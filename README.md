@@ -4,13 +4,11 @@
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
 [![Version](https://img.shields.io/badge/Release-v1.1.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
-[![License](https://img.shields.io/badge/License-GPL--2.0--or--later-green?style=for-the-badge)](https://www.gnu.org/licenses/old-licenses/gpl-2.0.html)
+[![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/old-licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below.
 
 Out of the box, a Gridbox store category page lists the products of the **whole category subtree**. A visitor who opens *Meters* immediately gets a mixed grid of every meter from every subcategory, with no way to pick *Installation testers* or *Thermal cameras* first. Better Categories adds that missing level of navigation — without touching Gridbox, its templates or its product list.
-
-![Layout variants](docs/screenshots/layout-variants.png)
 
 ---
 
@@ -53,50 +51,6 @@ Nothing is written to the database and Gridbox files are not modified. Disabling
 
 ---
 
-## 📦 What the Output Looks Like
-
-Screenshots come from a demo store with Polish category names.
-
-**Text links** (default) — one under another, with product counts:
-
-![Text links](docs/screenshots/text-vertical.png)
-
-**Tiles** — *text below the image*, rounded corners, image of the most viewed product as a fallback:
-
-![Tiles](docs/screenshots/tiles-text-below.png)
-
-**Hover effects** — in each row the second tile is shown in its hover state:
-
-![Hover effects](docs/screenshots/hover-effects.png)
-
-**What is inside** (1.1.0) — the five subcategory modes, and centring / stretching a short list. Panels marked *(open)* are shown in their open state:
-
-![Subcategory modes](docs/screenshots/subcategories.png)
-
-On phones the drawer under a narrow tile opens across the whole row, the tooltip stays inside the screen, and the card flip and side panel automatically become the drawer:
-
-![Subcategory modes on a phone](docs/screenshots/subcategories-phone.png)
-
-The generated markup is plain, accessible HTML you can style further from your template:
-
-```html
-<nav id="bettercategories-3f9c1a2b" class="bettercategories bettercategories--tiles bettercategories--vertical
-     bettercategories--align-left bettercategories--style-below bettercategories--shape-rounded" aria-label="Categories">
-  <h2 class="bettercategories-title">Categories</h2>
-  <ul class="bettercategories-list">
-    <li class="bettercategories-item bettercategories-tile">
-      <a class="bettercategories-link" href="/oferta/meters/installation-testers">
-        <span class="bettercategories-media"><img src="/images/products/mpi-540.png" alt="Installation testers" loading="lazy" decoding="async"></span>
-        <span class="bettercategories-caption"><span class="bettercategories-name">Installation testers</span>
-          <span class="bettercategories-count">(4)</span></span>
-      </a>
-    </li>
-    …
-  </ul>
-</nav>
-```
-
----
 
 ## 🚀 Installation & Package Structure
 
@@ -120,8 +74,6 @@ Uninstalling the package removes both extensions; the plugin stores nothing outs
 ## 👀 Live Preview
 
 The *Layout*, *Text and colours* and *Tiles* tabs have a **live preview column**. It shows the list exactly as the plugin renders it — real categories, counts and images from your store — using the values currently in the form, before you save. Switch between **Desktop (1280 px), Tablet (820 px) and Phone (390 px)**: the preview renders at the real device width, scaled to fit, so column settings and all responsive rules apply as on the site. Pick any parent category to preview its subcategories. Sliders show their current value, and colour pickers are enlarged for easier use.
-
-![Live preview](docs/screenshots/admin-live-preview.png)
 
 ---
 
@@ -291,6 +243,6 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 ## 📄 License & Maintainer
 
-* **License:** GNU General Public License version 2 or later.
+* **License:** GNU General Public License version 3.
 * **Maintainer:** [Merserwis](https://github.com/merserwis/)
 * *Balbooa* and *Gridbox* are trademarks of their respective owners. This project is not affiliated with Balbooa.
