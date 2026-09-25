@@ -34,7 +34,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.1.0';
+    private const VERSION    = '1.2.0';
     private const SUB_MODES  = ['none', 'below', 'drawer', 'side', 'flip', 'tooltip'];
     private const CACHE_GROUP = 'plg_system_bettercategories';
 
@@ -55,6 +55,22 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
     /** Stored in the cache in place of an empty result, so leaf categories skip rendering too. */
     private const CACHE_EMPTY = "\0empty";
+
+    /** Thumbnails folder (under the site root) and the time one request may spend creating them. */
+    private const THUMB_DIR    = 'media/plg_system_bettercategories/thumbs';
+    private const THUMB_BUDGET = 1.5;
+
+    /** Seconds spent creating thumbnails in this request. */
+    private float $thumbTime = 0.0;
+
+    /** A thumbnail was left for later (time budget): the block is not cached, the next visit finishes it. */
+    private bool $incomplete = false;
+
+    /** The page already carries breadcrumb structured data (the "automatic" breadcrumb setting adds none). */
+    private bool $pageCrumbs = false;
+
+    /** @var array<int, string> store app titles */
+    private array $appTitles = [];
 
     public static function getSubscribedEvents(): array
     {
@@ -102,6 +118,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return;
         }
 
+        $this->pageCrumbs = stripos($body, 'BreadcrumbList') !== false;
+
         $start  = hrtime(true);
         $device = $this->device();
         $config = substr(md5(json_encode($this->params->toArray())), 0, 8);
@@ -112,7 +130,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             if ($minutes > 0) {
                 $user  = $app->getIdentity();
                 $key   = md5(implode('|', [self::VERSION, $config, $appId, $categoryId, $device,
-                    $app->getLanguage()->getTag(), implode(',', $this->viewLevels()), Uri::root()]));
+                    $app->getLanguage()->getTag(), implode(',', $this->viewLevels()), Uri::root(), (int) $this->pageCrumbs]));
                 $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
                     ->createCacheController('output', ['defaultgroup' => self::CACHE_GROUP, 'lifetime' => $minutes, 'caching' => true]);
                 $html = $cache->get($key);
@@ -122,7 +140,12 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 } else {
                     $html   = $this->render($appId, $categoryId);
                     $status = 'miss';
-                    $cache->store($html === '' ? self::CACHE_EMPTY : $html, $key);
+                    if ($this->incomplete) {
+                        // some thumbnails are still to be made: the next visit renders (and caches) again
+                        $status = 'miss, thumbnails pending';
+                    } else {
+                        $cache->store($html === '' ? self::CACHE_EMPTY : $html, $key);
+                    }
                 }
             } else {
                 $html = $this->render($appId, $categoryId);
@@ -548,23 +571,29 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
 
             $categories = $this->loadCategories($appId);
-            $parents    = [0 => 'Store home'];
-            foreach ($categories as $cat) {
-                if ($cat->parent > 0 && isset($categories[$cat->parent])) {
-                    $parents[$cat->parent] = $categories[$cat->parent]->title;
+            // every category as an indented tree (last-level pages show the sibling bar)
+            $tree = [['id' => 0, 'title' => 'Store home']];
+            $walk = function (int $parent, int $depth) use (&$walk, &$tree, $categories): void {
+                foreach ($categories as $cat) {
+                    if ($cat->parent === $parent && $depth < 50) {
+                        $tree[] = ['id' => $cat->id, 'title' => str_repeat('— ', $depth) . $cat->title];
+                        $walk($cat->id, $depth + 1);
+                    }
                 }
-            }
+            };
+            $walk(0, 1);
 
             $categoryId = $app->getInput()->post->getInt('category', 0);
-            if (!isset($parents[$categoryId])) {
+            if (!isset($categories[$categoryId])) {
                 $categoryId = 0;
             }
+            $hasChildren = (bool) array_filter($categories, fn ($cat) => $cat->parent === $categoryId);
 
             $this->ajaxResult($event, [
                 'html'         => $this->render($appId, $categoryId),
-                'categories'   => array_map(fn ($id, $title) => ['id' => $id, 'title' => $title], array_keys($parents), $parents),
+                'categories'   => $tree,
                 'category'     => $categoryId,
-                'hideProducts' => (bool) $this->params->get('hide_products', 0),
+                'hideProducts' => $hasChildren && (bool) $this->params->get('hide_products', 0),
             ]);
         } catch (\Throwable $e) {
             $this->ajaxResult($event, ['error' => $e->getMessage()]);
@@ -691,30 +720,44 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return '';
         }
 
-        $children = array_filter($categories, fn ($cat) => $cat->parent === $categoryId);
-        if (!$children) {
-            return '';
-        }
+        // Settings of this level of the category tree (per-level overrides); restored afterwards.
+        $saved        = $this->params;
+        $this->params = $this->levelParams($categories, $categoryId);
 
-        $p = $this->settings();
+        try {
+            return $this->renderBlock($appId, $categoryId, $categories);
+        } finally {
+            $this->params = $saved;
+        }
+    }
+
+    private function renderBlock(int $appId, int $categoryId, array $categories): string
+    {
+        $p        = $this->settings();
+        $children = array_filter($categories, fn ($cat) => $cat->parent === $categoryId);
+        $rawLink  = fn (int $id): string => Route::_($this->categoryLink($appId, $id, $categories), false);
+        $link     = fn ($cat): string => $this->preview ? '#' : htmlspecialchars($rawLink($cat->id), ENT_QUOTES, 'UTF-8');
+        $crumbs   = $this->breadcrumbSchema($appId, $categoryId, $categories, $rawLink, $p);
+
+        if (!$children && !($p['leafSiblings'] && $categoryId > 0)) {
+            return $crumbs;
+        }
 
         if ($p['counter'] || $p['hideEmpty']) {
             $this->addCounts($categories);
         }
+        $children = array_filter($children, fn ($cat) => !$p['hideEmpty'] || $cat->count > 0);
+        if (!$children) {
+            // Last level: the sibling bar (when enabled) instead of the list.
+            return ($p['leafSiblings'] && $categoryId > 0 ? $this->renderSiblings($appId, $categoryId, $categories, $link, $p) : '') . $crumbs;
+        }
+
         if ($p['display'] === 'tiles' && $p['popularImage']) {
             $this->addTopProductImages($appId, $categories);
         }
         $manual = $p['display'] === 'tiles' ? $this->manualImages() : [];
 
-        // Categories that have visible subcategories (respecting "hide empty").
-        $branches = [];
-        foreach ($categories as $cat) {
-            if ($cat->parent > 0 && (!$p['hideEmpty'] || $cat->count > 0)) {
-                $branches[$cat->parent] = true;
-            }
-        }
-
-        // Visible subcategories of every category (for the "what is inside" panels).
+        // Visible subcategories of every category: "last level" counters and the "what is inside" panels.
         $kids = [];
         foreach ($categories as $cat) {
             if ($cat->parent > 0 && (!$p['hideEmpty'] || $cat->count > 0)) {
@@ -722,21 +765,20 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
         }
 
-        $id    = 'bettercategories-' . substr(md5($appId . '-' . $categoryId . '-' . microtime()), 0, 8);
-        $link  = fn ($cat) => $this->preview ? '#' : htmlspecialchars(Route::_($this->categoryLink($appId, $cat->id, $categories)), ENT_QUOTES, 'UTF-8');
-        $items = '';
-        $count = 0;
+        $id      = 'bettercategories-' . substr(md5($appId . '-' . $categoryId . '-' . microtime()), 0, 8);
+        $sizes   = $this->imageSizes($p);
+        $items   = '';
+        $count   = 0;
         $withSub = false;
+        $schema  = [];
         foreach ($children as $cat) {
-            if ($p['hideEmpty'] && $cat->count === 0) {
-                continue;
-            }
             $count++;
+            $schema[] = ['name' => $cat->title, 'url' => $rawLink($cat->id)];
 
             $url   = $link($cat);
             $title = htmlspecialchars($cat->title, ENT_QUOTES, 'UTF-8');
             // "Last level only": the count is shown only on categories without visible subcategories.
-            $showCount = $p['counter'] && (!$p['counterLeafOnly'] || empty($branches[$cat->id]));
+            $showCount = $p['counter'] && (!$p['counterLeafOnly'] || empty($kids[$cat->id]));
             $countHtml = $showCount ? ' <span class="bettercategories-count">(' . $cat->count . ')</span>' : '';
 
             // Panel listing the subcategories of this category ("what is inside").
@@ -759,11 +801,14 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             if ($image === '' && $p['popularImage']) {
                 $image = $cat->topImage;
             }
-            $src = htmlspecialchars($this->imageUrl($image), ENT_QUOTES, 'UTF-8');
+            // Small WebP copies (srcset) when enabled and possible; the original image otherwise.
+            [$thumb, $srcset] = $this->thumbnail($image, $p);
+            $src = htmlspecialchars($thumb !== '' ? $thumb : $this->imageUrl($image), ENT_QUOTES, 'UTF-8');
+            $set = $srcset !== '' ? ' srcset="' . htmlspecialchars($srcset, ENT_QUOTES, 'UTF-8') . '" sizes="' . $sizes . '"' : '';
 
             $front = '<a class="bettercategories-link" href="' . $url . '">'
                 . '<span class="bettercategories-media' . ($src === '' ? ' bettercategories-media--empty' : '') . '">'
-                . ($src !== '' ? '<img src="' . $src . '" alt="' . $title . '" loading="lazy" decoding="async">' : '')
+                . ($src !== '' ? '<img src="' . $src . '"' . $set . ' alt="' . $title . '" loading="lazy" decoding="async">' : '')
                 . ($p['hover'] === 'shine' ? '<span class="bettercategories-shine" aria-hidden="true"></span>' : '')
                 . '</span>'
                 . '<span class="bettercategories-caption"><span class="bettercategories-name">' . $title . '</span>' . $countHtml . '</span>'
@@ -772,9 +817,6 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $body = $sub !== '' && $p['subMode'] === 'flip' ? $toggle . '<div class="bettercategories-card">' . $front . $sub . '</div>' : $front . $toggle . $sub;
 
             $items .= '<li class="bettercategories-item bettercategories-tile' . $liClass . '">' . $body . '</li>';
-        }
-        if ($items === '') {
-            return '';
         }
 
         $classes = [
@@ -800,7 +842,398 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             . '<nav id="' . $id . '" class="' . implode(' ', $classes) . '" aria-label="' . $headAttr . '">'
             . ($heading !== '' ? '<' . $p['headingTag'] . ' class="bettercategories-title">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</' . $p['headingTag'] . '>' : '')
             . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
-            . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id) : '');
+            . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id) : '')
+            . ($p['schemaList'] ? $this->itemListSchema($heading !== '' ? $heading : 'Categories', $schema) : '')
+            . $crumbs;
+    }
+
+    /**
+     * Settings for the level of the category tree being shown: 0 = store home, 1 = a top category,
+     * 2 = its subcategory, 3 = anything deeper. A matching "per level" row overrides the chosen keys.
+     */
+    private function levelParams(array $categories, int $categoryId): Registry
+    {
+        $rows = (array) $this->params->get('level_overrides', []);
+        if (!$rows) {
+            return $this->params;
+        }
+
+        $depth = 0;
+        $id    = $categoryId;
+        while ($id > 0 && isset($categories[$id]) && $depth < 50) {
+            $depth++;
+            $id = $categories[$id]->parent;
+        }
+        $level = (string) min($depth, 3);
+
+        foreach ($rows as $row) {
+            $row = (array) $row;
+            if ((string) ($row['level'] ?? '') !== $level) {
+                continue;
+            }
+
+            $params = clone $this->params;
+            foreach (['heading', 'display', 'tile_style', 'orientation', 'columns', 'columns_tablet', 'columns_mobile', 'sub_mode'] as $key) {
+                $value = trim((string) ($row[$key] ?? ''));
+                if ($value !== '') {
+                    $params->set($key, $value);
+                }
+            }
+
+            return $params;
+        }
+
+        return $this->params;
+    }
+
+    /**
+     * Last-level category (no subcategories): a bar with the categories next to it, the current one
+     * marked, and a link back to the parent. Products below stay as Gridbox shows them.
+     */
+    private function renderSiblings(int $appId, int $categoryId, array $categories, callable $link, array $p): string
+    {
+        $parentId = $categories[$categoryId]->parent;
+        $siblings = array_filter($categories, fn ($cat) => $cat->parent === $parentId
+            && ($cat->id === $categoryId || !$p['hideEmpty'] || $cat->count > 0));
+
+        $items = '';
+        if ($p['leafBack']) {
+            $name   = $parentId > 0 ? $categories[$parentId]->title : $this->appTitle($appId);
+            $url    = $this->preview ? '#' : htmlspecialchars(Route::_($this->categoryLink($appId, $parentId, $categories), false), ENT_QUOTES, 'UTF-8');
+            $items .= '<li class="bettercategories-item bettercategories-back"><a class="bettercategories-link" href="' . $url . '">'
+                . '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M8 1.5 3.5 6 8 10.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
+                . htmlspecialchars(sprintf($p['leafBackLabel'], $name), ENT_QUOTES, 'UTF-8') . '</a></li>';
+        }
+        if (count($siblings) > 1) {
+            foreach ($siblings as $cat) {
+                $current = $cat->id === $categoryId;
+                $items  .= '<li class="bettercategories-item' . ($current ? ' is-current' : '') . '"><a class="bettercategories-link" href="' . $link($cat) . '"' . ($current ? ' aria-current="page"' : '') . '>'
+                    . htmlspecialchars($cat->title, ENT_QUOTES, 'UTF-8')
+                    . ($p['counter'] ? ' <span class="bettercategories-count">(' . $cat->count . ')</span>' : '') . '</a></li>';
+            }
+        }
+        if ($items === '') {
+            return '';
+        }
+
+        $id      = 'bettercategories-' . substr(md5($appId . '-' . $categoryId . '-' . microtime()), 0, 8);
+        $heading = count($siblings) > 1 ? $p['leafHeading'] : '';
+        $label   = htmlspecialchars($p['leafHeading'] !== '' ? $p['leafHeading'] : 'Related categories', ENT_QUOTES, 'UTF-8');
+
+        return $this->siblingsCss('#' . $id, $p)
+            . '<nav id="' . $id . '" class="bettercategories bettercategories--siblings" aria-label="' . $label . '">'
+            . ($heading !== '' ? '<' . $p['headingTag'] . ' class="bettercategories-title">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</' . $p['headingTag'] . '>' : '')
+            . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
+            // phones scroll the bar sideways: bring the current category into view
+            . '<script>(function(n){var c=n&&n.querySelector(".is-current"),l=n&&n.querySelector(".bettercategories-list");if(!c||!l)return;'
+            . 'function f(){if(l.scrollWidth<=l.clientWidth)return;var a=l.getBoundingClientRect(),b=c.getBoundingClientRect();l.scrollLeft+=b.left-a.left-(a.width-b.width)/2;}'
+            . 'f();window.addEventListener("load",f);})(document.getElementById("' . $id . '"));</script>';
+    }
+
+    /** Styles of the sibling bar: chips in a wrapping row, one scrolling row on phones. */
+    private function siblingsCss(string $s, array $p): string
+    {
+        $accent = $p['linkColor'] ?: '#1f2937';
+        $pad    = $p['device'] === 'mobile' ? $p['padSideMob'] : $p['padSide'];
+        $font   = $p['device'] === 'mobile' ? ($p['fontSizeMob'] ?: $p['fontSize']) : $p['fontSize'];
+        $phone  = "$s .bettercategories-list{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin;padding-bottom:6px;}"
+            . "$s .bettercategories-item{flex:0 0 auto;scroll-snap-align:start;}";
+
+        $r   = [];
+        $r[] = "$s,$s *,$s *::before,$s *::after{box-sizing:border-box;}";
+        // width limits: Gridbox columns are flex boxes, a one-line bar would otherwise widen the page
+        $r[] = "$s{width:100%;max-width:100%;min-width:0;margin:{$p['marginTop']}px 0 {$p['marginBottom']}px;padding:0 {$pad}px;text-align:left;" . ($font ? "font-size:$font;" : '') . ($p['textColor'] ? "color:{$p['textColor']};" : '') . '}';
+        $r[] = "$s .bettercategories-title{margin:{$p['headTop']}px 0 " . min($p['headBottom'], 12) . 'px;font-size:' . ($p['headingSize'] ?: '1.1em') . ';text-align:inherit;' . ($p['textColor'] ? 'color:inherit;' : '') . '}';
+        $r[] = "$s .bettercategories-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px;}";
+        $r[] = "$s .bettercategories-item{margin:0;padding:0;}";
+        $r[] = "$s .bettercategories-link{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:rgba(0,0,0,.05);line-height:1.3;text-decoration:none;white-space:nowrap;transition:background .2s,color .2s;"
+            . ($p['linkColor'] ? "color:{$p['linkColor']};" : '') . '}';
+        $r[] = "$s .bettercategories-link:hover{background:rgba(0,0,0,.1);" . ($p['hoverColor'] ? "color:{$p['hoverColor']};" : '') . '}';
+        $r[] = "$s .bettercategories-count{opacity:.7;}";
+        $r[] = "$s .is-current .bettercategories-link{background:$accent;color:#fff;font-weight:600;}";
+        $r[] = "$s .is-current .bettercategories-count{opacity:.85;}";
+        $r[] = "$s .bettercategories-back .bettercategories-link{background:transparent;padding-left:2px;font-weight:600;}";
+        $r[] = "$s .bettercategories-back svg{display:block;flex:0 0 auto;}";
+        // some sites strip @media from the page served to phones: the phone layout then applies directly
+        $r[] = $p['device'] === 'mobile' ? $phone : "@media (max-width:768px){ $phone $s{padding:0 {$p['padSideMob']}px;} }";
+
+        return '<style>' . implode('', $r) . '</style>';
+    }
+
+    // ---------------------------------------------------------------- thumbnails
+
+    /** "sizes" of the tile images, from the column counts per device. */
+    private function imageSizes(array $p): string
+    {
+        $tablet = $p['colsTablet'] ?: $p['colsDesktop'];
+        $mobile = $p['colsMobile'] ?: $tablet;
+
+        return sprintf('(max-width:768px) %dvw, (max-width:1024px) %dvw, %dpx',
+            (int) ceil(100 / max(1, $mobile)), (int) ceil(100 / max(1, $tablet)), (int) ceil(1280 / max(1, $p['colsDesktop'])));
+    }
+
+    /**
+     * WebP copies of a local image at the tile width and twice that (for sharp screens), made once and
+     * kept in media/plg_system_bettercategories/thumbs (the file name changes when the image changes).
+     * Returns [src, srcset], or ['', ''] when the original should be used: thumbnails switched off,
+     * an external or unreadable image, an image not larger than the tile, no WebP support, or no time
+     * left in this request (then the next visit makes it).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function thumbnail(string $image, array $p): array
+    {
+        if (!$p['thumbs'] || trim($image) === '' || !function_exists('imagewebp')) {
+            return ['', ''];
+        }
+
+        $file = $this->localImage($image);
+        $info = $file !== null ? @getimagesize($file) : false;
+        if (!$info || !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP, IMAGETYPE_GIF], true) || $info[0] < 2 || $info[1] < 2) {
+            return ['', ''];
+        }
+
+        $base  = ($this->preview ? rtrim(Uri::root(), '/') : Uri::root(true)) . '/' . self::THUMB_DIR . '/';
+        $hash  = substr(md5($file . '|' . filemtime($file) . '|' . filesize($file) . '|' . $p['thumbQuality']), 0, 16);
+        $set      = [];
+        $original = false;
+        foreach ([$p['thumbWidth'], $p['thumbWidth'] * 2] as $width) {
+            if ($width >= $info[0]) {
+                // the original is not larger than this copy would be: it serves these screens itself
+                $original = true;
+                break;
+            }
+            $name = $hash . '-' . $width . '.webp';
+            if (!is_file(JPATH_ROOT . '/' . self::THUMB_DIR . '/' . $name) && !$this->makeThumbnail($file, $info, $name, $width, $p['thumbQuality'])) {
+                // not made (yet): never offer a large original in its place
+                break;
+            }
+            $set[] = [$base . $name, $width];
+        }
+        if (!$set) {
+            return ['', ''];
+        }
+
+        $srcset = array_map(fn ($t) => $t[0] . ' ' . $t[1] . 'w', $set);
+        if ($original) {
+            $srcset[] = $this->imageUrl($image) . ' ' . $info[0] . 'w';
+        }
+
+        return [$set[0][0], implode(', ', $srcset)];
+    }
+
+    /** Absolute path of an image inside the site, or null (external URL, missing file, outside the site). */
+    private function localImage(string $image): ?string
+    {
+        $url = HTMLHelper::cleanImageURL(trim($image))->url;
+        if (preg_match('#^([a-z][a-z0-9+.-]*:)?//#i', $url)) {
+            return null;
+        }
+
+        $path = rawurldecode((string) parse_url($url, PHP_URL_PATH));
+        $root = Uri::root(true);
+        if ($root !== '' && str_starts_with($path, $root . '/')) {
+            $path = substr($path, strlen($root));
+        }
+
+        $site = realpath(JPATH_ROOT);
+        $file = realpath(JPATH_ROOT . '/' . ltrim($path, '/'));
+
+        return $site && $file && str_starts_with($file, $site . DIRECTORY_SEPARATOR) && is_file($file)
+            && preg_match('/\.(jpe?g|png|webp|gif)$/i', $file) ? $file : null;
+    }
+
+    /** Creates one WebP thumbnail (GD); false when it cannot (memory, format, write) or time is up. */
+    private function makeThumbnail(string $file, array $info, string $name, int $width, int $quality): bool
+    {
+        if ($this->thumbTime >= self::THUMB_BUDGET) {
+            $this->incomplete = true;
+
+            return false;
+        }
+        // decoded image + thumbnail must fit in the memory left to PHP
+        $limit = $this->memoryLimit();
+        if ($limit > 0 && memory_get_usage() + $info[0] * $info[1] * 5 + 16 * 1048576 > $limit) {
+            return false;
+        }
+
+        $t0 = hrtime(true);
+        try {
+            $src = match ($info[2]) {
+                IMAGETYPE_JPEG => @imagecreatefromjpeg($file),
+                IMAGETYPE_PNG  => @imagecreatefrompng($file),
+                IMAGETYPE_WEBP => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($file) : false,
+                IMAGETYPE_GIF  => @imagecreatefromgif($file),
+                default        => false,
+            };
+            if (!$src) {
+                return false;
+            }
+
+            // photos taken sideways: browsers honour the EXIF orientation, GD does not
+            if ($info[2] === IMAGETYPE_JPEG) {
+                $angle = [3 => 180, 6 => -90, 8 => 90][$this->jpegOrientation($file)] ?? 0;
+                if ($angle !== 0 && ($rotated = imagerotate($src, $angle, 0))) {
+                    $src = $rotated;
+                }
+            }
+
+            $w      = imagesx($src);
+            $h      = imagesy($src);
+            $height = max(1, (int) round($h * $width / $w));
+            $dst    = imagecreatetruecolor($width, $height);
+            imagealphablending($dst, false);
+            imagesavealpha($dst, true);
+            imagefill($dst, 0, 0, imagecolorallocatealpha($dst, 255, 255, 255, 127));
+            imagecopyresampled($dst, $src, 0, 0, 0, 0, $width, $height, $w, $h);
+
+            $dir = JPATH_ROOT . '/' . self::THUMB_DIR;
+            if (!is_dir($dir) && !@mkdir($dir, 0755, true) && !is_dir($dir)) {
+                return false;
+            }
+            // written under a temporary name first: a visitor never gets a half-written file
+            $tmp = $dir . '/' . $name . '.' . bin2hex(random_bytes(4)) . '.tmp';
+            $ok  = @imagewebp($dst, $tmp, $quality) && @rename($tmp, $dir . '/' . $name);
+            if (!$ok) {
+                @unlink($tmp);
+            }
+
+            return $ok;
+        } catch (\Throwable $e) {
+            return false;
+        } finally {
+            $this->thumbTime += (hrtime(true) - $t0) / 1e9;
+        }
+    }
+
+    /**
+     * EXIF orientation of a JPEG (1 = as stored), read from the file header without the exif
+     * extension, which many hosts do not have.
+     */
+    private function jpegOrientation(string $file): int
+    {
+        $data = @file_get_contents($file, false, null, 0, 131072);
+        if (!is_string($data) || !str_starts_with($data, "\xFF\xD8")) {
+            return 1;
+        }
+
+        $pos = 2;
+        $len = strlen($data);
+        while ($pos + 4 <= $len && $data[$pos] === "\xFF") {
+            $marker = ord($data[$pos + 1]);
+            $size   = unpack('n', substr($data, $pos + 2, 2))[1];
+            if ($marker === 0xE1 && substr($data, $pos + 4, 6) === "Exif\0\0") {
+                $tiff  = $pos + 10;
+                $le    = substr($data, $tiff, 2) === 'II';
+                $short = fn (int $o) => $o + 2 <= $len ? unpack($le ? 'v' : 'n', substr($data, $o, 2))[1] : 0;
+                $long  = fn (int $o) => $o + 4 <= $len ? unpack($le ? 'V' : 'N', substr($data, $o, 4))[1] : 0;
+                $ifd   = $tiff + $long($tiff + 4);
+                $count = $short($ifd);
+                for ($i = 0; $i < $count && $i < 200; $i++) {
+                    $entry = $ifd + 2 + $i * 12;
+                    if ($short($entry) === 0x0112) {
+                        $value = $short($entry + 8);
+
+                        return $value >= 1 && $value <= 8 ? $value : 1;
+                    }
+                }
+
+                return 1;
+            }
+            if ($marker === 0xDA || $size < 2) {
+                // image data starts: no EXIF block before it
+                break;
+            }
+            $pos += 2 + $size;
+        }
+
+        return 1;
+    }
+
+    private function memoryLimit(): int
+    {
+        $value = trim((string) ini_get('memory_limit'));
+        if ($value === '' || $value === '-1') {
+            return 0;
+        }
+        $number = (int) $value;
+
+        return match (strtolower(substr($value, -1))) {
+            'g'     => $number * 1073741824,
+            'm'     => $number * 1048576,
+            'k'     => $number * 1024,
+            default => $number,
+        };
+    }
+
+    // ---------------------------------------------------------------- structured data
+
+    /** schema.org ItemList of the listed categories (JSON-LD). */
+    private function itemListSchema(string $name, array $items): string
+    {
+        if ($this->preview || !$items) {
+            return '';
+        }
+
+        $list = [];
+        foreach (array_values($items) as $i => $item) {
+            $list[] = ['@type' => 'ListItem', 'position' => $i + 1, 'name' => $item['name'], 'url' => $this->absoluteUrl($item['url'])];
+        }
+
+        return $this->jsonLd(['@context' => 'https://schema.org', '@type' => 'ItemList', 'name' => $name, 'numberOfItems' => count($list), 'itemListElement' => $list]);
+    }
+
+    /**
+     * schema.org BreadcrumbList: store → parent categories → current category. "Automatic" adds it
+     * only when the page has no breadcrumb data of its own (e.g. from a breadcrumbs module).
+     */
+    private function breadcrumbSchema(int $appId, int $categoryId, array $categories, callable $rawLink, array $p): string
+    {
+        if ($this->preview || $categoryId <= 0 || $p['schemaCrumbs'] === 'no' || ($p['schemaCrumbs'] === 'auto' && $this->pageCrumbs)) {
+            return '';
+        }
+
+        $chain = [];
+        $id    = $categoryId;
+        while ($id > 0 && isset($categories[$id]) && count($chain) < 50) {
+            array_unshift($chain, $categories[$id]);
+            $id = $categories[$id]->parent;
+        }
+
+        $list = [['@type' => 'ListItem', 'position' => 1, 'name' => $this->appTitle($appId), 'item' => $this->absoluteUrl($rawLink(0))]];
+        foreach ($chain as $cat) {
+            $list[] = ['@type' => 'ListItem', 'position' => count($list) + 1, 'name' => $cat->title, 'item' => $this->absoluteUrl($rawLink($cat->id))];
+        }
+
+        return $this->jsonLd(['@context' => 'https://schema.org', '@type' => 'BreadcrumbList', 'itemListElement' => $list]);
+    }
+
+    private function jsonLd(array $data): string
+    {
+        // JSON_HEX_TAG: a title can never close the script element
+        return '<script type="application/ld+json">'
+            . json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_INVALID_UTF8_SUBSTITUTE)
+            . '</script>';
+    }
+
+    private function absoluteUrl(string $url): string
+    {
+        return preg_match('#^https?://#i', $url) ? $url : rtrim(Uri::getInstance()->toString(['scheme', 'host', 'port']), '/') . '/' . ltrim($url, '/');
+    }
+
+    /** Title of a store app (the first breadcrumb and the parent of top-level categories). */
+    private function appTitle(int $appId): string
+    {
+        if (!isset($this->appTitles[$appId])) {
+            $db    = $this->db();
+            $query = $db->createQuery()
+                ->select($db->quoteName('title'))
+                ->from($db->quoteName('#__gridbox_app'))
+                ->where($db->quoteName('id') . ' = ' . $appId);
+            $this->appTitles[$appId] = trim((string) $db->setQuery($query)->loadResult()) ?: 'Store';
+        }
+
+        return $this->appTitles[$appId];
     }
 
     /**
@@ -941,6 +1374,15 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'subAllLabel'  => trim((string) $this->params->get('sub_all_label', 'View all')) ?: 'View all',
             'subMoreLabel' => $this->printfLabel((string) $this->params->get('sub_more_label', '+%d more'), '+%d more'),
             'subToggleLabel' => $this->printfLabel((string) $this->params->get('sub_toggle_label', 'Subcategories of %s'), 'Subcategories of %s', 's'),
+            'thumbs'       => (bool) $this->params->get('thumbnails', 1),
+            'thumbWidth'   => $int('thumb_width', 480, 160, 1600),
+            'thumbQuality' => $int('thumb_quality', 80, 40, 95),
+            'leafSiblings' => (bool) $this->params->get('leaf_siblings', 0),
+            'leafHeading'  => trim((string) $this->params->get('leaf_heading', 'Related categories')),
+            'leafBack'     => (bool) $this->params->get('leaf_back', 1),
+            'leafBackLabel' => $this->printfLabel((string) $this->params->get('leaf_back_label', 'Back to %s'), 'Back to %s', 's'),
+            'schemaList'   => (bool) $this->params->get('schema_itemlist', 1),
+            'schemaCrumbs' => $pick('schema_breadcrumb', ['auto', 'yes', 'no'], 'auto'),
         ];
     }
 

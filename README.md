@@ -3,8 +3,8 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.1.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
-[![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/old-licenses/gpl-3.0.html)
+[![Version](https://img.shields.io/badge/Release-v1.2.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below.
 
@@ -20,6 +20,10 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **Text links or image tiles:** A simple list of links, one under another or in one wrapping row — or tiles with images in four styles: *text below the image*, *card*, *text on the image with a gradient* and *cover*.
 * **What is inside each category (new in 1.1.0):** Every category can show its own subcategories — as text under the name, a **drawer sliding down** that pushes the layout, a **panel sliding in from the side**, a **card flip** with the list on the back, or a **modern tooltip**. Custom title (e.g. *In this category:*), list / inline / chip styles, a limit with a *+N more* link, product counts, colours, hover or button opening, and a separate mode for phones.
 * **Fewer categories than columns (new in 1.1.0):** Six columns but only three subcategories? Keep them on the left, centre them, or stretch them over the full width of the module — per device.
+* **Fast WebP thumbnails (new in 1.2.0):** Tiles load small WebP copies of the images (tile width and twice that for sharp screens) instead of full-size photos — made once, kept on the server, EXIF rotation and transparency preserved.
+* **Per-level settings (new in 1.2.0):** Large image tiles on the store home page, compact text links deeper down — heading, display, tile style, direction, columns and the *what is inside* mode can differ per level of the tree.
+* **Sibling bar on the last level (new in 1.2.0):** A category without subcategories shows the categories next to it (current one highlighted) and a link back to the parent, so shoppers switch without going back. It scrolls sideways on phones.
+* **Structured data (new in 1.2.0):** The listed categories as a schema.org `ItemList`, and a `BreadcrumbList` (store → parents → current category) that is added only when the page has none of its own.
 * **Smart category images:** Tile images come from, in order: an image chosen for the category in the plugin → the image set on the category in Gridbox → **the image of the most viewed product** in the category and its subcategories. Categories need no manual work to look good.
 * **Modern hover effects:** Zoom in, zoom out, lift with shadow, light shine, grayscale-to-colour, tint fade-in / fade-out, tilt, outline ring — or none.
 * **Full visual control:** Position on the page, alignment, direction, responsive columns (desktop / tablet / phone), font sizes and colours (empty = Gridbox theme), image shape (rectangle, rounded corners, circle), aspect ratio, fit, background, colour tint, drop shadow (angle, distance, blur, size, opacity) and spacing.
@@ -37,7 +41,7 @@ flowchart LR
     B --> C{Better Categories<br/>onAfterRender}
     C -->|search / filter / tag / author<br/>or page 2+| G[Page unchanged]
     C -->|store category page| D[Load visible subcategories<br/>of the current category]
-    D -->|no subcategories| G
+    D -->|no subcategories| H[Sibling bar when enabled,<br/>otherwise unchanged]
     D --> E[Counts, images and<br/>canonical links]
     E --> F[Insert the list at the chosen<br/>position, e.g. above the products]
 ```
@@ -47,14 +51,13 @@ flowchart LR
 3. It counts products per subtree, picks tile images and builds links with Gridbox's own `Itemid` rules, then routes them through Joomla's router (and therefore Gridbox's router).
 4. The block — a `<nav>` with its own scoped `<style>` — is inserted next to a Gridbox element of the category template: by default **right before the product list** (`.ba-item-blog-posts`). If the chosen anchor is not on the page, it falls back to *above the products*; if there is no product list at all, nothing is inserted.
 
-Nothing is written to the database and Gridbox files are not modified. Disabling the plugin restores the original pages instantly.
+Nothing is written to the database and Gridbox files are not modified; the only files the plugin creates are the image thumbnails in `media/plg_system_bettercategories/thumbs`. Disabling the plugin restores the original pages instantly.
 
 ---
 
-
 ## 🚀 Installation & Package Structure
 
-1. Download `pkg_bettercategories-1.1.0.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
+1. Download `pkg_bettercategories-1.2.0.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
 2. In the Joomla administrator go to **System → Install → Extensions** and upload the package.
 3. On a fresh install the plugin is **enabled automatically**; an update keeps whatever you chose before. If Balbooa Gridbox is not installed, the installer says so in a notice.
 4. Open **Better Categories for Gridbox** in the administrator menu (or *System → Plugins → System - Better Categories for Gridbox*) and adjust the settings.
@@ -150,6 +153,8 @@ Column counts work even on sites that strip `@media` rules from the HTML served 
 | Shadow opacity (%) | `20` | |
 | Use the Gridbox category image | Yes | Use the image set on the category in Gridbox when the plugin has none for it. |
 | Most popular product image | Yes | Otherwise use the image of the most viewed visible product in the category and its subcategories. |
+| Fast thumbnails (WebP) | Yes | Small WebP copies instead of full-size photos: one at the thumbnail width, one twice as wide for sharp screens (`srcset`). Made once, kept in `media/plg_system_bettercategories/thumbs`; a changed image gets new copies. External images, images not larger than the tile and servers without WebP support in PHP GD keep the original image. |
+| Thumbnail width (px) / quality | `480` / `80` | Width of the smaller copy (160–1600) and WebP quality (40–95). |
 | Own category images | *(empty)* | Pick a category and an image from Media — takes priority over every other source. |
 
 ### Subcategories
@@ -170,6 +175,31 @@ Column counts work even on sites that strip `@media` rules from the HTML served 
 
 Only visible subcategories are listed (same access, publishing and language rules as the main list, empty ones hidden when *Hide empty categories* is on). Panels are keyboard accessible: the button has `aria-expanded` / `aria-controls`, **Escape** closes the panel and returns focus to the button, a click outside closes it, and opening one panel closes the others. The drawer under a narrow tile (under 200 px) opens across the whole row; the tooltip moves to stay inside the window and opens downwards when there is no room above.
 
+### Per level
+
+Rows of settings for one level of the category tree each: *Store home page*, *Level 1* (a top category), *Level 2* (its subcategory), *Level 3 and deeper*. Every field left at *— main setting —* keeps the value from the other tabs.
+
+| Field | Overrides |
+|---|---|
+| List heading | The heading above the list. |
+| Show categories as | Text links or tiles. |
+| Tile style | Text below the image, card, text on the image, cover. |
+| List direction | Rows, columns, one scrolling row, inline. |
+| Columns / tablet / phone | Column counts per device. |
+| Show what is inside | The subcategory panel mode. |
+
+The live preview shows the level of the category chosen in it.
+
+### Navigation and SEO
+
+| Option | Default | Description |
+|---|---|---|
+| Sibling categories on the last level | No | A category without subcategories shows a bar of chips with the categories next to it — the current one highlighted (`aria-current="page"`) — and a link back to the parent. Products stay as Gridbox shows them. On phones the bar scrolls sideways with the current category in view. |
+| Bar heading | `Related categories` | Empty = no heading. |
+| Link back to the parent category / text | Yes / `Back to %s` | `%s` = the parent category (or the store on top-level categories). |
+| Structured data: category list | Yes | The listed categories as a schema.org `ItemList` (JSON-LD). |
+| Structured data: breadcrumbs | Automatic | A schema.org `BreadcrumbList`: store → parent categories → current category. *Automatic* adds it only when the page has no breadcrumb data of its own (e.g. from a breadcrumbs module), so there are never two; *Yes* always, *No* never. |
+
 ### Hover effects
 
 | Effect | What happens |
@@ -189,7 +219,7 @@ Only visible subcategories are listed (same access, publishing and language rule
 
 ## 🧪 Verification & Testing
 
-Versions 1.0.0 and 1.1.0 were tested on **Joomla 6.1.3 with PHP 8.5.10**, MySQL 8.0 and **Gridbox 2.20.3.1** (early development builds also on PHP 8.4), with a store structure of nested categories, products assigned directly to parent categories, unpublished products and categories, transparent PNG and JPG images.
+Versions 1.0.0 to 1.2.0 were tested on **Joomla 6.1.3 with PHP 8.5.10**, MySQL 8.0 and **Gridbox 2.20.3.1** (early development builds also on PHP 8.4), with a store structure of nested categories, products assigned directly to parent categories, unpublished products and categories, transparent PNG and JPG images.
 
 1. **Counts and visibility** — parent categories count products of the whole subtree; unpublished products and categories under unpublished parents are excluded; empty categories are hidden by default.
 2. **Image sources** — plugin image → Gridbox category image → most viewed visible product (an unpublished product with more views is ignored).
@@ -199,6 +229,8 @@ Versions 1.0.0 and 1.1.0 were tested on **Joomla 6.1.3 with PHP 8.5.10**, MySQL 
 
 6. **Subcategory panels (1.1.0)** — every mode in a real browser on desktop and phone widths: opening with the button, closing with the second click, Escape and a click outside, one panel open at a time, no horizontal scrolling, no JavaScript errors. With the panels switched off the output is identical to 1.0.0 in all 42 tested page × settings × device combinations.
 
+7. **1.2.0** — thumbnails from JPEG (also a sideways EXIF photo), transparent PNG and 6000 × 4000 px photos: WebP copies at 480 / 960 px, rotation and transparency kept; with many large images the first visit makes what fits in 1.5 s and skips the cache, the next one finishes. Per-level overrides on every level, the sibling bar on desktop and phone (no horizontal page scroll), JSON-LD validated as JSON with absolute URLs. No PHP warnings from the extension with full error reporting. With thumbnails and structured data off, the output is identical to 1.1.0 in all 42 combinations; updating from 1.1.0 keeps all settings.
+
 Quick check on your site: open a store category that has subcategories and look for `<nav id="bettercategories-` in the page source.
 
 ---
@@ -206,18 +238,18 @@ Quick check on your site: open a store category that has subcategories and look 
 ## 🩺 Diagnostics
 
 Every Gridbox store category page (also one without subcategories) carries one HTML comment, e.g.
-`<!-- Better Categories 1.1.0 | cfg 9c0c6dbd | mobile | cache hit | 0.1 ms (total 0.4 ms) -->` —
-plugin version, a hash of the active settings, the detected device, cache status and time spent.
+`<!-- Better Categories 1.2.0 | cfg 9c0c6dbd | mobile | cache hit | 0.1 ms (total 0.4 ms) -->` —
+plugin version, a hash of the active settings, the detected device, cache status and time spent. `cache miss, thumbnails pending` means some thumbnails are still being made: that page is not cached yet and the next visit completes it.
 The plugin always uses its settings as saved in the database, even when the site hands it a different copy (some device-specific extensions or caches pass phones old plugin parameters); the comment then adds `(site passed …, ignored)`, so such a site setup is easy to spot.
 
 ---
 
 ## 🔒 Security & Performance
 
-* **Read-only:** the plugin only reads Gridbox tables; nothing is stored or modified.
+* **Read-only data:** the plugin only reads Gridbox tables. The only files it writes are the thumbnails, inside its own media folder, from images inside the site (paths are resolved and checked to stay in the site root). Delete the `thumbs` folder at any time and save the plugin settings (this clears its cache); the thumbnails are made again.
 * **Access-aware:** categories and products respect Joomla view levels, publishing state, publish-up / publish-down dates and language, like Gridbox's own listings.
 * **Escaped output:** titles, URLs and image paths are HTML-escaped; colours and sizes are validated before they reach the CSS.
-* **Fast:** with the cache the plugin adds about 0.1–0.5 ms per page (measured); without it a handful of database queries. A small scoped `<style>` block; no front-end JavaScript unless an interactive subcategory panel is on (then one small inline script per block, no dependencies). Images are lazy-loaded.
+* **Fast:** with the cache the plugin adds about 0.1–0.5 ms per page (measured); without it a handful of database queries. A small scoped `<style>` block; no front-end JavaScript unless an interactive subcategory panel is on (then one small inline script per block, no dependencies). Images are lazy-loaded; tiles use small WebP thumbnails with `srcset`, making the first visit to a page with new images slower once (at most 1.5 s of thumbnail work per request).
 * **Scoped:** runs only on Gridbox store category pages; every other page is returned untouched.
 
 ---
@@ -236,6 +268,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 ## 📝 Changelog
 
+* **1.2.0** — Fast WebP thumbnails with `srcset`. Per-level settings. Sibling bar with a back link on the last level. schema.org `ItemList` and `BreadcrumbList` (automatic, never duplicated).
 * **1.1.0** — *What is inside*: subcategories of each category as text, drawer, side panel, card flip or tooltip, with title, list style, limit, counts, colours, hover/button opening and a phone mode. *When there are fewer items than columns*: align left, centre or stretch.
 * **1.0.0** — First release.
 
@@ -243,6 +276,6 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 ## 📄 License & Maintainer
 
-* **License:** GNU General Public License version 3.
+* **License:** [GNU General Public License version 3](https://www.gnu.org/licenses/gpl-3.0.html) (GPL-3.0).
 * **Maintainer:** [Merserwis](https://github.com/merserwis/)
 * *Balbooa* and *Gridbox* are trademarks of their respective owners. This project is not affiliated with Balbooa.

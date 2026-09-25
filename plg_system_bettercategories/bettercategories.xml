@@ -6,7 +6,7 @@
     <creationDate>2026-09-24</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 2 or later</license>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -181,6 +181,12 @@
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>
+                <field name="thumbnails" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_THUMBS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_THUMBS_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="thumb_width" type="number" default="480" min="160" max="1600" step="10" label="PLG_SYSTEM_BETTERCATEGORIES_THUMB_WIDTH_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_THUMB_WIDTH_DESC" showon="thumbnails:1" />
+                <field name="thumb_quality" type="number" default="80" min="40" max="95" label="PLG_SYSTEM_BETTERCATEGORIES_THUMB_QUALITY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_THUMB_QUALITY_DESC" showon="thumbnails:1" />
                 <field name="category_images" type="subform" multiple="true" layout="joomla.form.field.subform.repeatable-table" buttons="add,remove,move" label="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_IMAGES_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_IMAGES_DESC">
                     <form>
                         <field name="category" type="gbcategories" addfieldprefix="Merserwis\Plugin\System\BetterCategories\Field" label="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_LABEL">
@@ -228,6 +234,49 @@
                 <field name="sub_more_label" type="text" default="+%d more" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_MORE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_MORE_DESC" showon="sub_mode!:none" />
                 <field name="sub_all_label" type="text" default="View all" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_ALL_LABEL" showon="sub_mode:flip" />
                 <field name="sub_toggle_label" type="text" default="Subcategories of %s" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_TOGGLE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_TOGGLE_DESC" showon="sub_mode:drawer[OR]sub_mode:side[OR]sub_mode:flip[OR]sub_mode:tooltip" />
+            </fieldset>
+            <fieldset name="levels" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LEVELS" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LEVELS_DESC">
+                <field name="preview_levels" type="bcpreview" hiddenLabel="true" />
+                <field name="level_overrides" type="subform" multiple="true" layout="joomla.form.field.subform.repeatable" buttons="add,remove,move" label="PLG_SYSTEM_BETTERCATEGORIES_LEVELS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_LEVELS_DESC">
+                    <form>
+                        <field name="level" type="list" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_LEVEL_LABEL">
+                            <option value="0">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_0</option>
+                            <option value="1">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_1</option>
+                            <option value="2">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_2</option>
+                            <option value="3">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_3</option>
+                        </field>
+                        <field name="heading" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_LEVEL_INHERIT" />
+                        <field name="display" type="list" default="" label="PLG_SYSTEM_BETTERCATEGORIES_DISPLAY_LABEL"><option value="">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_INHERIT</option><option value="text">PLG_SYSTEM_BETTERCATEGORIES_DISPLAY_TEXT</option><option value="tiles">PLG_SYSTEM_BETTERCATEGORIES_DISPLAY_TILES</option></field>
+                        <field name="tile_style" type="list" default="" label="PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_LABEL"><option value="">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_INHERIT</option><option value="below">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_BELOW</option><option value="card">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_CARD</option><option value="overlay">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_OVERLAY</option><option value="cover">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_COVER</option></field>
+                        <field name="orientation" type="list" default="" label="PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_LABEL"><option value="">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_INHERIT</option><option value="rows">PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_ROWS</option><option value="columns">PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_COLUMNS</option><option value="scroll">PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_SCROLL</option><option value="inline">PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_INLINE</option></field>
+                        <field name="columns" type="list" default="" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_LABEL"><option value="">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_INHERIT</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></field>
+                        <field name="columns_tablet" type="list" default="" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_TABLET_LABEL"><option value="">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_INHERIT</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></field>
+                        <field name="columns_mobile" type="list" default="" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_MOBILE_LABEL"><option value="">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_INHERIT</option><option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option></field>
+                        <field name="sub_mode" type="list" default="" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_LABEL"><option value="">PLG_SYSTEM_BETTERCATEGORIES_LEVEL_INHERIT</option><option value="none">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_NONE</option><option value="below">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_BELOW</option><option value="drawer">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_DRAWER</option><option value="side">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_SIDE</option><option value="flip">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_FLIP</option><option value="tooltip">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_TOOLTIP</option></field>
+                    </form>
+                </field>
+            </fieldset>
+            <fieldset name="navigation" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_NAV" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_NAV_DESC">
+                <field name="preview_navigation" type="bcpreview" hiddenLabel="true" />
+                <field name="leaf_siblings" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_LEAF_SIBLINGS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_LEAF_SIBLINGS_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="leaf_heading" type="text" default="Related categories" label="PLG_SYSTEM_BETTERCATEGORIES_LEAF_HEADING_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_LEAF_HEADING_DESC" showon="leaf_siblings:1" />
+                <field name="leaf_back" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_LEAF_BACK_LABEL" showon="leaf_siblings:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="leaf_back_label" type="text" default="Back to %s" label="PLG_SYSTEM_BETTERCATEGORIES_LEAF_BACK_TEXT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_LEAF_BACK_TEXT_DESC" showon="leaf_siblings:1[AND]leaf_back:1" />
+                <field name="schema_itemlist" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_LIST_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_LIST_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="schema_breadcrumb" type="list" default="auto" label="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_DESC">
+                    <option value="auto">PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_AUTO</option>
+                    <option value="yes">JYES</option>
+                    <option value="no">JNO</option>
+                </field>
             </fieldset>
         </fields>
     </config>
