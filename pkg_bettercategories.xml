@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="package" method="upgrade">
+    <name>Better Categories for Gridbox Package</name>
+    <packagename>bettercategories</packagename>
+    <version>1.0.0</version>
+    <creationDate>2026-09-24</creationDate>
+    <author>Merserwis</author>
+    <authorUrl>https://github.com/merserwis/</authorUrl>
+    <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <description>Better Categories for Gridbox: system plugin and administrator menu shortcut. Requires Joomla 6 and PHP 8.2+ (tested with PHP 8.5).</description>
+    <files folder="packages">
+        <file type="plugin" id="bettercategories" group="system">plg_system_bettercategories.zip</file>
+        <file type="component" id="com_bettercategories">com_bettercategories.zip</file>
+    </files>
+</extension>

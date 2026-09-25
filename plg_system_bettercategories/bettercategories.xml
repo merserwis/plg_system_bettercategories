@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="system" method="upgrade">
+    <name>plg_system_bettercategories</name>
+    <author>Merserwis</author>
+    <authorUrl>https://github.com/merserwis/</authorUrl>
+    <creationDate>2026-09-24</creationDate>
+    <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <version>1.0.0</version>
+    <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
+    <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
+    <files>
+        <folder plugin="bettercategories">services</folder>
+        <folder>src</folder>
+        <filename>script.php</filename>
+    </files>
+    <scriptfile>script.php</scriptfile>
+    <media folder="media" destination="plg_system_bettercategories">
+        <folder>css</folder>
+        <folder>js</folder>
+    </media>
+    <languages folder="language">
+        <language tag="en-GB">en-GB/plg_system_bettercategories.ini</language>
+        <language tag="en-GB">en-GB/plg_system_bettercategories.sys.ini</language>
+    </languages>
+    <config>
+        <fields name="params" addfieldprefix="Merserwis\Plugin\System\BetterCategories\Field">
+            <fieldset name="basic">
+                <field name="extension_info" type="note" class="alert alert-info"
+                    label="PLG_SYSTEM_BETTERCATEGORIES_INFO_LABEL"
+                    description="PLG_SYSTEM_BETTERCATEGORIES_INFO_DESC" />
+                <field name="app_ids" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_APP_IDS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_APP_IDS_DESC" />
+                <field name="heading" type="text" default="Categories" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_HEADING_DESC" />
+                <field name="heading_tag" type="list" default="h2" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_TAG_LABEL">
+                    <option value="h2">H2</option>
+                    <option value="h3">H3</option>
+                    <option value="h4">H4</option>
+                    <option value="div">DIV</option>
+                </field>
+                <field name="show_counter" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_COUNTER_LABEL">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="counter_leaf_only" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_COUNTER_LEAF_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COUNTER_LEAF_DESC" showon="show_counter:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="hide_products" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_HIDE_PRODUCTS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_HIDE_PRODUCTS_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="hide_filters" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_HIDE_FILTERS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_HIDE_FILTERS_DESC" showon="hide_products:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="hide_empty" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_HIDE_EMPTY_LABEL">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="cache_time" type="number" default="15" min="0" max="1440" label="PLG_SYSTEM_BETTERCATEGORIES_CACHE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CACHE_DESC" />
+                <field name="first_page_only" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FIRST_PAGE_LABEL">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+            </fieldset>
+
+            <fieldset name="layout" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LAYOUT">
+                <field name="preview_layout" type="bcpreview" hiddenLabel="true" />
+                <field name="position" type="list" default="before_products" label="PLG_SYSTEM_BETTERCATEGORIES_POSITION_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_POSITION_DESC">
+                    <option value="before_products">PLG_SYSTEM_BETTERCATEGORIES_POSITION_BEFORE_PRODUCTS</option>
+                    <option value="after_products">PLG_SYSTEM_BETTERCATEGORIES_POSITION_AFTER_PRODUCTS</option>
+                    <option value="after_intro">PLG_SYSTEM_BETTERCATEGORIES_POSITION_AFTER_INTRO</option>
+                    <option value="page_top">PLG_SYSTEM_BETTERCATEGORIES_POSITION_PAGE_TOP</option>
+                    <option value="before_item">PLG_SYSTEM_BETTERCATEGORIES_POSITION_BEFORE_ITEM</option>
+                    <option value="after_item">PLG_SYSTEM_BETTERCATEGORIES_POSITION_AFTER_ITEM</option>
+                </field>
+                <field name="item_id" type="text" default="" hint="item-1500368728" label="PLG_SYSTEM_BETTERCATEGORIES_ITEM_ID_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ITEM_ID_DESC" showon="position:before_item[OR]position:after_item" />
+                <field name="display" type="list" default="text" label="PLG_SYSTEM_BETTERCATEGORIES_DISPLAY_LABEL">
+                    <option value="text">PLG_SYSTEM_BETTERCATEGORIES_DISPLAY_TEXT</option>
+                    <option value="tiles">PLG_SYSTEM_BETTERCATEGORIES_DISPLAY_TILES</option>
+                </field>
+                <field name="orientation" type="list" default="rows" label="PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_DESC">
+                    <option value="rows">PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_ROWS</option>
+                    <option value="columns">PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_COLUMNS</option>
+                    <option value="scroll">PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_SCROLL</option>
+                    <option value="inline">PLG_SYSTEM_BETTERCATEGORIES_ORIENTATION_INLINE</option>
+                </field>
+                <field name="align" type="list" default="left" label="PLG_SYSTEM_BETTERCATEGORIES_ALIGN_LABEL">
+                    <option value="left">PLG_SYSTEM_BETTERCATEGORIES_ALIGN_LEFT</option>
+                    <option value="center">PLG_SYSTEM_BETTERCATEGORIES_ALIGN_CENTER</option>
+                    <option value="right">PLG_SYSTEM_BETTERCATEGORIES_ALIGN_RIGHT</option>
+                </field>
+                <field name="columns" type="number" default="0" min="0" max="8" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_DESC" />
+                <field name="columns_tablet" type="number" default="0" min="0" max="8" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_TABLET_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_RESPONSIVE_DESC" />
+                <field name="columns_mobile" type="number" default="0" min="0" max="8" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_RESPONSIVE_DESC" />
+                <field name="gap" type="number" default="16" min="0" max="80" label="PLG_SYSTEM_BETTERCATEGORIES_GAP_LABEL" />
+                <field name="margin_top" type="number" default="0" min="-200" max="400" label="PLG_SYSTEM_BETTERCATEGORIES_MARGIN_TOP_LABEL" />
+                <field name="margin_bottom" type="number" default="24" min="-200" max="400" label="PLG_SYSTEM_BETTERCATEGORIES_MARGIN_BOTTOM_LABEL" />
+                <field name="padding_side" type="number" default="0" min="0" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_PADDING_SIDE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_PADDING_SIDE_DESC" />
+                <field name="padding_side_mobile" type="number" default="16" min="0" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_PADDING_SIDE_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_PADDING_SIDE_DESC" />
+                <field name="heading_margin_top" type="number" default="0" min="-100" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_MARGIN_TOP_LABEL" />
+                <field name="heading_margin_bottom" type="number" default="16" min="-100" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_MARGIN_BOTTOM_LABEL" />
+            </fieldset>
+
+            <fieldset name="typography" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TYPOGRAPHY" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TYPOGRAPHY_DESC">
+                <field name="preview_typography" type="bcpreview" hiddenLabel="true" />
+                <field name="font_size" type="text" default="" hint="16px / 1rem" label="PLG_SYSTEM_BETTERCATEGORIES_FONT_SIZE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SIZE_DESC" />
+                <field name="font_size_mobile" type="text" default="" hint="14px / .9rem" label="PLG_SYSTEM_BETTERCATEGORIES_FONT_SIZE_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SIZE_MOBILE_DESC" />
+                <field name="heading_size" type="text" default="" hint="28px / 1.75rem" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_SIZE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SIZE_DESC" />
+                <field name="heading_size_mobile" type="text" default="" hint="22px / 1.4rem" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_SIZE_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SIZE_MOBILE_DESC" />
+                <field name="text_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_TEXT_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" />
+                <field name="link_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_LINK_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" />
+                <field name="link_hover_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_LINK_HOVER_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" />
+            </fieldset>
+
+            <fieldset name="tiles" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES_DESC">
+                <field name="preview_tiles" type="bcpreview" hiddenLabel="true" />
+                <field name="tile_style" type="list" default="below" label="PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_LABEL">
+                    <option value="below">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_BELOW</option>
+                    <option value="card">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_CARD</option>
+                    <option value="overlay">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_OVERLAY</option>
+                    <option value="cover">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_COVER</option>
+                </field>
+                <field name="overlay_color" type="color" default="#000000" label="PLG_SYSTEM_BETTERCATEGORIES_OVERLAY_COLOR_LABEL" showon="tile_style:overlay[OR]tile_style:cover" />
+                <field name="image_shape" type="list" default="rounded" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_SHAPE_LABEL">
+                    <option value="rect">PLG_SYSTEM_BETTERCATEGORIES_IMAGE_SHAPE_RECT</option>
+                    <option value="rounded">PLG_SYSTEM_BETTERCATEGORIES_IMAGE_SHAPE_ROUNDED</option>
+                    <option value="circle">PLG_SYSTEM_BETTERCATEGORIES_IMAGE_SHAPE_CIRCLE</option>
+                </field>
+                <field name="image_radius" type="number" default="12" min="0" max="60" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_RADIUS_LABEL" showon="image_shape:rounded" />
+                <field name="image_ratio" type="list" default="1-1" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_RATIO_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_RATIO_DESC">
+                    <option value="1-1">1:1</option>
+                    <option value="4-3">4:3</option>
+                    <option value="3-2">3:2</option>
+                    <option value="16-9">16:9</option>
+                    <option value="3-4">3:4</option>
+                </field>
+                <field name="caption_margin_top" type="number" default="10" min="-100" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_CAPTION_MARGIN_TOP_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CAPTION_MARGIN_DESC" showon="tile_style:below[OR]tile_style:card" />
+                <field name="caption_margin_bottom" type="number" default="0" min="-100" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_CAPTION_MARGIN_BOTTOM_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CAPTION_MARGIN_DESC" showon="tile_style:below[OR]tile_style:card" />
+                <field name="image_bg" type="color" default="#ffffff" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_BG_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_BG_DESC" />
+                <field name="image_fit" type="list" default="contain" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_FIT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_FIT_DESC">
+                    <option value="contain">PLG_SYSTEM_BETTERCATEGORIES_IMAGE_FIT_CONTAIN</option>
+                    <option value="cover">PLG_SYSTEM_BETTERCATEGORIES_IMAGE_FIT_COVER</option>
+                </field>
+                <field name="spacer_effects" type="spacer" label="PLG_SYSTEM_BETTERCATEGORIES_SPACER_EFFECTS" />
+                <field name="tint_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_TINT_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_TINT_COLOR_DESC" />
+                <field name="tint_opacity" type="range" default="0" min="0" max="100" step="5" label="PLG_SYSTEM_BETTERCATEGORIES_TINT_OPACITY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_PERCENT_DESC" />
+                <field name="hover_effect" type="list" default="zoom" label="PLG_SYSTEM_BETTERCATEGORIES_HOVER_LABEL">
+                    <option value="none">PLG_SYSTEM_BETTERCATEGORIES_HOVER_NONE</option>
+                    <option value="zoom">PLG_SYSTEM_BETTERCATEGORIES_HOVER_ZOOM</option>
+                    <option value="zoom_out">PLG_SYSTEM_BETTERCATEGORIES_HOVER_ZOOM_OUT</option>
+                    <option value="lift">PLG_SYSTEM_BETTERCATEGORIES_HOVER_LIFT</option>
+                    <option value="shine">PLG_SYSTEM_BETTERCATEGORIES_HOVER_SHINE</option>
+                    <option value="grayscale">PLG_SYSTEM_BETTERCATEGORIES_HOVER_GRAYSCALE</option>
+                    <option value="tint_reveal">PLG_SYSTEM_BETTERCATEGORIES_HOVER_TINT_REVEAL</option>
+                    <option value="tint_show">PLG_SYSTEM_BETTERCATEGORIES_HOVER_TINT_SHOW</option>
+                    <option value="tilt">PLG_SYSTEM_BETTERCATEGORIES_HOVER_TILT</option>
+                    <option value="ring">PLG_SYSTEM_BETTERCATEGORIES_HOVER_RING</option>
+                </field>
+                <field name="shadow" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_LABEL">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="shadow_color" type="color" default="#000000" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_COLOR_LABEL" showon="shadow:1" />
+                <field name="shadow_angle" type="range" default="90" min="0" max="360" step="5" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_ANGLE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_ANGLE_DESC" showon="shadow:1" />
+                <field name="shadow_distance" type="number" default="8" min="0" max="100" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_DISTANCE_LABEL" showon="shadow:1" />
+                <field name="shadow_blur" type="number" default="20" min="0" max="150" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_BLUR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_BLUR_DESC" showon="shadow:1" />
+                <field name="shadow_spread" type="number" default="0" min="-50" max="50" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_SPREAD_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_SPREAD_DESC" showon="shadow:1" />
+                <field name="shadow_opacity" type="range" default="20" min="0" max="100" step="5" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_OPACITY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_PERCENT_DESC" showon="shadow:1" />
+                <field name="spacer_images" type="spacer" label="PLG_SYSTEM_BETTERCATEGORIES_SPACER_IMAGES" />
+                <field name="use_gridbox_image" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_USE_GRIDBOX_IMAGE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_USE_GRIDBOX_IMAGE_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="use_popular_image" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_USE_POPULAR_IMAGE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_USE_POPULAR_IMAGE_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="category_images" type="subform" multiple="true" layout="joomla.form.field.subform.repeatable-table" buttons="add,remove,move" label="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_IMAGES_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_IMAGES_DESC">
+                    <form>
+                        <field name="category" type="gbcategories" addfieldprefix="Merserwis\Plugin\System\BetterCategories\Field" label="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_LABEL">
+                            <option value="">PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_SELECT</option>
+                        </field>
+                        <field name="image" type="media" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_LABEL" />
+                    </form>
+                </field>
+            </fieldset>
+        </fields>
+    </config>
+</extension>
