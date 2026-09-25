@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="component" method="upgrade">
+    <name>com_bettercategories</name>
+    <author>Merserwis</author>
+    <authorUrl>https://github.com/merserwis/</authorUrl>
+    <creationDate>2026-09-24</creationDate>
+    <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <version>1.0.0</version>
+    <description>Better Categories for Gridbox — administrator menu entry that opens the plugin settings.</description>
+    <namespace path="src">Merserwis\Component\BetterCategories</namespace>
+    <administration>
+        <menu img="class:folder-tree">Better Categories for Gridbox</menu>
+        <files folder="admin">
+            <folder>services</folder>
+            <folder>src</folder>
+        </files>
+    </administration>
+</extension>
