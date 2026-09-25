@@ -70,8 +70,6 @@ Uninstalling the package removes both extensions; the plugin stores nothing outs
 
 The *Layout*, *Text and colours* and *Tiles* tabs have a **live preview column**. It shows the list exactly as the plugin renders it — real categories, counts and images from your store — using the values currently in the form, before you save. Switch between **Desktop (1280 px), Tablet (820 px) and Phone (390 px)**: the preview renders at the real device width, scaled to fit, so column settings and all responsive rules apply as on the site. Pick any parent category to preview its subcategories. Sliders show their current value, and colour pickers are enlarged for easier use.
 
-![Live preview](docs/screenshots/admin-live-preview.png)
-
 ---
 
 ## ⚙️ Configuration Reference
