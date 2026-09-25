@@ -34,7 +34,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.0.0';
+    private const VERSION    = '1.1.0';
+    private const SUB_MODES  = ['none', 'below', 'drawer', 'side', 'flip', 'tooltip'];
     private const CACHE_GROUP = 'plg_system_bettercategories';
 
     /** @var int[]|null */
@@ -713,20 +714,41 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
         }
 
+        // Visible subcategories of every category (for the "what is inside" panels).
+        $kids = [];
+        foreach ($categories as $cat) {
+            if ($cat->parent > 0 && (!$p['hideEmpty'] || $cat->count > 0)) {
+                $kids[$cat->parent][] = $cat;
+            }
+        }
+
+        $id    = 'bettercategories-' . substr(md5($appId . '-' . $categoryId . '-' . microtime()), 0, 8);
+        $link  = fn ($cat) => $this->preview ? '#' : htmlspecialchars(Route::_($this->categoryLink($appId, $cat->id, $categories)), ENT_QUOTES, 'UTF-8');
         $items = '';
+        $count = 0;
+        $withSub = false;
         foreach ($children as $cat) {
             if ($p['hideEmpty'] && $cat->count === 0) {
                 continue;
             }
+            $count++;
 
-            $url   = $this->preview ? '#' : htmlspecialchars(Route::_($this->categoryLink($appId, $cat->id, $categories)), ENT_QUOTES, 'UTF-8');
+            $url   = $link($cat);
             $title = htmlspecialchars($cat->title, ENT_QUOTES, 'UTF-8');
             // "Last level only": the count is shown only on categories without visible subcategories.
             $showCount = $p['counter'] && (!$p['counterLeafOnly'] || empty($branches[$cat->id]));
-            $count     = $showCount ? ' <span class="bettercategories-count">(' . $cat->count . ')</span>' : '';
+            $countHtml = $showCount ? ' <span class="bettercategories-count">(' . $cat->count . ')</span>' : '';
+
+            // Panel listing the subcategories of this category ("what is inside").
+            $sub = $toggle = '';
+            if ($p['subMode'] !== 'none' && !empty($kids[$cat->id])) {
+                $withSub = true;
+                [$toggle, $sub] = $this->subPanel($id . '-' . $cat->id, $cat, $kids[$cat->id], $url, $link, $p);
+            }
+            $liClass = $sub !== '' ? ' bettercategories-has-sub' : '';
 
             if ($p['display'] !== 'tiles') {
-                $items .= '<li class="bettercategories-item"><a class="bettercategories-link" href="' . $url . '">' . $title . '</a>' . $count . '</li>';
+                $items .= '<li class="bettercategories-item' . $liClass . '"><a class="bettercategories-link" href="' . $url . '">' . $title . '</a>' . $countHtml . $toggle . $sub . '</li>';
                 continue;
             }
 
@@ -739,19 +761,22 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
             $src = htmlspecialchars($this->imageUrl($image), ENT_QUOTES, 'UTF-8');
 
-            $items .= '<li class="bettercategories-item bettercategories-tile"><a class="bettercategories-link" href="' . $url . '">'
+            $front = '<a class="bettercategories-link" href="' . $url . '">'
                 . '<span class="bettercategories-media' . ($src === '' ? ' bettercategories-media--empty' : '') . '">'
                 . ($src !== '' ? '<img src="' . $src . '" alt="' . $title . '" loading="lazy" decoding="async">' : '')
                 . ($p['hover'] === 'shine' ? '<span class="bettercategories-shine" aria-hidden="true"></span>' : '')
                 . '</span>'
-                . '<span class="bettercategories-caption"><span class="bettercategories-name">' . $title . '</span>' . $count . '</span>'
-                . '</a></li>';
+                . '<span class="bettercategories-caption"><span class="bettercategories-name">' . $title . '</span>' . $countHtml . '</span>'
+                . '</a>';
+            // Card flip: the front (tile) and the back (subcategories) turn together; the button stays outside.
+            $body = $sub !== '' && $p['subMode'] === 'flip' ? $toggle . '<div class="bettercategories-card">' . $front . $sub . '</div>' : $front . $toggle . $sub;
+
+            $items .= '<li class="bettercategories-item bettercategories-tile' . $liClass . '">' . $body . '</li>';
         }
         if ($items === '') {
             return '';
         }
 
-        $id      = 'bettercategories-' . substr(md5($appId . '-' . $categoryId . '-' . microtime()), 0, 8);
         $classes = [
             'bettercategories',
             'bettercategories--' . $p['display'],
@@ -762,6 +787,11 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $classes[] = 'bettercategories--style-' . $p['style'];
             $classes[] = 'bettercategories--shape-' . $p['shape'];
         }
+        if ($withSub) {
+            $classes[] = 'bettercategories--sub-' . $p['subMode'];
+        }
+        $p['items']   = $count;
+        $p['withSub'] = $withSub;
 
         $heading  = $p['heading'];
         $headAttr = htmlspecialchars($heading !== '' ? $heading : 'Categories', ENT_QUOTES, 'UTF-8');
@@ -769,7 +799,70 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         return $this->css($id, $p)
             . '<nav id="' . $id . '" class="' . implode(' ', $classes) . '" aria-label="' . $headAttr . '">'
             . ($heading !== '' ? '<' . $p['headingTag'] . ' class="bettercategories-title">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</' . $p['headingTag'] . '>' : '')
-            . '<ul class="bettercategories-list">' . $items . '</ul></nav>';
+            . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
+            . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id) : '');
+    }
+
+    /**
+     * "What is inside" panel of one category: optional title, links to its subcategories (up to the
+     * limit, then "+N more"), and for the card back a link to the whole category. Interactive modes
+     * get a toggle button (touch screens, keyboard); hover opens them too unless "click only" is set.
+     */
+    /** @return array{0: string, 1: string} toggle button, panel */
+    private function subPanel(string $panelId, object $cat, array $kids, string $url, callable $link, array $p): array
+    {
+        $max   = $p['subMax'] > 0 ? $p['subMax'] : count($kids);
+        $shown = array_slice($kids, 0, $max);
+        $more  = count($kids) - count($shown);
+
+        $list = '';
+        foreach ($shown as $kid) {
+            $list .= '<li><a href="' . $link($kid) . '">' . htmlspecialchars($kid->title, ENT_QUOTES, 'UTF-8') . '</a>'
+                . ($p['subCounts'] ? ' <span class="bettercategories-count">(' . $kid->count . ')</span>' : '') . '</li>';
+        }
+        if ($more > 0) {
+            $list .= '<li class="bettercategories-sub-more"><a href="' . $url . '">' . htmlspecialchars(sprintf($p['subMoreLabel'], $more), ENT_QUOTES, 'UTF-8') . '</a></li>';
+        }
+
+        $inner = ($p['subTitle'] !== '' ? '<div class="bettercategories-sub-title">' . htmlspecialchars($p['subTitle'], ENT_QUOTES, 'UTF-8') . '</div>' : '')
+            . '<ul class="bettercategories-sublist bettercategories-sublist--' . $p['subStyle'] . '">' . $list . '</ul>'
+            . ($p['subMode'] === 'flip' ? '<a class="bettercategories-sub-all" href="' . $url . '">' . htmlspecialchars($p['subAllLabel'], ENT_QUOTES, 'UTF-8') . '</a>' : '');
+
+        if ($p['subMode'] === 'below') {
+            return ['', '<div class="bettercategories-sub">' . $inner . '</div>'];
+        }
+
+        $label = htmlspecialchars(sprintf($p['subToggleLabel'], $cat->title), ENT_QUOTES, 'UTF-8');
+
+        return [
+            '<button type="button" class="bettercategories-toggle" aria-expanded="false" aria-controls="' . $panelId . '" aria-label="' . $label . '" title="' . $label . '">'
+                . '<svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true" focusable="false"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg></button>',
+            '<div class="bettercategories-sub" id="' . $panelId . '"><div class="bettercategories-sub-inner">' . $inner . '</div></div>',
+        ];
+    }
+
+    /**
+     * Toggle buttons of one block: open/close a panel, close the others, close on Escape or a click
+     * outside. Scoped to the block; no dependencies.
+     */
+    private function subScript(string $id): string
+    {
+        return '<script>(function(n){if(!n)return;'
+            // fit(): a tooltip stays inside the window; a drawer under a narrow tile (< 200 px) opens
+            // across the whole row of the list, so its text is not squeezed into the tile width.
+            . 'var tip=n.classList.contains("bettercategories--sub-tooltip"),dr=n.classList.contains("bettercategories--sub-drawer"),ul=n.querySelector(".bettercategories-list");'
+            . 'function fit(li){var s=li.querySelector(".bettercategories-sub");if(!s)return;'
+            . 'if(tip){s.classList.remove("bettercategories-sub--down");s.style.setProperty("--bc-dx","0px");var r=s.getBoundingClientRect();if(r.top<8){s.classList.add("bettercategories-sub--down");r=s.getBoundingClientRect();}var w=document.documentElement.clientWidth,d=0;if(r.left<8)d=8-r.left;else if(r.right>w-8)d=w-8-r.right;s.style.setProperty("--bc-dx",Math.round(d)+"px");}'
+            . 'else if(dr&&ul){var a=ul.getBoundingClientRect(),b=li.getBoundingClientRect();if(b.width<200&&a.width>b.width+1){s.style.width=a.width+"px";s.style.marginLeft=Math.round(a.left-b.left)+"px";}else{s.style.width="";s.style.marginLeft="";}}}'
+            . 'if(tip||dr){var last=null;n.addEventListener("pointerover",function(e){var li=e.target.closest(".bettercategories-has-sub");if(li&&li!==last){last=li;fit(li);}});'
+            . 'n.addEventListener("focusin",function(e){var li=e.target.closest(".bettercategories-has-sub");if(li)fit(li);});'
+            . 'window.addEventListener("resize",function(){last=null;n.querySelectorAll(".bettercategories-has-sub.is-open").forEach(fit);});}'
+            . 'function set(li,o){if(o)fit(li);li.classList.toggle("is-open",o);var b=li.querySelector(".bettercategories-toggle");if(b)b.setAttribute("aria-expanded",o?"true":"false");}'
+            . 'function closeAll(k){n.querySelectorAll(".bettercategories-item.is-open").forEach(function(li){if(li!==k)set(li,false);});}'
+            . 'n.addEventListener("click",function(e){var b=e.target.closest(".bettercategories-toggle");if(!b||!n.contains(b))return;e.preventDefault();var li=b.closest(".bettercategories-item");var o=!li.classList.contains("is-open");closeAll(li);set(li,o);});'
+            . 'document.addEventListener("click",function(e){if(!n.contains(e.target))closeAll(null);});'
+            . 'n.addEventListener("keydown",function(e){if(e.key==="Escape"){var li=e.target.closest(".bettercategories-item.is-open");closeAll(null);if(li){var b=li.querySelector(".bettercategories-toggle");if(b)b.focus();}}});'
+            . '})(document.getElementById("' . $id . '"));</script>';
     }
 
     /** Validated settings (every value is safe to print into CSS/HTML). */
@@ -836,6 +929,18 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'headBottom'   => $int('heading_margin_bottom', 16, -100, 200),
             'capTop'       => $int('caption_margin_top', 10, -100, 200),
             'capBottom'    => $int('caption_margin_bottom', 0, -100, 200),
+            'fill'         => $pick('fill_mode', ['left', 'center', 'stretch'], 'left'),
+            'subMode'      => $this->subMode($display, $this->preview ? 'desktop' : $this->device()),
+            'subTrigger'   => $pick('sub_trigger', ['hover', 'click'], 'hover'),
+            'subStyle'     => $pick('sub_style', ['list', 'inline', 'chips'], 'list'),
+            'subTitle'     => trim((string) $this->params->get('sub_title', 'In this category:')),
+            'subMax'       => $int('sub_max', 6, 0, 50),
+            'subCounts'    => (bool) $this->params->get('sub_counts', 0),
+            'subBg'        => $this->cssColor((string) $this->params->get('sub_bg', '#ffffff')) ?: '#ffffff',
+            'subColor'     => $this->cssColor((string) $this->params->get('sub_color', '')),
+            'subAllLabel'  => trim((string) $this->params->get('sub_all_label', 'View all')) ?: 'View all',
+            'subMoreLabel' => $this->printfLabel((string) $this->params->get('sub_more_label', '+%d more'), '+%d more'),
+            'subToggleLabel' => $this->printfLabel((string) $this->params->get('sub_toggle_label', 'Subcategories of %s'), 'Subcategories of %s', 's'),
         ];
     }
 
@@ -857,6 +962,35 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
 
         return in_array($value, self::DIRECTIONS, true) ? $value : 'rows';
+    }
+
+    /**
+     * Subcategory panel mode; card flip and side drawer need tiles (text links fall back to the drawer).
+     * Phones can use their own mode: "auto" turns the flip and side panel (too small on a narrow tile)
+     * into the drawer, "same" keeps the main mode.
+     */
+    private function subMode(string $display, string $device): string
+    {
+        $mode = (string) $this->params->get('sub_mode', 'none');
+        $mode = in_array($mode, self::SUB_MODES, true) ? $mode : 'none';
+        if ($device === 'mobile' && $mode !== 'none') {
+            $phone = (string) $this->params->get('sub_mode_mobile', 'auto');
+            if ($phone === 'auto') {
+                $mode = in_array($mode, ['flip', 'side'], true) ? 'drawer' : $mode;
+            } elseif ($phone !== 'same' && in_array($phone, self::SUB_MODES, true)) {
+                $mode = $phone;
+            }
+        }
+
+        return $display !== 'tiles' && in_array($mode, ['flip', 'side'], true) ? 'drawer' : $mode;
+    }
+
+    /** A label with exactly one printf placeholder of the given type (%d or %s), else the default. */
+    private function printfLabel(string $value, string $default, string $type = 'd'): string
+    {
+        $value = trim(str_replace('%%', '', $value)) === '' ? '' : trim($value);
+
+        return $value !== '' && substr_count($value, '%') === 1 && str_contains($value, '%' . $type) ? $value : $default;
     }
 
     private function cssSize(string $value): string
@@ -892,9 +1026,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'tablet'  => ['cols' => $tablet, 'font' => $p['fontSize'], 'head' => $p['headingSize'], 'pad' => $p['padSide']],
             'mobile'  => ['cols' => $mobile, 'font' => $p['fontSizeMob'] ?: $p['fontSize'], 'head' => $p['headingSizeMob'] ?: $p['headingSize'], 'pad' => $p['padSideMob']],
         ];
-        $block = function (array $d) use ($s): string {
+        $block = function (array $d) use ($s, $p): string {
             return "$s{--bcat-cols:{$d['cols']};padding-left:{$d['pad']}px;padding-right:{$d['pad']}px;" . ($d['font'] ? "font-size:{$d['font']};" : '') . '}'
-                . ($d['head'] ? "$s .bettercategories-title{font-size:{$d['head']};}" : '');
+                . ($d['head'] ? "$s .bettercategories-title{font-size:{$d['head']};}" : '')
+                . $this->fillCss($s, $p, (int) $d['cols']);
         };
 
         $rows[] = "$s{--bcat-gap:{$p['gap']}px;margin:{$p['marginTop']}px 0 {$p['marginBottom']}px;text-align:{$p['align']};"
@@ -1028,6 +1163,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $rows[] = '@media (min-width:769px) and (max-width:1024px){ ' . $block($devices['tablet']) . ' }';
         $rows[] = '@media (max-width:768px){ ' . $block($devices['mobile']) . ' }';
 
+        if ($p['withSub']) {
+            $rows[] = $this->subCss($s, $p);
+        }
+
         if ($p['hideProducts'] && !$this->preview) {
             // Parent categories list subcategories only; products appear on the last level.
             $rows[] = '.ba-item-blog-posts{display:none!important}';
@@ -1037,6 +1176,146 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
 
         return '<style>' . implode('', $rows) . '</style>';
+    }
+
+    /**
+     * Fewer items than columns on this device: keep them left (default), centre them at the normal
+     * column width, or stretch them over the full width.
+     */
+    private function fillCss(string $s, array $p, int $cols): string
+    {
+        $n = (int) ($p['items'] ?? 0);
+        if ($p['fill'] === 'left' || $n <= 0 || $n >= $cols) {
+            return '';
+        }
+
+        $width = "calc((100% - ($cols - 1)*var(--bcat-gap))/$cols)";
+        switch ($p['orientation']) {
+            case 'rows':
+                return $p['fill'] === 'stretch'
+                    ? "$s .bettercategories-list{grid-template-columns:repeat($n,minmax(0,1fr));}"
+                    : "$s .bettercategories-list{grid-template-columns:repeat($n,$width);justify-content:center;}";
+            case 'scroll':
+                return $p['fill'] === 'stretch'
+                    ? "$s .bettercategories-list{grid-auto-columns:calc((100% - ($n - 1)*var(--bcat-gap))/$n);}"
+                    : "$s .bettercategories-list{justify-content:center;}";
+            case 'columns':
+                return $p['fill'] === 'stretch'
+                    ? "$s .bettercategories-list{column-count:$n;}"
+                    : "$s .bettercategories-list{column-count:$n;max-width:calc($n*$width + ($n - 1)*var(--bcat-gap));margin-left:auto;margin-right:auto;}";
+            default: // inline text links
+                return $p['fill'] === 'stretch'
+                    ? "$s .bettercategories-item{flex:1 1 0;text-align:center;}"
+                    : "$s .bettercategories-list{justify-content:center;}";
+        }
+    }
+
+    /** Styles of the subcategory panels ("what is inside") for the chosen mode. */
+    private function subCss(string $s, array $p): string
+    {
+        $mode   = $p['subMode'];
+        $bg     = $p['subBg'];
+        $color  = $p['subColor'] ? "color:{$p['subColor']};" : '';
+        $ease   = 'cubic-bezier(.2,.7,.2,1)';
+        $radius = $p['display'] === 'tiles' ? ['rect' => '0', 'rounded' => $p['radius'] . 'px', 'circle' => '14px'][$p['shape']] : '8px';
+        $open   = "$s .bettercategories-has-sub.is-open";
+        // Hover opens panels only where a real pointer can hover (touch screens use the button).
+        $hover  = $p['subTrigger'] === 'hover';
+        // Keyboard focus on the category link opens the drawer and tooltip (flip and side would cover
+        // the focused link); focus inside a panel keeps it open. Focus on the toggle button does not,
+        // so Escape (which returns focus to the button) really closes the panel.
+        $focus  = in_array($mode, ['drawer', 'tooltip'], true)
+            ? "$s .bettercategories-has-sub:has(.bettercategories-link:focus-visible,.bettercategories-sub:focus-within)"
+            : "$s .bettercategories-has-sub:has(.bettercategories-sub:focus-within)";
+        $both   = fn (string $sel, string $decl) => "$open $sel,$focus $sel{{$decl}}"
+            . ($hover ? "@media (hover:hover){ $s .bettercategories-has-sub:hover $sel{{$decl}} }" : '');
+
+        $r = [];
+        // Shared content
+        $r[] = "$s .bettercategories-sub-title{font-weight:600;font-size:.85em;opacity:.8;margin:0 0 .35em;}";
+        $r[] = "$s .bettercategories-sublist{list-style:none;margin:0;padding:0;font-size:.9em;line-height:1.45;}";
+        $r[] = "$s .bettercategories-sublist li{margin:0;padding:0;}";
+        $r[] = "$s .bettercategories-sublist a{text-decoration:none;" . ($p['linkColor'] ? "color:{$p['linkColor']};" : '') . '}';
+        $r[] = "$s .bettercategories-sublist a:hover{text-decoration:underline;}";
+        $r[] = "$s .bettercategories-sublist--inline li{display:inline;}";
+        $r[] = "$s .bettercategories-sublist--inline li:not(:last-child)::after{content:', ';}";
+        $r[] = "$s .bettercategories-sublist--chips{display:flex;flex-wrap:wrap;gap:6px;}";
+        $r[] = "$s .bettercategories-sublist--chips a{display:inline-block;padding:3px 10px;border-radius:999px;background:rgba(0,0,0,.06);font-size:.9em;}";
+        $r[] = "$s .bettercategories-sublist--chips a:hover{text-decoration:none;background:rgba(0,0,0,.12);}";
+        $r[] = "$s .bettercategories-sub-more a{font-weight:600;}";
+        $r[] = "$s .bettercategories-sub-all{display:inline-block;margin-top:.6em;font-weight:600;text-decoration:none;" . ($p['linkColor'] ? "color:{$p['linkColor']};" : '') . '}';
+        $r[] = "$s .bettercategories-has-sub{position:relative;}";
+
+        if ($mode === 'below' || $mode === 'drawer') {
+            // the list sits under the tile: the tile must not stretch over the list's space
+            $r[] = "$s .bettercategories-has-sub > .bettercategories-link{height:auto;}";
+        }
+        if ($mode === 'below') {
+            $r[] = "$s .bettercategories-sub{margin-top:.4em;text-align:inherit;$color}";
+            if ($p['display'] === 'tiles') {
+                $r[] = "$s .bettercategories-tile .bettercategories-sub{text-align:{$p['align']};}";
+            }
+
+            return implode('', $r);
+        }
+
+        // Toggle button: "+" that turns into "×"
+        $r[] = "$s .bettercategories-toggle{position:absolute;top:8px;right:8px;z-index:6;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333;}";
+        $r[] = "$s .bettercategories-toggle svg{display:block;width:12px;height:12px;transition:transform .3s $ease;}";
+        $r[] = "$open .bettercategories-toggle svg{transform:rotate(45deg);}";
+        $r[] = "$s .bettercategories-toggle:focus-visible{outline:2px solid currentColor;outline-offset:2px;}";
+        if ($p['display'] !== 'tiles') {
+            $r[] = "$s .bettercategories-toggle{position:relative;top:auto;right:auto;display:inline-flex;vertical-align:middle;width:22px;height:22px;margin-left:6px;box-shadow:none;background:rgba(0,0,0,.06);}";
+        }
+
+        switch ($mode) {
+            case 'drawer':
+                // Slides open below the category and pushes the rest of the layout down.
+                $r[] = "$s .bettercategories-list{align-items:start;}";
+                $r[] = "$s .bettercategories-sub{display:grid;grid-template-rows:0fr;transition:grid-template-rows .35s $ease;}";
+                $r[] = "$s .bettercategories-sub-inner{overflow:hidden;min-height:0;}";
+                $r[] = "$s .bettercategories-sub-inner > *:first-child{margin-top:.6em;}";
+                $r[] = "$s .bettercategories-sub-inner{padding:0 .75em;border-radius:$radius;background:$bg;$color}";
+                $r[] = $both('.bettercategories-sub', 'grid-template-rows:1fr;');
+                // a drawer widened across the row (narrow tiles) lies over the neighbouring tiles' free space
+                $r[] = "$open,$focus" . "{z-index:7;}" . ($hover ? "@media (hover:hover){ $s .bettercategories-has-sub:hover{z-index:7;} }" : '');
+                $r[] = $both('.bettercategories-sub-inner', 'padding-bottom:.6em;box-shadow:0 4px 14px rgba(0,0,0,.08);');
+                break;
+
+            case 'side':
+                // Slides in from the side over the tile.
+                $r[] = "$s .bettercategories-tile{overflow:hidden;border-radius:$radius;}";
+                $r[] = "$s .bettercategories-sub{position:absolute;inset:0;z-index:5;overflow:hidden auto;overflow-wrap:break-word;scrollbar-width:thin;padding:14px 44px 14px 14px;background:$bg;$color"
+                    . "transform:translateX(102%);transition:transform .4s $ease;text-align:left;}";
+                $r[] = $both('.bettercategories-sub', 'transform:translateX(0);box-shadow:-6px 0 18px rgba(0,0,0,.12);');
+                break;
+
+            case 'flip':
+                // The tile turns over; its back lists the subcategories.
+                $r[] = "$s .bettercategories-tile{perspective:1200px;}";
+                $r[] = "$s .bettercategories-card{position:relative;height:100%;transform-style:preserve-3d;transition:transform .6s $ease;}";
+                $r[] = "$s .bettercategories-card > .bettercategories-link{backface-visibility:hidden;-webkit-backface-visibility:hidden;}";
+                $r[] = "$s .bettercategories-sub{position:absolute;inset:0;z-index:5;overflow:hidden auto;overflow-wrap:break-word;scrollbar-width:thin;padding:16px 44px 16px 16px;border-radius:$radius;background:$bg;$color"
+                    . "transform:rotateY(180deg);backface-visibility:hidden;-webkit-backface-visibility:hidden;text-align:left;box-shadow:0 6px 18px rgba(0,0,0,.12);}";
+                $r[] = $both('.bettercategories-card', 'transform:rotateY(180deg);');
+                break;
+
+            case 'tooltip':
+                // A small bubble above the category.
+                $r[] = "$s .bettercategories-sub{position:absolute;left:50%;bottom:calc(100% + 10px);z-index:30;width:max-content;max-width:min(300px,90vw);padding:12px 14px;border-radius:10px;background:$bg;$color"
+                    . "box-shadow:0 10px 30px rgba(0,0,0,.18);text-align:left;opacity:0;visibility:hidden;pointer-events:none;transform:translate(calc(-50% + var(--bc-dx,0px)),6px);transition:opacity .2s,transform .2s $ease,visibility 0s linear .2s;}";
+                $r[] = "$s .bettercategories-sub::after{content:'';position:absolute;left:50%;top:100%;margin-left:calc(-7px - var(--bc-dx,0px));border:7px solid transparent;border-top-color:$bg;}";
+                // an invisible bridge so the pointer can move from the category to the bubble
+                $r[] = "$s .bettercategories-sub::before{content:'';position:absolute;left:0;right:0;top:100%;height:12px;}";
+                // no room above (top of the window): the bubble opens below the category
+                $r[] = "$s .bettercategories-sub.bettercategories-sub--down{bottom:auto;top:calc(100% + 10px);}";
+                $r[] = "$s .bettercategories-sub--down::after{top:auto;bottom:100%;border-top-color:transparent;border-bottom-color:$bg;}";
+                $r[] = "$s .bettercategories-sub--down::before{top:auto;bottom:100%;}";
+                $r[] = $both('.bettercategories-sub', 'opacity:1;visibility:visible;pointer-events:auto;transform:translate(calc(-50% + var(--bc-dx,0px)),0);transition-delay:0s;');
+                break;
+        }
+
+        return implode('', $r);
     }
 
     /**

@@ -6,7 +6,7 @@
     <creationDate>2026-09-24</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 2 or later</license>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -91,6 +91,11 @@
                     <option value="right">PLG_SYSTEM_BETTERCATEGORIES_ALIGN_RIGHT</option>
                 </field>
                 <field name="columns" type="number" default="0" min="0" max="8" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_DESC" />
+                <field name="fill_mode" type="list" default="left" label="PLG_SYSTEM_BETTERCATEGORIES_FILL_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILL_DESC">
+                    <option value="left">PLG_SYSTEM_BETTERCATEGORIES_FILL_LEFT</option>
+                    <option value="center">PLG_SYSTEM_BETTERCATEGORIES_FILL_CENTER</option>
+                    <option value="stretch">PLG_SYSTEM_BETTERCATEGORIES_FILL_STRETCH</option>
+                </field>
                 <field name="columns_tablet" type="number" default="0" min="0" max="8" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_TABLET_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_RESPONSIVE_DESC" />
                 <field name="columns_mobile" type="number" default="0" min="0" max="8" label="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLUMNS_RESPONSIVE_DESC" />
                 <field name="gap" type="number" default="16" min="0" max="80" label="PLG_SYSTEM_BETTERCATEGORIES_GAP_LABEL" />
@@ -184,6 +189,45 @@
                         <field name="image" type="media" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_LABEL" />
                     </form>
                 </field>
+            </fieldset>
+            <fieldset name="subcategories" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SUB" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SUB_DESC">
+                <field name="preview_subcategories" type="bcpreview" hiddenLabel="true" />
+                <field name="sub_mode" type="list" default="none" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_DESC">
+                    <option value="none">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_NONE</option>
+                    <option value="below">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_BELOW</option>
+                    <option value="drawer">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_DRAWER</option>
+                    <option value="side">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_SIDE</option>
+                    <option value="flip">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_FLIP</option>
+                    <option value="tooltip">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_TOOLTIP</option>
+                </field>
+                <field name="sub_trigger" type="list" default="hover" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_TRIGGER_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_TRIGGER_DESC" showon="sub_mode:drawer[OR]sub_mode:side[OR]sub_mode:flip[OR]sub_mode:tooltip">
+                    <option value="hover">PLG_SYSTEM_BETTERCATEGORIES_SUB_TRIGGER_HOVER</option>
+                    <option value="click">PLG_SYSTEM_BETTERCATEGORIES_SUB_TRIGGER_CLICK</option>
+                </field>
+                <field name="sub_mode_mobile" type="list" default="auto" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_MOBILE_DESC" showon="sub_mode!:none">
+                    <option value="auto">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_MOBILE_AUTO</option>
+                    <option value="same">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_MOBILE_SAME</option>
+                    <option value="none">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_NONE</option>
+                    <option value="below">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_BELOW</option>
+                    <option value="drawer">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_DRAWER</option>
+                    <option value="tooltip">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_TOOLTIP</option>
+                </field>
+                <field name="sub_title" type="text" default="In this category:" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_TITLE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_TITLE_DESC" showon="sub_mode!:none" />
+                <field name="sub_style" type="list" default="list" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_STYLE_LABEL" showon="sub_mode!:none">
+                    <option value="list">PLG_SYSTEM_BETTERCATEGORIES_SUB_STYLE_LIST</option>
+                    <option value="inline">PLG_SYSTEM_BETTERCATEGORIES_SUB_STYLE_INLINE</option>
+                    <option value="chips">PLG_SYSTEM_BETTERCATEGORIES_SUB_STYLE_CHIPS</option>
+                </field>
+                <field name="sub_max" type="number" default="6" min="0" max="50" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_MAX_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_MAX_DESC" showon="sub_mode!:none" />
+                <field name="sub_counts" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_COUNTS_LABEL" showon="sub_mode!:none">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="sub_bg" type="color" default="#ffffff" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_BG_LABEL" showon="sub_mode:drawer[OR]sub_mode:side[OR]sub_mode:flip[OR]sub_mode:tooltip" />
+                <field name="sub_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="sub_mode!:none" />
+                <field name="sub_more_label" type="text" default="+%d more" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_MORE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_MORE_DESC" showon="sub_mode!:none" />
+                <field name="sub_all_label" type="text" default="View all" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_ALL_LABEL" showon="sub_mode:flip" />
+                <field name="sub_toggle_label" type="text" default="Subcategories of %s" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_TOGGLE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_TOGGLE_DESC" showon="sub_mode:drawer[OR]sub_mode:side[OR]sub_mode:flip[OR]sub_mode:tooltip" />
             </fieldset>
         </fields>
     </config>
