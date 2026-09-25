@@ -210,6 +210,6 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 ## 📄 License & Maintainer
 
-* **License:** GNU General Public License version 2 or later.
+* **License:** GNU General Public License version 3.
 * **Maintainer:** [Merserwis](https://github.com/merserwis/)
 * *Balbooa* and *Gridbox* are trademarks of their respective owners. This project is not affiliated with Balbooa.
