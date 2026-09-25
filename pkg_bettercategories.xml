@@ -13,4 +13,7 @@
         <file type="plugin" id="bettercategories" group="system">plg_system_bettercategories.zip</file>
         <file type="component" id="com_bettercategories">com_bettercategories.zip</file>
     </files>
+    <updateservers>
+        <server type="extension" priority="1" name="Better Categories for Gridbox Updates">https://raw.githubusercontent.com/merserwis/plg_system_bettercategories/main/update.xml</server>
+    </updateservers>
 </extension>
