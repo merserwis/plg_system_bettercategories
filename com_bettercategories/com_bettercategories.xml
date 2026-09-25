@@ -6,7 +6,7 @@
     <creationDate>2026-09-24</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 2 or later</license>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
     <description>Better Categories for Gridbox — administrator menu entry that opens the plugin settings.</description>
     <namespace path="src">Merserwis\Component\BetterCategories</namespace>
     <administration>
