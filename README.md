@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.2.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.3.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below.
@@ -24,6 +24,10 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **Per-level settings (new in 1.2.0):** Large image tiles on the store home page, compact text links deeper down — heading, display, tile style, direction, columns and the *what is inside* mode can differ per level of the tree.
 * **Sibling bar on the last level (new in 1.2.0):** A category without subcategories shows the categories next to it (current one highlighted) and a link back to the parent, so shoppers switch without going back. It scrolls sideways on phones.
 * **Structured data (new in 1.2.0):** The listed categories as a schema.org `ItemList`, and a `BreadcrumbList` (store → parents → current category) that is added only when the page has none of its own.
+* **Lowest price on every category (new in 1.3.0):** “from 1 290 zł” under each category — the lowest price in its subtree, taking sale prices, store sales and product variations into account, in the store currency (also the one picked in Gridbox's currency switcher).
+* **A module for any page (new in 1.3.0):** `mod_bettercategories` shows the list of any store category — or the store home — in a module position or a Gridbox *Joomla Module* element, e.g. on the home page, with the plugin's styles and its own overrides.
+* **Faster first view (new in 1.3.0):** thumbnails can be generated for the whole store with one click, and the first row of tiles loads with high priority (better LCP in PageSpeed).
+* **Settings file (new in 1.3.0):** export all settings or only the styles to a JSON file and import them on another site.
 * **Smart category images:** Tile images come from, in order: an image chosen for the category in the plugin → the image set on the category in Gridbox → **the image of the most viewed product** in the category and its subcategories. Categories need no manual work to look good.
 * **Modern hover effects:** Zoom in, zoom out, lift with shadow, light shine, grayscale-to-colour, tint fade-in / fade-out, tilt, outline ring — or none.
 * **Full visual control:** Position on the page, alignment, direction, responsive columns (desktop / tablet / phone), font sizes and colours (empty = Gridbox theme), image shape (rectangle, rounded corners, circle), aspect ratio, fit, background, colour tint, drop shadow (angle, distance, blur, size, opacity) and spacing.
@@ -57,7 +61,7 @@ Nothing is written to the database and Gridbox files are not modified; the only 
 
 ## 🚀 Installation & Package Structure
 
-1. Download `pkg_bettercategories-1.2.0.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
+1. Download `pkg_bettercategories-1.3.0.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
 2. In the Joomla administrator go to **System → Install → Extensions** and upload the package.
 3. On a fresh install the plugin is **enabled automatically**; an update keeps whatever you chose before. If Balbooa Gridbox is not installed, the installer says so in a notice.
 4. Open **Better Categories for Gridbox** in the administrator menu (or *System → Plugins → System - Better Categories for Gridbox*) and adjust the settings.
@@ -66,9 +70,10 @@ Nothing is written to the database and Gridbox files are not modified; the only 
 |---|---|---|
 | `plg_system_bettercategories` | System plugin | Renders the subcategory list on Gridbox store category pages. |
 | `com_bettercategories` | Administrator component | Menu entry *Better Categories for Gridbox* that opens the plugin settings. |
-| `pkg_bettercategories` | Package | Installs and updates both in one step. |
+| `mod_bettercategories` | Site module | The list of any store category in a module position or a Gridbox *Joomla Module* element. |
+| `pkg_bettercategories` | Package | Installs and updates all three in one step. |
 
-Uninstalling the package removes both extensions; the plugin stores nothing outside its own settings.
+Uninstalling the package removes all three extensions and the thumbnails; the plugin stores nothing else outside its own settings.
 
 **Updates:** the package registers the update server `https://raw.githubusercontent.com/merserwis/plg_system_bettercategories/main/update.xml`, so new releases appear in *System → Update → Extensions*. Joomla verifies each download against the SHA-256 checksum in `update.xml`.
 
@@ -97,6 +102,7 @@ Empty typography and colour fields always mean **"use the Gridbox theme value"**
 | Also hide product filters | No | Hide the Gridbox product filters on the same pages. |
 | Hide subcategories without products | Yes | Skips subcategories whose count is 0 (e.g. *Uncategorised*). |
 | First page of the list only | Yes | No list on `?page=2` and further. |
+| Settings file | — | **Export all settings**, **Export styles only** (without store IDs, element ID and category images, so the file fits another site) and **Import from file…**. Export takes the values currently in the form. Import checks the file, takes only known settings (plain values, nothing else), saves them at once and reloads the page; *Import styles only* keeps this site's store IDs, element ID and category images. |
 | Cache time (minutes) | `15` | The finished list is stored and reused (per category, device, language and access level), so pages are not slowed down. `0` = no cache. Saving the settings clears it, together with Joomla's and Gridbox's page caches. |
 
 ### Layout
@@ -129,6 +135,9 @@ Column counts work even on sites that strip `@media` rules from the HTML served 
 | Text colour | *(theme)* | Heading, counts and texts. |
 | Link colour | *(theme)* | Category names. |
 | Link hover colour | *(theme)* | Also the colour of the *Outline* hover effect. |
+| Show the lowest price | No | Under each category: the lowest price of its products, including subcategories — the sale price when set, otherwise the price after an active store sale, over all product variations; products without a price are left out. Shown in the store currency with its separators, decimals and symbol position; the currency picked in Gridbox's currency switcher is respected (cached separately). |
+| Price text | `from %s` | `%s` = the price with the currency, e.g. `from %s net`. |
+| Price colour | *(text colour)* | |
 
 ### Tiles
 
@@ -155,6 +164,8 @@ Column counts work even on sites that strip `@media` rules from the HTML served 
 | Most popular product image | Yes | Otherwise use the image of the most viewed visible product in the category and its subcategories. |
 | Fast thumbnails (WebP) | Yes | Small WebP copies instead of full-size photos: one at the thumbnail width, one twice as wide for sharp screens (`srcset`). Made once, kept in `media/plg_system_bettercategories/thumbs`; a changed image gets new copies. External images, images not larger than the tile and servers without WebP support in PHP GD keep the original image. |
 | Thumbnail width (px) / quality | `480` / `80` | Width of the smaller copy (160–1600) and WebP quality (40–95). |
+| Thumbnails — tools | — | **Generate thumbnails now** makes the copies for every category of the store at once (in steps, with progress), so no visitor waits for them; **Delete thumbnails** removes them all and clears the cache. |
+| Load the first row at once | Yes | Images of the first row of tiles (as many as the columns on the visitor's device) load immediately with `fetchpriority="high"`, the rest lazily. Not in the module, which may sit lower on the page. |
 | Own category images | *(empty)* | Pick a category and an image from Media — takes priority over every other source. |
 
 ### Subcategories
@@ -174,6 +185,18 @@ Column counts work even on sites that strip `@media` rules from the HTML served 
 | Button label for screen readers | `Subcategories of %s` | `%s` = the category name. |
 
 Only visible subcategories are listed (same access, publishing and language rules as the main list, empty ones hidden when *Hide empty categories* is on). Panels are keyboard accessible: the button has `aria-expanded` / `aria-controls`, **Escape** closes the panel and returns focus to the button, a click outside closes it, and opening one panel closes the others. The drawer under a narrow tile (under 200 px) opens across the whole row; the tooltip moves to stay inside the window and opens downwards when there is no room above.
+
+### Module (mod_bettercategories)
+
+Create it in *Content → Site Modules → New → Better Categories for Gridbox*, or add it to a Gridbox page with the **Joomla Module** element. It needs the Better Categories plugin enabled and uses all of its styles.
+
+| Option | Description |
+|---|---|
+| Category | The category whose subcategories are listed, or *Store home* (the top categories). |
+| Store app ID | For the store home only: which store; `0` = the store set in the plugin, or the first store. |
+| Heading, display, tile style, direction, columns (desktop / tablet / phone), *what is inside*, lowest price | Left at *— plugin setting —* they follow the plugin. |
+
+The module never hides products, adds no structured data and loads images lazily. It has its own cache entries (per module, device, language and currency).
 
 ### Per level
 
@@ -219,7 +242,7 @@ The live preview shows the level of the category chosen in it.
 
 ## 🧪 Verification & Testing
 
-Versions 1.0.0 to 1.2.0 were tested on **Joomla 6.1.3 with PHP 8.5.10**, MySQL 8.0 and **Gridbox 2.20.3.1** (early development builds also on PHP 8.4), with a store structure of nested categories, products assigned directly to parent categories, unpublished products and categories, transparent PNG and JPG images.
+Versions 1.0.0 to 1.3.0 were tested on **Joomla 6.1.3 with PHP 8.5.10**, MySQL 8.0 and **Gridbox 2.20.3.1** (early development builds also on PHP 8.4), with a store structure of nested categories, products assigned directly to parent categories, unpublished products and categories, transparent PNG and JPG images.
 
 1. **Counts and visibility** — parent categories count products of the whole subtree; unpublished products and categories under unpublished parents are excluded; empty categories are hidden by default.
 2. **Image sources** — plugin image → Gridbox category image → most viewed visible product (an unpublished product with more views is ignored).
@@ -230,6 +253,8 @@ Versions 1.0.0 to 1.2.0 were tested on **Joomla 6.1.3 with PHP 8.5.10**, MySQL 8
 6. **Subcategory panels (1.1.0)** — every mode in a real browser on desktop and phone widths: opening with the button, closing with the second click, Escape and a click outside, one panel open at a time, no horizontal scrolling, no JavaScript errors. With the panels switched off the output is identical to 1.0.0 in all 42 tested page × settings × device combinations.
 
 7. **1.2.0** — thumbnails from JPEG (also a sideways EXIF photo), transparent PNG and 6000 × 4000 px photos: WebP copies at 480 / 960 px, rotation and transparency kept; with many large images the first visit makes what fits in 1.5 s and skips the cache, the next one finishes. Per-level overrides on every level, the sibling bar on desktop and phone (no horizontal page scroll), JSON-LD validated as JSON with absolute URLs. No PHP warnings from the extension with full error reporting. With thumbnails and structured data off, the output is identical to 1.1.0 in all 42 combinations; updating from 1.1.0 keeps all settings.
+
+8. **1.3.0** — lowest price checked against the product data on 10 categories: sale price, a store sale (−10 % on a category), variations, an additional product category, a product without a price and an unpublished one; a second currency with an exchange rate via the currency switcher cookie, cached separately. First row: 3 of 5 images at 3 desktop columns, 2 at 2 phone columns. The module on a Gridbox page (via the *Joomla Module* shortcode) with its own heading, layout and price. Settings file: export all / styles only, import all / styles only, a foreign file rejected, unknown and too deeply nested keys ignored, actions refused without an administrator session. Thumbnail generation for the whole store and deletion. No PHP warnings from the plugin or module with full error reporting; with the new options off the output is identical to 1.2.0 in all 42 combinations; updating from 1.2.0 keeps all settings and adds the module.
 
 Quick check on your site: open a store category that has subcategories and look for `<nav id="bettercategories-` in the page source.
 
@@ -246,7 +271,7 @@ The plugin always uses its settings as saved in the database, even when the site
 
 ## 🔒 Security & Performance
 
-* **Read-only data:** the plugin only reads Gridbox tables. The only files it writes are the thumbnails, inside its own media folder, from images inside the site (paths are resolved and checked to stay in the site root). Delete the `thumbs` folder at any time and save the plugin settings (this clears its cache); the thumbnails are made again.
+* **Read-only data:** the plugin only reads Gridbox tables; it writes its own settings only when you import a settings file (administrators with the right to edit plugins, with a security token). The only files it writes are the thumbnails, inside its own media folder, from images inside the site (paths are resolved and checked to stay in the site root). Delete the `thumbs` folder at any time and save the plugin settings (this clears its cache); the thumbnails are made again.
 * **Access-aware:** categories and products respect Joomla view levels, publishing state, publish-up / publish-down dates and language, like Gridbox's own listings.
 * **Escaped output:** titles, URLs and image paths are HTML-escaped; colours and sizes are validated before they reach the CSS.
 * **Fast:** with the cache the plugin adds about 0.1–0.5 ms per page (measured); without it a handful of database queries. A small scoped `<style>` block; no front-end JavaScript unless an interactive subcategory panel is on (then one small inline script per block, no dependencies). Images are lazy-loaded; tiles use small WebP thumbnails with `srcset`, making the first visit to a page with new images slower once (at most 1.5 s of thumbnail work per request).
@@ -268,6 +293,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 ## 📝 Changelog
 
+* **1.3.0** — Lowest price per category. `mod_bettercategories` module. One-click thumbnail generation and deletion. First row of tiles with high priority. Export / import of settings and styles. Licence changed to GPL-3.0.
 * **1.2.0** — Fast WebP thumbnails with `srcset`. Per-level settings. Sibling bar with a back link on the last level. schema.org `ItemList` and `BreadcrumbList` (automatic, never duplicated).
 * **1.1.0** — *What is inside*: subcategories of each category as text, drawer, side panel, card flip or tooltip, with title, list style, limit, counts, colours, hover/button opening and a phone mode. *When there are fewer items than columns*: align left, centre or stretch.
 * **1.0.0** — First release.

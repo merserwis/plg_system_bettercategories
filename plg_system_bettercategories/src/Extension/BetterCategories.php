@@ -34,7 +34,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.2.0';
+    private const VERSION    = '1.3.0';
     private const SUB_MODES  = ['none', 'below', 'drawer', 'side', 'flip', 'tooltip'];
     private const CACHE_GROUP = 'plg_system_bettercategories';
 
@@ -58,7 +58,12 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
     /** Thumbnails folder (under the site root) and the time one request may spend creating them. */
     private const THUMB_DIR    = 'media/plg_system_bettercategories/thumbs';
-    private const THUMB_BUDGET = 1.5;
+
+    /** Settings that belong to one site (store IDs, category IDs, element IDs): kept by a "styles only" import. */
+    private const SITE_KEYS = ['app_ids', 'item_id', 'category_images'];
+
+    /** Seconds one request may spend creating thumbnails (the administrator "generate" action allows more). */
+    private float $thumbBudget = 1.5;
 
     /** Seconds spent creating thumbnails in this request. */
     private float $thumbTime = 0.0;
@@ -72,9 +77,20 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     /** @var array<int, string> store app titles */
     private array $appTitles = [];
 
+    /** Rendering for the module: no structured data, no hidden products, images load lazily. */
+    private bool $moduleMode = false;
+
+    /** @var object|null|false store currency (false = not read yet) */
+    private $currency = false;
+
     public static function getSubscribedEvents(): array
     {
-        return ['onAfterRender' => 'onAfterRender', 'onAjaxBettercategories' => 'onAjax', 'onExtensionAfterSave' => 'onExtensionAfterSave'];
+        return [
+            'onAfterRender'            => 'onAfterRender',
+            'onAjaxBettercategories'   => 'onAjax',
+            'onExtensionAfterSave'     => 'onExtensionAfterSave',
+            'onBetterCategoriesModule' => 'onModule',
+        ];
     }
 
     public function onAfterRender(): void
@@ -130,7 +146,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             if ($minutes > 0) {
                 $user  = $app->getIdentity();
                 $key   = md5(implode('|', [self::VERSION, $config, $appId, $categoryId, $device,
-                    $app->getLanguage()->getTag(), implode(',', $this->viewLevels()), Uri::root(), (int) $this->pageCrumbs]));
+                    $app->getLanguage()->getTag(), implode(',', $this->viewLevels()), Uri::root(), (int) $this->pageCrumbs,
+                    $app->getInput()->cookie->getString('gridbox-currency', '')]));
                 $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
                     ->createCacheController('output', ['defaultgroup' => self::CACHE_GROUP, 'lifetime' => $minutes, 'caching' => true]);
                 $html = $cache->get($key);
@@ -175,6 +192,12 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return;
         }
 
+        $this->cleanCaches();
+    }
+
+    /** Clears this plugin's cache and the page caches that may hold pages rendered with old settings. */
+    private function cleanCaches(): void
+    {
         $factory = Factory::getContainer()->get(CacheControllerFactoryInterface::class);
         foreach (array_unique([JPATH_SITE . '/cache', JPATH_ADMINISTRATOR . '/cache', JPATH_CACHE]) as $base) {
             foreach ([self::CACHE_GROUP, 'com_plugins', 'page', 'gridbox'] as $group) {
@@ -344,6 +367,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $row->count  = 0;
             $row->topHits  = -1;
             $row->topImage = '';
+            $row->priceFrom = null;
             $categories[$row->id] = $row;
         }
 
@@ -557,12 +581,35 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return;
         }
 
+        $action = $app->getInput()->post->getCmd('bc_action', 'preview');
+        if ($action === 'import') {
+            $this->ajaxResult($event, $this->importSettings());
+
+            return;
+        }
+        if ($action === 'thumbs_clear') {
+            $this->ajaxResult($event, $this->clearThumbnails());
+
+            return;
+        }
+
         $form   = (array) $app->getInput()->post->get('jform', [], 'array');
         $saved  = $this->params;
         $this->params  = new Registry((array) ($form['params'] ?? []));
         $this->preview = true;
 
         try {
+            if ($action === 'export') {
+                $this->ajaxResult($event, $this->exportSettings($app->getInput()->post->getCmd('scope', 'all')));
+
+                return;
+            }
+            if ($action === 'thumbs') {
+                $this->ajaxResult($event, $this->generateThumbnails());
+
+                return;
+            }
+
             $appId = $this->previewApp();
             if ($appId === 0) {
                 $this->ajaxResult($event, ['error' => 'No Gridbox store app found.']);
@@ -723,6 +770,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         // Settings of this level of the category tree (per-level overrides); restored afterwards.
         $saved        = $this->params;
         $this->params = $this->levelParams($categories, $categoryId);
+        if ($this->moduleMode) {
+            $this->params = $this->moduleParams($this->params);
+        }
 
         try {
             return $this->renderBlock($appId, $categoryId, $categories);
@@ -747,6 +797,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $this->addCounts($categories);
         }
         $children = array_filter($children, fn ($cat) => !$p['hideEmpty'] || $cat->count > 0);
+        if ($children && $p['priceFrom']) {
+            $this->addPricesFrom($appId, $categories);
+        }
         if (!$children) {
             // Last level: the sibling bar (when enabled) instead of the list.
             return ($p['leafSiblings'] && $categoryId > 0 ? $this->renderSiblings($appId, $categoryId, $categories, $link, $p) : '') . $crumbs;
@@ -767,6 +820,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $id      = 'bettercategories-' . substr(md5($appId . '-' . $categoryId . '-' . microtime()), 0, 8);
         $sizes   = $this->imageSizes($p);
+        // Images of the first row load at once with high priority (they are usually the largest element
+        // in view, the LCP); the others lazily. Not in the module, which may sit lower on the page.
+        $firstRow = $p['eager'] && !$this->moduleMode && !$this->preview ? $this->deviceColumns($p) : 0;
         $items   = '';
         $count   = 0;
         $withSub = false;
@@ -780,6 +836,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             // "Last level only": the count is shown only on categories without visible subcategories.
             $showCount = $p['counter'] && (!$p['counterLeafOnly'] || empty($kids[$cat->id]));
             $countHtml = $showCount ? ' <span class="bettercategories-count">(' . $cat->count . ')</span>' : '';
+            if ($p['priceFrom'] && $cat->priceFrom !== null) {
+                $countHtml .= ' <span class="bettercategories-price">' . htmlspecialchars(sprintf($p['priceLabel'], $this->formatPrice($cat->priceFrom)), ENT_QUOTES, 'UTF-8') . '</span>';
+            }
 
             // Panel listing the subcategories of this category ("what is inside").
             $sub = $toggle = '';
@@ -808,7 +867,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
             $front = '<a class="bettercategories-link" href="' . $url . '">'
                 . '<span class="bettercategories-media' . ($src === '' ? ' bettercategories-media--empty' : '') . '">'
-                . ($src !== '' ? '<img src="' . $src . '"' . $set . ' alt="' . $title . '" loading="lazy" decoding="async">' : '')
+                . ($src !== '' ? '<img src="' . $src . '"' . $set . ' alt="' . $title . '"' . ($count <= $firstRow ? ' fetchpriority="high"' : ' loading="lazy"') . ' decoding="async">' : '')
                 . ($p['hover'] === 'shine' ? '<span class="bettercategories-shine" aria-hidden="true"></span>' : '')
                 . '</span>'
                 . '<span class="bettercategories-caption"><span class="bettercategories-name">' . $title . '</span>' . $countHtml . '</span>'
@@ -843,7 +902,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             . ($heading !== '' ? '<' . $p['headingTag'] . ' class="bettercategories-title">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</' . $p['headingTag'] . '>' : '')
             . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
             . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id) : '')
-            . ($p['schemaList'] ? $this->itemListSchema($heading !== '' ? $heading : 'Categories', $schema) : '')
+            . ($p['schemaList'] && !$this->moduleMode ? $this->itemListSchema($heading !== '' ? $heading : 'Categories', $schema) : '')
             . $crumbs;
     }
 
@@ -1046,7 +1105,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     /** Creates one WebP thumbnail (GD); false when it cannot (memory, format, write) or time is up. */
     private function makeThumbnail(string $file, array $info, string $name, int $width, int $quality): bool
     {
-        if ($this->thumbTime >= self::THUMB_BUDGET) {
+        if ($this->thumbTime >= $this->thumbBudget) {
             $this->incomplete = true;
 
             return false;
@@ -1166,6 +1225,498 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         };
     }
 
+    /** Columns of the visitor's device (the first row of tiles). */
+    private function deviceColumns(array $p): int
+    {
+        $tablet = $p['colsTablet'] ?: $p['colsDesktop'];
+
+        return (int) match ($p['device']) {
+            'mobile' => $p['colsMobile'] ?: $tablet,
+            'tablet' => $tablet,
+            default  => $p['colsDesktop'],
+        };
+    }
+
+    // ---------------------------------------------------------------- module
+
+    /** @var array<string, string> settings chosen in the module (empty = plugin setting) */
+    private array $moduleOverrides = [];
+
+    /**
+     * mod_bettercategories: renders the list of one category (or the store home) anywhere on the site,
+     * with the plugin's styles and the module's own overrides. Event arguments: app, category,
+     * module (id), overrides; the HTML is returned in the "html" argument.
+     */
+    public function onModule($event): void
+    {
+        $app = $this->getApplication();
+        if (!$app->isClient('site') || !method_exists($event, 'getArgument')) {
+            return;
+        }
+
+        $this->params = $this->savedParams() ?? $this->params;
+        $categoryId   = max(0, (int) $event->getArgument('category', 0));
+        $appId        = max(0, (int) $event->getArgument('app', 0));
+        $overrides    = array_filter(array_map('strval', (array) $event->getArgument('overrides', [])), fn ($v) => trim($v) !== '');
+        $html         = '';
+
+        try {
+            if ($categoryId > 0) {
+                $db    = $this->db();
+                $query = $db->createQuery()
+                    ->select($db->quoteName('app_id'))
+                    ->from($db->quoteName('#__gridbox_categories'))
+                    ->where($db->quoteName('id') . ' = ' . $categoryId);
+                $appId = (int) $db->setQuery($query)->loadResult();
+            }
+            if ($appId <= 0) {
+                $appId = $this->previewApp();
+            }
+            if ($appId <= 0 || !ComponentHelper::isEnabled('com_gridbox') || !$this->isEnabledApp($appId)) {
+                return;
+            }
+
+            $this->moduleMode      = true;
+            $this->moduleOverrides = $overrides;
+            $minutes               = max(0, min(1440, (int) $this->params->get('cache_time', 15)));
+            if ($minutes > 0) {
+                $key   = md5(implode('|', ['module', self::VERSION, md5(json_encode($this->params->toArray())), json_encode($overrides), $appId, $categoryId,
+                    $this->device(), $app->getLanguage()->getTag(), implode(',', $this->viewLevels()), Uri::root(), $app->getInput()->cookie->getString('gridbox-currency', '')]));
+                $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
+                    ->createCacheController('output', ['defaultgroup' => self::CACHE_GROUP, 'lifetime' => $minutes, 'caching' => true]);
+                $html = $cache->get($key);
+                if (!is_string($html)) {
+                    $html = $this->render($appId, $categoryId);
+                    if (!$this->incomplete) {
+                        $cache->store($html === '' ? self::CACHE_EMPTY : $html, $key);
+                    }
+                }
+                $html = $html === self::CACHE_EMPTY ? '' : $html;
+            } else {
+                $html = $this->render($appId, $categoryId);
+            }
+        } catch (\Throwable $e) {
+            $html = '';
+        } finally {
+            $this->moduleMode      = false;
+            $this->moduleOverrides = [];
+        }
+
+        $event->setArgument('html', $html);
+    }
+
+    /** Module overrides on top of the plugin settings; the module never hides products or adds structured data. */
+    private function moduleParams(Registry $base): Registry
+    {
+        $params = clone $base;
+        foreach (['heading', 'display', 'tile_style', 'orientation', 'columns', 'columns_tablet', 'columns_mobile', 'sub_mode', 'price_from'] as $key) {
+            if (isset($this->moduleOverrides[$key])) {
+                $params->set($key, $this->moduleOverrides[$key]);
+            }
+        }
+        $params->set('hide_products', 0);
+        $params->set('leaf_siblings', 0);
+
+        return $params;
+    }
+
+    // ---------------------------------------------------------------- price "from"
+
+    /**
+     * Lowest price of the visible products in every category subtree: the sale price when set (or the
+     * price after an active store sale, as Gridbox calculates it), including product variations.
+     * Products without a price ("price on request") are left out.
+     */
+    private function addPricesFrom(int $appId, array $categories): void
+    {
+        $db    = $this->db();
+        $query = $this->visibleProductsQuery()
+            ->select(['p.id', 'p.page_category', 'd.price', 'd.sale_price', 'd.variations'])
+            ->innerJoin($db->quoteName('#__gridbox_store_product_data', 'd') . ' ON d.product_id = p.id')
+            ->where('p.app_id = ' . $appId);
+
+        try {
+            $products = $db->setQuery($query)->loadObjectList() ?: [];
+        } catch (\Throwable $e) {
+            return;
+        }
+        if (!$products) {
+            return;
+        }
+
+        // additional categories of the products
+        $ids    = implode(',', array_map(fn ($row) => (int) $row->id, $products));
+        $mapped = [];
+        try {
+            $query = $db->createQuery()
+                ->select(['page_id', 'category_id'])
+                ->from($db->quoteName('#__gridbox_category_page_map'))
+                ->where('page_id IN (' . $ids . ')');
+            foreach ($db->setQuery($query)->loadObjectList() ?: [] as $row) {
+                $mapped[(int) $row->page_id][] = (int) $row->category_id;
+            }
+        } catch (\Throwable $e) {
+        }
+
+        $sales = $this->activeSales();
+        foreach ($products as $product) {
+            $id   = (int) $product->id;
+            $cats = array_unique(array_merge([(int) $product->page_category], $mapped[$id] ?? []));
+
+            $candidates = [['', (string) $product->price, (string) $product->sale_price]];
+            $variations = json_decode((string) $product->variations);
+            if (is_object($variations)) {
+                foreach ($variations as $key => $variation) {
+                    if (is_object($variation)) {
+                        $candidates[] = [(string) $key, (string) ($variation->price ?? ''), (string) ($variation->sale_price ?? '')];
+                    }
+                }
+            }
+
+            $min = null;
+            foreach ($candidates as [$variation, $price, $sale]) {
+                if (!is_numeric($price) || (float) $price <= 0) {
+                    continue;
+                }
+                $value = is_numeric($sale) ? (float) $sale : $this->salePrice($sales, (float) $price, $id, $variation, $cats);
+                if ($value > 0 && ($min === null || $value < $min)) {
+                    $min = $value;
+                }
+            }
+            if ($min === null) {
+                continue;
+            }
+
+            foreach ($cats as $categoryId) {
+                $this->walkUp($categories, $categoryId, function ($cat) use ($min) {
+                    if ($cat->priceFrom === null || $min < $cat->priceFrom) {
+                        $cat->priceFrom = $min;
+                    }
+                });
+            }
+        }
+    }
+
+    /** Price after the first store sale that applies (Gridbox's own rule order). */
+    private function salePrice(array $sales, float $price, int $productId, string $variation, array $categories): float
+    {
+        foreach ($sales as $sale) {
+            if (empty($sale->discount)) {
+                continue;
+            }
+            $applies = match ((string) $sale->applies_to) {
+                '*'        => true,
+                'category' => (bool) array_filter($sale->map, fn ($m) => in_array((int) $m->item_id, $categories, true)),
+                'product'  => (bool) array_filter($sale->map, fn ($m) => (int) $m->item_id === $productId && (string) $m->variation === $variation),
+                default    => false,
+            };
+            if ($applies) {
+                return $price - ($sale->unit === '%' ? $price * ((float) $sale->discount / 100) : (float) $sale->discount);
+            }
+        }
+
+        return $price;
+    }
+
+    /** Store sales active now for the visitor's access levels, with their product/category maps. */
+    private function activeSales(): array
+    {
+        try {
+            $db    = $this->db();
+            $tz    = new \DateTimeZone((string) $this->getApplication()->get('offset', 'UTC') ?: 'UTC');
+            $now   = $db->quote((new \DateTime('now', $tz))->format('Y-m-d H:i:s'));
+            $null  = $db->quote($db->getNullDate());
+            $query = $db->createQuery()
+                ->select('*')
+                ->from($db->quoteName('#__gridbox_store_sales'))
+                ->where('published = 1')
+                ->where('(publish_down = ' . $null . ' OR publish_down IS NULL OR publish_down >= ' . $now . ')')
+                ->where('(publish_up = ' . $null . ' OR publish_up IS NULL OR publish_up <= ' . $now . ')')
+                ->where('access IN (' . implode(',', $this->viewLevels()) . ')')
+                ->order('id ASC');
+            $sales = $db->setQuery($query)->loadObjectList() ?: [];
+            foreach ($sales as $sale) {
+                $query     = $db->createQuery()
+                    ->select('*')
+                    ->from($db->quoteName('#__gridbox_store_sales_map'))
+                    ->where('sale_id = ' . (int) $sale->id);
+                $sale->map = $db->setQuery($query)->loadObjectList() ?: [];
+            }
+
+            return $sales;
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+
+    /** The store currency the visitor sees (default, the language's, or the one picked in the currency switcher). */
+    private function storeCurrency(): ?object
+    {
+        if ($this->currency !== false) {
+            return $this->currency;
+        }
+        $this->currency = null;
+
+        try {
+            $db    = $this->db();
+            $query = $db->createQuery()
+                ->select($db->quoteName('key'))
+                ->from($db->quoteName('#__gridbox_api'))
+                ->where($db->quoteName('service') . ' = ' . $db->quote('store'));
+            $store = json_decode((string) $db->setQuery($query)->loadResult());
+        } catch (\Throwable $e) {
+            return null;
+        }
+        if (!is_object($store)) {
+            return null;
+        }
+
+        $list     = is_object($store->currencies ?? null) ? (array) ($store->currencies->list ?? []) : [];
+        $currency = null;
+        foreach ($list as $item) {
+            if (!empty($item->default)) {
+                $currency = $item;
+            }
+        }
+        $lang = $this->getApplication()->getLanguage()->getTag();
+        foreach ($list as $item) {
+            if (($item->language ?? '') === $lang) {
+                $currency = $item;
+            }
+        }
+        $code = $this->getApplication()->getInput()->cookie->getString('gridbox-currency', '');
+        foreach ($list as $item) {
+            if ($code !== '' && ($item->code ?? '') === $code) {
+                $currency = $item;
+            }
+        }
+
+        $this->currency = $currency ?? (is_object($store->currency ?? null) ? $store->currency : null);
+
+        return $this->currency;
+    }
+
+    /** A price in the store's format: rate, decimals, separators and symbol position as Gridbox shows them. */
+    private function formatPrice(float $price): string
+    {
+        $c        = $this->storeCurrency();
+        $decimals = max(0, min(4, (int) ($c->decimals ?? 2)));
+        $rate     = (float) ($c->rate ?? 1) ?: 1.0;
+        $number   = number_format(round($price * $rate, $decimals), $decimals, (string) ($c->separator ?? '.'), (string) ($c->thousand ?? ' '));
+        $symbol   = trim((string) ($c->symbol ?? ''));
+        if ($symbol === '') {
+            return $number;
+        }
+
+        return ($c->position ?? '') === 'left-currency-position' ? $symbol . "\u{00A0}" . $number : $number . "\u{00A0}" . $symbol;
+    }
+
+    // ---------------------------------------------------------------- administrator tools
+
+    /** Names of the plugin settings (top-level form fields, without display-only fields). */
+    private function settingKeys(): array
+    {
+        $xml = @simplexml_load_file(JPATH_PLUGINS . '/system/bettercategories/bettercategories.xml');
+        if (!$xml) {
+            return [];
+        }
+        $keys = [];
+        foreach ($xml->xpath('/extension/config/fields/fieldset/field') ?: [] as $field) {
+            $type = strtolower((string) $field['type']);
+            if (!in_array($type, ['note', 'spacer', 'bcpreview', 'bctools'], true) && (string) $field['name'] !== '') {
+                $keys[] = (string) $field['name'];
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Export: the settings currently in the form (saved or not) as a JSON file. "styles" leaves out the
+     * site-specific ones (store IDs, element ID, category images), so the file fits another site.
+     */
+    private function exportSettings(string $scope): array
+    {
+        $scope  = $scope === 'styles' ? 'styles' : 'all';
+        $values = $this->params->toArray();
+        $params = [];
+        foreach ($this->settingKeys() as $key) {
+            if (array_key_exists($key, $values) && !($scope === 'styles' && in_array($key, self::SITE_KEYS, true))) {
+                $params[$key] = $values[$key];
+            }
+        }
+
+        return [
+            'name' => 'better-categories-' . ($scope === 'styles' ? 'styles' : 'settings') . '-' . gmdate('Y-m-d') . '.json',
+            'file' => [
+                'extension' => 'plg_system_bettercategories',
+                'version'   => self::VERSION,
+                'scope'     => $scope,
+                'exported'  => gmdate('c'),
+                'params'    => $params,
+            ],
+        ];
+    }
+
+    /**
+     * Import a settings file into the saved plugin settings. Only known settings are taken, values are
+     * plain text or nested lists; "styles" keeps this site's store IDs, element ID and category images.
+     */
+    private function importSettings(): array
+    {
+        $app = $this->getApplication();
+        if (!$app->getIdentity()?->authorise('core.edit', 'com_plugins')) {
+            return ['error' => 'You are not allowed to change plugin settings.'];
+        }
+
+        $raw = (string) $app->getInput()->post->getRaw('data', '');
+        if ($raw === '' || strlen($raw) > 262144) {
+            return ['error' => 'The file is empty or too large (max. 256 KB).'];
+        }
+        $data = json_decode($raw, true);
+        if (!is_array($data) || ($data['extension'] ?? '') !== 'plg_system_bettercategories' || !is_array($data['params'] ?? null)) {
+            return ['error' => 'This is not a Better Categories settings file.'];
+        }
+
+        $stylesOnly = $app->getInput()->post->getCmd('scope', 'all') === 'styles';
+        $known      = $this->settingKeys();
+        $params     = $this->savedParams() ?? new Registry();
+        $imported   = 0;
+        $ignored    = [];
+        foreach ($data['params'] as $key => $value) {
+            $key = (string) $key;
+            if (!in_array($key, $known, true) || ($stylesOnly && in_array($key, self::SITE_KEYS, true))) {
+                $ignored[] = $key;
+                continue;
+            }
+            $clean = $this->cleanValue($value, 0);
+            if ($clean === null) {
+                $ignored[] = $key;
+                continue;
+            }
+            $params->set($key, $clean);
+            $imported++;
+        }
+        if ($imported === 0) {
+            return ['error' => 'The file contains no settings of this plugin.'];
+        }
+
+        $db    = $this->db();
+        $query = $db->createQuery()
+            ->update($db->quoteName('#__extensions'))
+            ->set($db->quoteName('params') . ' = ' . $db->quote($params->toString()))
+            ->where($db->quoteName('type') . ' = ' . $db->quote('plugin'))
+            ->where($db->quoteName('folder') . ' = ' . $db->quote('system'))
+            ->where($db->quoteName('element') . ' = ' . $db->quote('bettercategories'));
+        $db->setQuery($query)->execute();
+        $this->cleanCaches();
+
+        return ['ok' => true, 'imported' => $imported, 'ignored' => array_slice($ignored, 0, 50), 'version' => (string) ($data['version'] ?? '')];
+    }
+
+    /** A settings value: text (max. 5000 characters) or a list of such values (max. 5 levels, 500 items). */
+    private function cleanValue($value, int $depth)
+    {
+        if (is_bool($value)) {
+            return $value ? '1' : '0';
+        }
+        if (is_int($value) || is_float($value) || is_string($value)) {
+            $value = (string) $value;
+
+            return strlen($value) <= 5000 ? $value : null;
+        }
+        if (is_array($value) && $depth < 5 && count($value) <= 500) {
+            $out = [];
+            foreach ($value as $k => $v) {
+                $v = $this->cleanValue($v, $depth + 1);
+                if ($v !== null) {
+                    $out[(string) $k] = $v;
+                }
+            }
+
+            return $out;
+        }
+
+        return null;
+    }
+
+    /**
+     * Makes the thumbnails of every category tile now (form values: width, quality, image sources), so
+     * no visitor waits for them. Runs in steps of about 8 s; the page repeats the call until "done".
+     */
+    private function generateThumbnails(): array
+    {
+        $p = $this->settings();
+        if (!$p['thumbs']) {
+            return ['error' => 'Fast thumbnails are switched off.'];
+        }
+        if (!function_exists('imagewebp')) {
+            return ['error' => 'This server\'s PHP (GD) cannot write WebP images.'];
+        }
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(60);
+        }
+
+        $ids = array_filter(array_map('intval', explode(',', (string) $this->params->get('app_ids', ''))));
+        if (!$ids) {
+            $db    = $this->db();
+            $query = $db->createQuery()
+                ->select($db->quoteName('id'))
+                ->from($db->quoteName('#__gridbox_app'))
+                ->where($db->quoteName('type') . ' = ' . $db->quote('products'));
+            $ids = array_map('intval', $db->setQuery($query)->loadColumn() ?: []);
+        }
+
+        $this->thumbBudget = 8.0;
+        $manual = $this->manualImages();
+        $images = [];
+        foreach ($ids as $appId) {
+            $categories = $this->loadCategories($appId);
+            if ($p['popularImage']) {
+                $this->addTopProductImages($appId, $categories);
+            }
+            foreach ($categories as $cat) {
+                $image = $manual[$cat->id] ?? '';
+                if ($image === '' && $p['gridboxImage']) {
+                    $image = (string) $cat->image;
+                }
+                if ($image === '' && $p['popularImage']) {
+                    $image = $cat->topImage;
+                }
+                if ($image !== '') {
+                    $images[$image] = true;
+                }
+            }
+        }
+
+        $ready = $skipped = 0;
+        foreach (array_keys($images) as $image) {
+            [$src] = $this->thumbnail($image, $p);
+            if ($this->incomplete) {
+                return ['done' => false, 'total' => count($images), 'ready' => $ready, 'skipped' => $skipped];
+            }
+            $src !== '' ? $ready++ : $skipped++;
+        }
+        $this->cleanCaches();
+
+        return ['done' => true, 'total' => count($images), 'ready' => $ready, 'skipped' => $skipped];
+    }
+
+    /** Deletes all thumbnails (they are made again on the next visits or with "generate"). */
+    private function clearThumbnails(): array
+    {
+        $dir     = JPATH_ROOT . '/' . self::THUMB_DIR;
+        $deleted = 0;
+        foreach (is_dir($dir) ? (scandir($dir) ?: []) : [] as $file) {
+            if (preg_match('/^[0-9a-f]{16}-\d+\.webp(\.[0-9a-f]{8}\.tmp)?$/', $file) && @unlink($dir . '/' . $file)) {
+                $deleted++;
+            }
+        }
+        $this->cleanCaches();
+
+        return ['ok' => true, 'deleted' => $deleted];
+    }
+
     // ---------------------------------------------------------------- structured data
 
     /** schema.org ItemList of the listed categories (JSON-LD). */
@@ -1189,7 +1740,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
      */
     private function breadcrumbSchema(int $appId, int $categoryId, array $categories, callable $rawLink, array $p): string
     {
-        if ($this->preview || $categoryId <= 0 || $p['schemaCrumbs'] === 'no' || ($p['schemaCrumbs'] === 'auto' && $this->pageCrumbs)) {
+        if ($this->preview || $this->moduleMode || $categoryId <= 0 || $p['schemaCrumbs'] === 'no' || ($p['schemaCrumbs'] === 'auto' && $this->pageCrumbs)) {
             return '';
         }
 
@@ -1383,6 +1934,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'leafBackLabel' => $this->printfLabel((string) $this->params->get('leaf_back_label', 'Back to %s'), 'Back to %s', 's'),
             'schemaList'   => (bool) $this->params->get('schema_itemlist', 1),
             'schemaCrumbs' => $pick('schema_breadcrumb', ['auto', 'yes', 'no'], 'auto'),
+            'eager'        => (bool) $this->params->get('first_row_eager', 1),
+            'priceFrom'    => (bool) $this->params->get('price_from', 0),
+            'priceLabel'   => $this->printfLabel((string) $this->params->get('price_from_label', 'from %s'), 'from %s', 's'),
+            'priceColor'   => $this->cssColor((string) $this->params->get('price_color', '')),
         ];
     }
 
@@ -1486,6 +2041,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $rows[] = "$s .bettercategories-link:hover,$s .bettercategories-link:focus{color:{$p['hoverColor']};}";
         }
         $rows[] = "$s .bettercategories-count{opacity:.75;}";
+        if ($p['priceFrom']) {
+            $rows[] = "$s .bettercategories-price{font-size:.85em;font-weight:600;white-space:nowrap;" . ($p['priceColor'] ? "color:{$p['priceColor']};" : 'opacity:.85;')
+                . ($p['display'] === 'tiles' ? 'display:block;margin-top:2px;' : 'margin-left:.4em;') . '}';
+        }
 
         $justify = ['left' => 'flex-start', 'center' => 'center', 'right' => 'flex-end'][$p['align']];
 

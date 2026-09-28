@@ -39,3 +39,9 @@
 .options-form:has(.bcat-preview) .minicolors input.minicolors-input { height: 2.75rem; width: 12rem; padding-left: 3.4rem; font-size: 1rem; }
 .options-form:has(.bcat-preview) .minicolors-theme-bootstrap .minicolors-swatch { width: 2.25rem; height: 2.25rem; top: .25rem; left: .3rem; border-radius: .35rem; }
 .options-form:has(.bcat-preview) .minicolors-panel { transform: scale(1.25); transform-origin: top left; }
+
+/* 1.3.0 — administrator tools (settings file, thumbnails) */
+.bcat-tools{padding:12px 14px;border:1px solid var(--template-bg-dark-10,#dfe3e7);border-radius:6px;background:var(--template-bg-light,#f8f9fa);max-width:640px}
+.bcat-tools-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+.bcat-tools-check{display:inline-flex;align-items:center;gap:6px;font-size:.875rem;margin-bottom:4px}
+.bcat-tools-status{min-height:1.2em}
