@@ -2,16 +2,17 @@
 <extension type="package" method="upgrade">
     <name>Better Categories for Gridbox Package</name>
     <packagename>bettercategories</packagename>
-    <version>1.2.0</version>
+    <version>1.3.0</version>
     <creationDate>2026-09-24</creationDate>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
-    <license>GNU General Public License version 2 or later</license>
-    <description>Better Categories for Gridbox: system plugin and administrator menu shortcut. Requires Joomla 6 and PHP 8.2+ (tested with PHP 8.5).</description>
+    <license>GNU General Public License version 3</license>
+    <description>Better Categories for Gridbox: system plugin, site module and administrator menu shortcut. Requires Joomla 6 and PHP 8.2+ (tested with PHP 8.5).</description>
     <files folder="packages">
         <file type="plugin" id="bettercategories" group="system">plg_system_bettercategories.zip</file>
         <file type="component" id="com_bettercategories">com_bettercategories.zip</file>
+        <file type="module" id="mod_bettercategories" client="site">mod_bettercategories.zip</file>
     </files>
     <updateservers>
         <server type="extension" priority="1" name="Better Categories for Gridbox Updates">https://raw.githubusercontent.com/merserwis/plg_system_bettercategories/main/update.xml</server>

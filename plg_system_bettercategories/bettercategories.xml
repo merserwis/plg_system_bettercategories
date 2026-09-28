@@ -5,8 +5,8 @@
     <authorUrl>https://github.com/merserwis/</authorUrl>
     <creationDate>2026-09-24</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
-    <license>GNU General Public License version 2 or later</license>
-    <version>1.2.0</version>
+    <license>GNU General Public License version 3</license>
+    <version>1.3.0</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -62,6 +62,7 @@
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>
+                <field name="tools_settings" type="bctools" mode="settings" hiddenLabel="true" />
             </fieldset>
 
             <fieldset name="layout" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LAYOUT">
@@ -116,6 +117,12 @@
                 <field name="text_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_TEXT_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" />
                 <field name="link_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_LINK_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" />
                 <field name="link_hover_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_LINK_HOVER_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" />
+                <field name="price_from" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_PRICE_FROM_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_PRICE_FROM_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="price_from_label" type="text" default="from %s" label="PLG_SYSTEM_BETTERCATEGORIES_PRICE_FROM_TEXT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_PRICE_FROM_TEXT_DESC" showon="price_from:1" />
+                <field name="price_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_PRICE_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="price_from:1" />
             </fieldset>
 
             <fieldset name="tiles" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES_DESC">
@@ -187,6 +194,11 @@
                 </field>
                 <field name="thumb_width" type="number" default="480" min="160" max="1600" step="10" label="PLG_SYSTEM_BETTERCATEGORIES_THUMB_WIDTH_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_THUMB_WIDTH_DESC" showon="thumbnails:1" />
                 <field name="thumb_quality" type="number" default="80" min="40" max="95" label="PLG_SYSTEM_BETTERCATEGORIES_THUMB_QUALITY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_THUMB_QUALITY_DESC" showon="thumbnails:1" />
+                <field name="tools_thumbs" type="bctools" mode="thumbs" hiddenLabel="true" showon="thumbnails:1" />
+                <field name="first_row_eager" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_EAGER_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_EAGER_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
                 <field name="category_images" type="subform" multiple="true" layout="joomla.form.field.subform.repeatable-table" buttons="add,remove,move" label="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_IMAGES_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_IMAGES_DESC">
                     <form>
                         <field name="category" type="gbcategories" addfieldprefix="Merserwis\Plugin\System\BetterCategories\Field" label="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_LABEL">

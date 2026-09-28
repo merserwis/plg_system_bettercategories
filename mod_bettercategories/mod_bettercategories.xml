@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="module" client="site" method="upgrade">
+    <name>mod_bettercategories</name>
+    <author>Merserwis</author>
+    <authorUrl>https://github.com/merserwis/</authorUrl>
+    <creationDate>2026-09-28</creationDate>
+    <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
+    <license>GNU General Public License version 3</license>
+    <version>1.3.0</version>
+    <description>MOD_BETTERCATEGORIES_XML_DESCRIPTION</description>
+    <namespace path="src">Merserwis\Module\BetterCategories</namespace>
+    <files>
+        <folder module="mod_bettercategories">services</folder>
+        <folder>src</folder>
+        <folder>tmpl</folder>
+    </files>
+    <languages folder="language">
+        <language tag="en-GB">en-GB/mod_bettercategories.ini</language>
+        <language tag="en-GB">en-GB/mod_bettercategories.sys.ini</language>
+    </languages>
+    <config>
+        <fields name="params">
+            <fieldset name="basic" addfieldprefix="Merserwis\Plugin\System\BetterCategories\Field">
+                <field name="module_info" type="note" class="alert alert-info" description="MOD_BETTERCATEGORIES_INFO" />
+                <field name="category" type="gbcategories" default="0" label="MOD_BETTERCATEGORIES_CATEGORY_LABEL" description="MOD_BETTERCATEGORIES_CATEGORY_DESC">
+                    <option value="0">MOD_BETTERCATEGORIES_CATEGORY_HOME</option>
+                </field>
+                <field name="app_id" type="number" default="0" min="0" label="MOD_BETTERCATEGORIES_APP_LABEL" description="MOD_BETTERCATEGORIES_APP_DESC" showon="category:0" />
+                <field name="heading" type="text" default="" label="MOD_BETTERCATEGORIES_HEADING_LABEL" description="MOD_BETTERCATEGORIES_INHERIT_DESC" />
+                <field name="display" type="list" default="" label="MOD_BETTERCATEGORIES_DISPLAY_LABEL">
+                    <option value="">MOD_BETTERCATEGORIES_INHERIT</option>
+                    <option value="text">MOD_BETTERCATEGORIES_DISPLAY_TEXT</option>
+                    <option value="tiles">MOD_BETTERCATEGORIES_DISPLAY_TILES</option>
+                </field>
+                <field name="tile_style" type="list" default="" label="MOD_BETTERCATEGORIES_TILE_STYLE_LABEL">
+                    <option value="">MOD_BETTERCATEGORIES_INHERIT</option>
+                    <option value="below">MOD_BETTERCATEGORIES_TILE_STYLE_BELOW</option>
+                    <option value="card">MOD_BETTERCATEGORIES_TILE_STYLE_CARD</option>
+                    <option value="overlay">MOD_BETTERCATEGORIES_TILE_STYLE_OVERLAY</option>
+                    <option value="cover">MOD_BETTERCATEGORIES_TILE_STYLE_COVER</option>
+                </field>
+                <field name="orientation" type="list" default="" label="MOD_BETTERCATEGORIES_ORIENTATION_LABEL">
+                    <option value="">MOD_BETTERCATEGORIES_INHERIT</option>
+                    <option value="rows">MOD_BETTERCATEGORIES_ORIENTATION_ROWS</option>
+                    <option value="columns">MOD_BETTERCATEGORIES_ORIENTATION_COLUMNS</option>
+                    <option value="scroll">MOD_BETTERCATEGORIES_ORIENTATION_SCROLL</option>
+                    <option value="inline">MOD_BETTERCATEGORIES_ORIENTATION_INLINE</option>
+                </field>
+                <field name="columns" type="list" default="" label="MOD_BETTERCATEGORIES_COLUMNS_LABEL">
+                    <option value="">MOD_BETTERCATEGORIES_INHERIT</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                    <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                </field>
+                <field name="columns_tablet" type="list" default="" label="MOD_BETTERCATEGORIES_COLUMNS_TABLET_LABEL">
+                    <option value="">MOD_BETTERCATEGORIES_INHERIT</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                    <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                </field>
+                <field name="columns_mobile" type="list" default="" label="MOD_BETTERCATEGORIES_COLUMNS_MOBILE_LABEL">
+                    <option value="">MOD_BETTERCATEGORIES_INHERIT</option>
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option>
+                    <option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option>
+                </field>
+                <field name="sub_mode" type="list" default="" label="MOD_BETTERCATEGORIES_SUB_MODE_LABEL">
+                    <option value="">MOD_BETTERCATEGORIES_INHERIT</option>
+                    <option value="none">MOD_BETTERCATEGORIES_SUB_MODE_NONE</option>
+                    <option value="below">MOD_BETTERCATEGORIES_SUB_MODE_BELOW</option>
+                    <option value="drawer">MOD_BETTERCATEGORIES_SUB_MODE_DRAWER</option>
+                    <option value="side">MOD_BETTERCATEGORIES_SUB_MODE_SIDE</option>
+                    <option value="flip">MOD_BETTERCATEGORIES_SUB_MODE_FLIP</option>
+                    <option value="tooltip">MOD_BETTERCATEGORIES_SUB_MODE_TOOLTIP</option>
+                </field>
+                <field name="price_from" type="list" default="" label="MOD_BETTERCATEGORIES_PRICE_LABEL">
+                    <option value="">MOD_BETTERCATEGORIES_INHERIT</option>
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+            </fieldset>
+            <fieldset name="advanced">
+                <field name="layout" type="modulelayout" label="JFIELD_ALT_LAYOUT_LABEL" class="form-select" validate="moduleLayout" />
+                <field name="moduleclass_sfx" type="textarea" label="COM_MODULES_FIELD_MODULECLASS_SFX_LABEL" rows="3" validate="CssIdentifier" />
+            </fieldset>
+        </fields>
+    </config>
+</extension>
