@@ -12,6 +12,7 @@ namespace Merserwis\Plugin\System\BetterCategories\Field;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\FormField;
 use Joomla\CMS\Language\Text;
+use Merserwis\Plugin\System\BetterCategories\Extension\BetterCategories;
 
 /**
  * Live preview column of the plugin settings: the list rendered by the plugin itself (com_ajax)
@@ -24,8 +25,13 @@ class BcpreviewField extends FormField
     protected function getInput()
     {
         $wa = Factory::getApplication()->getDocument()->getWebAssetManager();
-        $wa->registerAndUseStyle('plg_system_bettercategories.admin', 'plg_system_bettercategories/admin.css');
-        $wa->registerAndUseScript('plg_system_bettercategories.preview', 'plg_system_bettercategories/preview.js', [], ['defer' => true], ['core']);
+        // the file time in the version: browsers take a changed file even when only the file was replaced
+        $ver = fn (string $file): string => BetterCategories::ASSET_VERSION . '.' . (int) @filemtime(JPATH_ROOT . '/media/plg_system_bettercategories/' . $file);
+        $wa->registerAndUseStyle('plg_system_bettercategories.admin', 'plg_system_bettercategories/admin.css', ['version' => $ver('css/admin.css')]);
+        $wa->registerAndUseScript('plg_system_bettercategories.preview', 'plg_system_bettercategories/preview.js', ['version' => $ver('js/preview.js')], ['defer' => true], ['core']);
+        foreach (['UPDATING', 'UNAVAILABLE', 'PRODUCT', 'PRODUCTS_HIDDEN', 'NO_SUBCATEGORIES'] as $key) {
+            Text::script('PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_' . $key);
+        }
 
         $devices = '';
         foreach (['desktop' => 'PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_DESKTOP', 'tablet' => 'PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_TABLET', 'mobile' => 'PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_MOBILE'] as $device => $label) {

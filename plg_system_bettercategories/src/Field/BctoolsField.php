@@ -12,6 +12,7 @@ namespace Merserwis\Plugin\System\BetterCategories\Field;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\FormField;
 use Joomla\CMS\Language\Text;
+use Merserwis\Plugin\System\BetterCategories\Extension\BetterCategories;
 
 /**
  * Administrator tools in the plugin settings: export / import of the settings (mode="settings")
@@ -24,8 +25,10 @@ class BctoolsField extends FormField
     protected function getInput()
     {
         $wa = Factory::getApplication()->getDocument()->getWebAssetManager();
-        $wa->registerAndUseStyle('plg_system_bettercategories.admin', 'plg_system_bettercategories/admin.css');
-        $wa->registerAndUseScript('plg_system_bettercategories.tools', 'plg_system_bettercategories/tools.js', [], ['defer' => true], ['core']);
+        // the file time in the version: browsers take a changed file even when only the file was replaced
+        $ver = fn (string $file): string => BetterCategories::ASSET_VERSION . '.' . (int) @filemtime(JPATH_ROOT . '/media/plg_system_bettercategories/' . $file);
+        $wa->registerAndUseStyle('plg_system_bettercategories.admin', 'plg_system_bettercategories/admin.css', ['version' => $ver('css/admin.css')]);
+        $wa->registerAndUseScript('plg_system_bettercategories.tools', 'plg_system_bettercategories/tools.js', ['version' => $ver('js/tools.js')], ['defer' => true], ['core']);
         foreach (['EXPORT_DONE', 'IMPORT_CONFIRM', 'IMPORT_DONE', 'IMPORT_READING', 'THUMBS_RUNNING', 'THUMBS_DONE', 'THUMBS_CLEAR_CONFIRM', 'THUMBS_CLEARED', 'WORKING', 'FAILED'] as $key) {
             Text::script('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_' . $key);
         }

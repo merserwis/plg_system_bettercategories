@@ -25,14 +25,14 @@
 .bcat-preview-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; margin-bottom: .5rem; flex-wrap: wrap; }
 .bcat-preview-cat { display: flex; align-items: center; gap: .5rem; margin-bottom: .5rem; font-size: .875rem; }
 .bcat-preview-cat select { max-width: 260px; }
-.bcat-preview-frame { background: repeating-conic-gradient(#f5f6f8 0% 25%, #fff 0% 50%) 50% / 16px 16px; border-radius: .35rem; overflow: hidden; position: relative; }
+.bcat-preview-frame { direction: ltr; background: repeating-conic-gradient(#f5f6f8 0% 25%, #fff 0% 50%) 50% / 16px 16px; border-radius: .35rem; overflow: hidden; position: relative; }
 .bcat-preview-frame iframe { display: block; border: 0; background: #fff; transform-origin: 0 0; box-shadow: 0 0 0 1px rgba(0,0,0,.06); }
 .bcat-preview-status { margin-top: .35rem; min-height: 1.2em; }
 
 /* Narrower sliders and number fields, with the current value shown */
 .options-form:has(.bcat-preview) .form-range { max-width: 260px; vertical-align: middle; }
 .options-form:has(.bcat-preview) input[type="number"] { max-width: 9rem; }
-.bcat-range-value { display: inline-block; min-width: 3.5em; margin-left: .75rem; font-variant-numeric: tabular-nums; font-weight: 600; vertical-align: middle; }
+.bcat-range-value { display: inline-block; min-width: 3.5em; margin-inline-start: .75rem; font-variant-numeric: tabular-nums; font-weight: 600; vertical-align: middle; }
 
 /* Bigger colour pickers (minicolors) */
 .options-form:has(.bcat-preview) .minicolors { display: inline-block; }

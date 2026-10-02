@@ -16,7 +16,7 @@ use Joomla\Database\DatabaseInterface;
 class PlgSystemBettercategoriesInstallerScript extends InstallerScript
 {
     protected $minimumPhp    = '8.2.0';
-    protected $minimumJoomla = '5.0.0';
+    protected $minimumJoomla = '6.0.0';
 
     /**
      * A fresh install enables the plugin; an update keeps whatever the administrator chose.
@@ -42,6 +42,18 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
             }
 
             // The plugin only does something on Gridbox store pages: say so when Gridbox is missing.
+            // the predecessor (Gridbox Subcategories, plg_system_gbsubcats) would add a second list
+            $old = $db->createQuery()
+                ->update($db->quoteName('#__extensions'))
+                ->set($db->quoteName('enabled') . ' = 0')
+                ->where($db->quoteName('type') . ' = ' . $db->quote('plugin'))
+                ->where($db->quoteName('folder') . ' = ' . $db->quote('system'))
+                ->where($db->quoteName('element') . ' = ' . $db->quote('gbsubcats'))
+                ->where($db->quoteName('enabled') . ' = 1');
+            if ($db->setQuery($old)->execute() && $db->getAffectedRows() > 0) {
+                Factory::getApplication()->enqueueMessage(Text::_('PLG_SYSTEM_BETTERCATEGORIES_INSTALL_OLD_DISABLED'), 'notice');
+            }
+
             $gridbox = $db->setQuery(
                 $db->createQuery()
                     ->select('COUNT(*)')
