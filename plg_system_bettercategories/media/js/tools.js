@@ -109,8 +109,69 @@
     });
   }
 
+  // ---------------------------------------------------------------- help tooltips ("?" beside the option names)
+
+  // The text sits next to its "?" and is shown by CSS (hover, keyboard focus) or by a click
+  // (class is-open): no positioning script, so no administrator template can push it away.
+  function initHelp(form, label) {
+    let n = 0;
+    const closeAll = (except) => {
+      form.querySelectorAll('.bs-help-wrap.is-open').forEach((w) => {
+        if (w !== except) {
+          w.classList.remove('is-open');
+          w.querySelector('.bs-help').setAttribute('aria-expanded', 'false');
+        }
+      });
+    };
+    const add = (scope) => {
+      scope.querySelectorAll('.control-group').forEach((g) => {
+        const head = g.querySelector('.control-label');
+        const desc = g.querySelector('[id$="-desc"]');
+        if (!head || !desc || !desc.textContent.trim() || head.querySelector('.bs-help-wrap')) return;
+        const wrap = document.createElement('span');
+        wrap.className = 'bs-help-wrap';
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'bs-help';
+        b.textContent = '?';
+        b.setAttribute('aria-label', label);
+        b.setAttribute('aria-expanded', 'false');
+        const tip = document.createElement('span');
+        tip.className = 'bs-help-tip';
+        tip.id = 'bs-help-tip-' + (++n);
+        tip.innerHTML = (desc.querySelector('.form-text') || desc).innerHTML;
+        b.setAttribute('aria-describedby', tip.id);
+        wrap.append(b, tip);
+        head.appendChild(wrap);
+      });
+    };
+    form.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('.bs-help');
+      if (!b) {
+        if (!(e.target.closest && e.target.closest('.bs-help-tip'))) closeAll(null);
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      const wrap = b.parentNode;
+      const open = !wrap.classList.contains('is-open');
+      closeAll(wrap);
+      wrap.classList.toggle('is-open', open);
+      b.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape') return;
+      closeAll(null);
+      if (document.activeElement && document.activeElement.classList.contains('bs-help')) document.activeElement.blur();
+    });
+    add(form);
+    document.addEventListener('subform-row-add', (e) => add((e.detail && e.detail.row) || e.target));
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     if (!form()) return;
     document.querySelectorAll('[data-bctools]').forEach(setup);
+    const label = window.Joomla && Joomla.Text ? Joomla.Text._('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_HELP') : '';
+    initHelp(form(), label && label !== 'PLG_SYSTEM_BETTERCATEGORIES_TOOLS_HELP' ? label : 'Help');
   });
 })();

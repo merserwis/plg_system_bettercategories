@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.4.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.4.1-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below.
@@ -28,7 +28,8 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **A module for any page (new in 1.3.0):** `mod_bettercategories` shows the list of any store category — or the store home — in a module position or a Gridbox *Joomla Module* element, e.g. on the home page, with the plugin's styles and its own overrides.
 * **Faster first view (new in 1.3.0):** thumbnails can be generated for the whole store with one click, and the first row of tiles loads with high priority (better LCP in PageSpeed).
 * **Settings file (new in 1.3.0):** export all settings or only the styles to a JSON file and import them on another site.
-* **12 administrator languages (new in 1.4.0):** English, Polish, Ukrainian, German, Czech, Slovak, Lithuanian, French, Hindi, Chinese (Simplified), Arabic and Spanish. The language follows the Joomla administrator language; for other languages the texts are in English. Right-to-left sites (Arabic) get a mirrored list: side panels, toggle buttons and the back arrow follow the writing direction.
+* **4 administrator languages:** English (default), Polish, Ukrainian and German. The language follows the Joomla administrator language; for other languages the texts are in English. Right-to-left sites get a mirrored list: side panels, toggle buttons and the back arrow follow the writing direction.
+* **Help tooltips (new in 1.4.1):** a “?” beside every option shows its description on hover, keyboard focus or a click.
 * **Prices exactly as Gridbox calculates them (1.4.0):** the first store sale that applies, category sales on the product's own category and its parents, automatic exchange rates and the language currency.
 * **Smart category images:** Tile images come from, in order: an image chosen for the category in the plugin → the image set on the category in Gridbox → **the image of the most viewed product** in the category and its subcategories. Categories need no manual work to look good.
 * **Modern hover effects:** Zoom in, zoom out, lift with shadow, light shine, grayscale-to-colour, tint fade-in / fade-out, tilt, outline ring — or none.
@@ -245,7 +246,7 @@ The live preview shows the level of the category chosen in it.
 
 ## 🧪 Verification & Testing
 
-Versions 1.0.0 to 1.4.0 were tested on **Joomla 6.1.3 with PHP 8.5.10**, MySQL 8.0 and **Gridbox 2.20.3.1** (early development builds also on PHP 8.4), with a store structure of nested categories, products assigned directly to parent categories, unpublished products and categories, transparent PNG and JPG images.
+Versions 1.0.0 to 1.4.1 were tested on **Joomla 6.1.3 with PHP 8.5.10**, MySQL 8.0 and **Gridbox 2.20.3.1** (early development builds also on PHP 8.4), with a store structure of nested categories, products assigned directly to parent categories, unpublished products and categories, transparent PNG and JPG images.
 
 1. **Counts and visibility** — parent categories count products of the whole subtree; unpublished products and categories under unpublished parents are excluded; empty categories are hidden by default.
 2. **Image sources** — plugin image → Gridbox category image → most viewed visible product (an unpublished product with more views is ignored).
@@ -301,6 +302,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 ## 📝 Changelog
 
+* **1.4.1** — “?” help tooltips beside the options. Languages reduced to English, Polish, Ukrainian and German (files of the other languages removed on update).
 * **1.4.0** — 11 translations (with English fallback) and right-to-left support. Store sales, currencies and publishing dates exactly as Gridbox handles them. Cache hardening, hourly clean-up and refresh on scheduled changes. Diagnostic comment off by default, errors to the Joomla log, stricter rights for thumbnails. Joomla 6 required by the installer; the older Gridbox Subcategories plugin is switched off on install.
 * **1.3.0** — Lowest price per category. `mod_bettercategories` module. One-click thumbnail generation and deletion. First row of tiles with high priority. Export / import of settings and styles. Licence changed to GPL-3.0.
 * **1.2.0** — Fast WebP thumbnails with `srcset`. Per-level settings. Sibling bar with a back link on the last level. schema.org `ItemList` and `BreadcrumbList` (automatic, never duplicated).
