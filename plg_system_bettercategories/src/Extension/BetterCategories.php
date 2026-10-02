@@ -18,12 +18,16 @@ use Joomla\CMS\Cache\CacheControllerFactoryInterface;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\HTML\HTMLHelper;
+use Joomla\CMS\Language\Associations;
+use Joomla\CMS\Language\Text;
+use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\CMSPlugin;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 use Joomla\Registry\Registry;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Database\DatabaseInterface;
+use Joomla\Event\Priority;
 use Joomla\Event\SubscriberInterface;
 
 final class BetterCategories extends CMSPlugin implements SubscriberInterface
@@ -34,7 +38,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.3.0';
+    private const VERSION    = '1.4.0';
+
+    /** Version of the administrator scripts and styles (cache busting together with the file time). */
+    public const ASSET_VERSION = self::VERSION;
     private const SUB_MODES  = ['none', 'below', 'drawer', 'side', 'flip', 'tooltip'];
     private const CACHE_GROUP = 'plg_system_bettercategories';
 
@@ -55,6 +62,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
     /** Stored in the cache in place of an empty result, so leaf categories skip rendering too. */
     private const CACHE_EMPTY = "\0empty";
+
+    /** Placeholder of scheme://host:port in cached renderings. */
+    private const CACHE_HOST = "\0host";
 
     /** Thumbnails folder (under the site root) and the time one request may spend creating them. */
     private const THUMB_DIR    = 'media/plg_system_bettercategories/thumbs';
@@ -83,10 +93,24 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     /** @var object|null|false store currency (false = not read yet) */
     private $currency = false;
 
+    /** @var array|null active store sales of this request */
+    private ?array $sales = null;
+
+    /** @var Registry|null|false settings saved in the database (false = not read yet) */
+    private $saved = false;
+
+    /** @var array<int, string> scheduleStamp() of each app in this request */
+    private array $stamps = [];
+
+    /** @var array<int, int>|null parent of every Gridbox category */
+    private ?array $parents = null;
+
     public static function getSubscribedEvents(): array
     {
         return [
-            'onAfterRender'            => 'onAfterRender',
+            // after Gridbox's own onAfterRender (lazy loading, minifying): the block is inserted as built
+            'onAfterRender'            => ['onAfterRender', Priority::MIN],
+            'onAfterRespond'           => 'onAfterRespond',
             'onAjaxBettercategories'   => 'onAjax',
             'onExtensionAfterSave'     => 'onExtensionAfterSave',
             'onBetterCategoriesModule' => 'onModule',
@@ -127,6 +151,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         if ($appId <= 0 || !ComponentHelper::isEnabled('com_gridbox') || !$this->isEnabledApp($appId)) {
             return;
         }
+        // an id of no category of this app renders nothing and must not get a cache entry of its own
+        if ($categoryId > 0 && !$this->categoryInApp($categoryId, $appId)) {
+            return;
+        }
 
         $body = $app->getBody();
         $pos  = $this->findInsertPosition($body);
@@ -144,39 +172,96 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         try {
             $minutes = max(0, min(1440, (int) $this->params->get('cache_time', 15)));
             if ($minutes > 0) {
-                $user  = $app->getIdentity();
-                $key   = md5(implode('|', [self::VERSION, $config, $appId, $categoryId, $device,
-                    $app->getLanguage()->getTag(), implode(',', $this->viewLevels()), Uri::root(), (int) $this->pageCrumbs,
-                    $app->getInput()->cookie->getString('gridbox-currency', '')]));
-                $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
-                    ->createCacheController('output', ['defaultgroup' => self::CACHE_GROUP, 'lifetime' => $minutes, 'caching' => true]);
-                $html = $cache->get($key);
-                if (is_string($html)) {
-                    $status = 'hit';
-                    $html   = $html === self::CACHE_EMPTY ? '' : $html;
-                } else {
-                    $html   = $this->render($appId, $categoryId);
-                    $status = 'miss';
-                    if ($this->incomplete) {
-                        // some thumbnails are still to be made: the next visit renders (and caches) again
-                        $status = 'miss, thumbnails pending';
-                    } else {
-                        $cache->store($html === '' ? self::CACHE_EMPTY : $html, $key);
-                    }
-                }
+                $key = $this->cacheKey([$config, $appId, $categoryId, $device, (int) $this->pageCrumbs, $this->scheduleStamp($appId)]);
+                [$html, $status] = $this->cached($key, $minutes, fn () => $this->render($appId, $categoryId));
             } else {
                 $html = $this->render($appId, $categoryId);
             }
         } catch (\Throwable $e) {
+            $this->logError($e);
+
             return;
         }
 
-        // One comment line (also on pages without subcategories) to compare what desktop and phone
-        // visitors get: settings hash, device, cache state and time spent.
-        $html .= sprintf('<!-- Better Categories %s | cfg %s%s | %s | cache %s | %.1f ms (total %.1f ms) -->',
-            self::VERSION, $config, $given !== $config ? ' (site passed ' . $given . ', ignored)' : '',
-            $device, $status, (hrtime(true) - $start) / 1e6, (hrtime(true) - $t0) / 1e6);
+        // Diagnostics (setting or Joomla debug): one comment line, also on pages without subcategories,
+        // to compare what desktop and phone visitors get: settings hash, device, cache state, time.
+        if ($this->params->get('diagnostics', 0) || (defined('JDEBUG') && JDEBUG)) {
+            $html .= sprintf('<!-- Better Categories %s | cfg %s%s | %s | cache %s | %.1f ms (total %.1f ms) -->',
+                self::VERSION, $config, $given !== $config ? ' (site passed ' . $given . ', ignored)' : '',
+                $device, $status, (hrtime(true) - $start) / 1e6, (hrtime(true) - $t0) / 1e6);
+        }
         $app->setBody(substr($body, 0, $pos) . $html . substr($body, $pos));
+    }
+
+    /**
+     * Cache key of a rendering. Only values with a bounded set of possible values go into it: the
+     * currency is the store currency picked (not the raw cookie) and the host is left out (see
+     * cached()), so visitors cannot fill the cache with keys of their own.
+     */
+    private function cacheKey(array $parts): string
+    {
+        $app = $this->getApplication();
+
+        return md5(implode('|', array_merge([self::VERSION], $parts, [$app->getLanguage()->getTag(),
+            implode(',', $this->viewLevels()), Uri::root(true), (string) ($this->storeCurrency()->code ?? '')])));
+    }
+
+    /**
+     * Rendering from the cache, or rendered and stored. The address of the site (structured data
+     * links) is stored as a placeholder and put back on reading: a request with another Host
+     * header neither gets its own copy nor plants its host in the copy other visitors get.
+     *
+     * @return array{0: string, 1: string} html, cache state
+     */
+    private function cached(string $key, int $minutes, callable $render): array
+    {
+        $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
+            ->createCacheController('output', ['defaultgroup' => self::CACHE_GROUP, 'lifetime' => $minutes, 'caching' => true]);
+        $host  = Uri::getInstance()->toString(['scheme', 'host', 'port']);
+        $html  = $cache->get($key);
+        if (is_string($html)) {
+            return [$html === self::CACHE_EMPTY ? '' : str_replace(self::CACHE_HOST, $host, $html), 'hit'];
+        }
+
+        $html = (string) $render();
+        if ($this->incomplete) {
+            // some thumbnails are still to be made: the next visit renders (and caches) again
+            return [$html, 'miss, thumbnails pending'];
+        }
+        $cache->store($html === '' ? self::CACHE_EMPTY : str_replace($host, self::CACHE_HOST, $html), $key);
+
+        return [$html, 'miss'];
+    }
+
+    /** Joomla never removes expired cache files on the site by itself: at most once an hour, after the response. */
+    public function onAfterRespond(): void
+    {
+        $app = $this->getApplication();
+        if (!$app->isClient('site')) {
+            return;
+        }
+        $stamp = JPATH_CACHE . '/' . self::CACHE_GROUP . '.gc';
+        $mtime = @filemtime($stamp);
+        if ($mtime && time() - $mtime < 3600) {
+            return;
+        }
+        @touch($stamp);
+        try {
+            Factory::getContainer()->get(CacheControllerFactoryInterface::class)
+                ->createCacheController('output', ['defaultgroup' => self::CACHE_GROUP, 'caching' => true])
+                ->cache->gc();
+        } catch (\Throwable $e) {
+            $this->logError($e);
+        }
+    }
+
+    /** Errors go to the Joomla log (category plg_system_bettercategories), never to visitors. */
+    private function logError(\Throwable $e): void
+    {
+        try {
+            Log::add(get_class($e) . ': ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine(), Log::ERROR, self::CACHE_GROUP);
+        } catch (\Throwable $ignored) {
+        }
     }
 
     /**
@@ -211,6 +296,15 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
     /** The plugin settings as saved in #__extensions (null when they cannot be read). */
     private function savedParams(): ?Registry
+    {
+        if ($this->saved !== false) {
+            return $this->saved;
+        }
+
+        return $this->saved = $this->readSavedParams();
+    }
+
+    private function readSavedParams(): ?Registry
     {
         try {
             $db    = $this->db();
@@ -263,13 +357,13 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         switch ($position) {
             case 'page_top':
-                if (preg_match('#<div\b[^>]*\bclass="[^"]*\bba-gridbox-page\b[^"]*"[^>]*>#i', $body, $m, PREG_OFFSET_CAPTURE, $bodyStart)) {
+                if (preg_match('#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-gridbox-page(?:\s[^"]*)?"[^>]*>#i', $body, $m, PREG_OFFSET_CAPTURE, $bodyStart)) {
                     return $m[0][1] + strlen($m[0][0]);
                 }
                 break;
 
             case 'after_intro':
-                $start = $this->findElementStart($body, '#<div\b[^>]*\bclass="[^"]*\bba-item-category-intro\b#i', $bodyStart);
+                $start = $this->findElementStart($body, '#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-item-category-intro[\s"]#i', $bodyStart);
                 $end   = $start === null ? null : $this->findElementEnd($body, $start);
                 if ($end !== null) {
                     return $end;
@@ -280,7 +374,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             case 'after_item':
                 $itemId = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $this->params->get('item_id', ''));
                 if ($itemId !== '') {
-                    $start = $this->findElementStart($body, '#<div\b[^>]*\bid="' . preg_quote($itemId, '#') . '"#i', $bodyStart);
+                    $start = $this->findElementStart($body, '#<div\b[^>]*\sid="' . preg_quote($itemId, '#') . '"#i', $bodyStart);
                     $end   = $start === null ? null : ($position === 'before_item' ? $start : $this->findElementEnd($body, $start));
                     if ($end !== null) {
                         return $end;
@@ -289,7 +383,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 break;
 
             case 'after_products':
-                $start = $this->findElementStart($body, '#<div\b[^>]*\bclass="[^"]*\bba-item-blog-posts\b#i', $bodyStart);
+                $start = $this->findElementStart($body, '#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-item-blog-posts[\s"]#i', $bodyStart);
                 $end   = $start === null ? null : $this->findElementEnd($body, $start);
                 if ($end !== null) {
                     return $end;
@@ -298,7 +392,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
 
         // before_products, and the fallback when the chosen anchor is not on the page
-        return $this->findElementStart($body, '#<div\b[^>]*\bclass="[^"]*\bba-item-blog-posts\b#i', $bodyStart);
+        return $this->findElementStart($body, '#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-item-blog-posts[\s"]#i', $bodyStart);
     }
 
     private function findElementStart(string $body, string $pattern, int $offset): ?int
@@ -436,7 +530,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private function visibleProductsQuery(): \Joomla\Database\QueryInterface
     {
         $db     = $this->db();
-        $now    = $db->quote(gmdate('Y-m-d H:i:s'));
+        $now    = $db->quote($this->siteNow());
         $null   = $db->quote($db->getNullDate());
         $lang   = $this->getApplication()->getLanguage()->getTag();
         $hidden = $this->hiddenProducts();
@@ -574,14 +668,22 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     public function onAjax($event): void
     {
         $app = $this->getApplication();
+        $this->loadLanguage();
         if (!$app->isClient('administrator') || !Session::checkToken() || !$app->getIdentity()?->authorise('core.manage', 'com_plugins')) {
             $app->setHeader('status', '403', true);
-            $this->ajaxResult($event, ['error' => 'Not allowed']);
+            $this->ajaxResult($event, ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_NOT_ALLOWED')]);
 
             return;
         }
 
         $action = $app->getInput()->post->getCmd('bc_action', 'preview');
+        // actions that write files or settings need the right to edit plugins, not only to see them
+        if (in_array($action, ['import', 'thumbs', 'thumbs_clear'], true) && !$app->getIdentity()->authorise('core.edit', 'com_plugins')) {
+            $app->setHeader('status', '403', true);
+            $this->ajaxResult($event, ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_NOT_ALLOWED_EDIT')]);
+
+            return;
+        }
         if ($action === 'import') {
             $this->ajaxResult($event, $this->importSettings());
 
@@ -612,14 +714,14 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
             $appId = $this->previewApp();
             if ($appId === 0) {
-                $this->ajaxResult($event, ['error' => 'No Gridbox store app found.']);
+                $this->ajaxResult($event, ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_NO_STORE')]);
 
                 return;
             }
 
             $categories = $this->loadCategories($appId);
             // every category as an indented tree (last-level pages show the sibling bar)
-            $tree = [['id' => 0, 'title' => 'Store home']];
+            $tree = [['id' => 0, 'title' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_STORE_HOME')]];
             $walk = function (int $parent, int $depth) use (&$walk, &$tree, $categories): void {
                 foreach ($categories as $cat) {
                     if ($cat->parent === $parent && $depth < 50) {
@@ -643,7 +745,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 'hideProducts' => $hasChildren && (bool) $this->params->get('hide_products', 0),
             ]);
         } catch (\Throwable $e) {
-            $this->ajaxResult($event, ['error' => $e->getMessage()]);
+            // details in the Joomla log; the message only with debugging on (it may name tables and paths)
+            $this->logError($e);
+            $this->ajaxResult($event, ['error' => defined('JDEBUG') && JDEBUG ? $e->getMessage() : Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_GENERIC')]);
         } finally {
             $this->params  = $saved;
             $this->preview = false;
@@ -1001,7 +1105,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $r   = [];
         $r[] = "$s,$s *,$s *::before,$s *::after{box-sizing:border-box;}";
         // width limits: Gridbox columns are flex boxes, a one-line bar would otherwise widen the page
-        $r[] = "$s{width:100%;max-width:100%;min-width:0;margin:{$p['marginTop']}px 0 {$p['marginBottom']}px;padding:0 {$pad}px;text-align:left;" . ($font ? "font-size:$font;" : '') . ($p['textColor'] ? "color:{$p['textColor']};" : '') . '}';
+        $r[] = "$s{width:100%;max-width:100%;min-width:0;margin:{$p['marginTop']}px 0 {$p['marginBottom']}px;padding:0 {$pad}px;text-align:start;" . ($font ? "font-size:$font;" : '') . ($p['textColor'] ? "color:{$p['textColor']};" : '') . '}';
         $r[] = "$s .bettercategories-title{margin:{$p['headTop']}px 0 " . min($p['headBottom'], 12) . 'px;font-size:' . ($p['headingSize'] ?: '1.1em') . ';text-align:inherit;' . ($p['textColor'] ? 'color:inherit;' : '') . '}';
         $r[] = "$s .bettercategories-list{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px;}";
         $r[] = "$s .bettercategories-item{margin:0;padding:0;}";
@@ -1011,7 +1115,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $r[] = "$s .bettercategories-count{opacity:.7;}";
         $r[] = "$s .is-current .bettercategories-link{background:$accent;color:#fff;font-weight:600;}";
         $r[] = "$s .is-current .bettercategories-count{opacity:.85;}";
-        $r[] = "$s .bettercategories-back .bettercategories-link{background:transparent;padding-left:2px;font-weight:600;}";
+        $r[] = "$s .bettercategories-back .bettercategories-link{background:transparent;padding-inline-start:2px;font-weight:600;}";
+        // the back arrow points to the start of the line (right in right-to-left languages)
+        $r[] = "[dir=rtl] $s .bettercategories-back svg{transform:scaleX(-1);}";
         $r[] = "$s .bettercategories-back svg{display:block;flex:0 0 auto;}";
         // some sites strip @media from the page served to phones: the phone layout then applies directly
         $r[] = $p['device'] === 'mobile' ? $phone : "@media (max-width:768px){ $phone $s{padding:0 {$p['padSideMob']}px;} }";
@@ -1113,6 +1219,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         // decoded image + thumbnail must fit in the memory left to PHP
         $limit = $this->memoryLimit();
         if ($limit > 0 && memory_get_usage() + $info[0] * $info[1] * 5 + 16 * 1048576 > $limit) {
+            return false;
+        }
+        // a hard cap also without a memory limit: a huge upload is not decoded inside a visitor's request
+        if ($info[0] * $info[1] > 40000000) {
             return false;
         }
 
@@ -1280,22 +1390,13 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $this->moduleOverrides = $overrides;
             $minutes               = max(0, min(1440, (int) $this->params->get('cache_time', 15)));
             if ($minutes > 0) {
-                $key   = md5(implode('|', ['module', self::VERSION, md5(json_encode($this->params->toArray())), json_encode($overrides), $appId, $categoryId,
-                    $this->device(), $app->getLanguage()->getTag(), implode(',', $this->viewLevels()), Uri::root(), $app->getInput()->cookie->getString('gridbox-currency', '')]));
-                $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
-                    ->createCacheController('output', ['defaultgroup' => self::CACHE_GROUP, 'lifetime' => $minutes, 'caching' => true]);
-                $html = $cache->get($key);
-                if (!is_string($html)) {
-                    $html = $this->render($appId, $categoryId);
-                    if (!$this->incomplete) {
-                        $cache->store($html === '' ? self::CACHE_EMPTY : $html, $key);
-                    }
-                }
-                $html = $html === self::CACHE_EMPTY ? '' : $html;
+                $key    = $this->cacheKey(['module', md5(json_encode($this->params->toArray())), json_encode($overrides), $appId, $categoryId, $this->device(), $this->scheduleStamp($appId)]);
+                [$html] = $this->cached($key, $minutes, fn () => $this->render($appId, $categoryId));
             } else {
                 $html = $this->render($appId, $categoryId);
             }
         } catch (\Throwable $e) {
+            $this->logError($e);
             $html = '';
         } finally {
             $this->moduleMode      = false;
@@ -1362,6 +1463,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         foreach ($products as $product) {
             $id   = (int) $product->id;
             $cats = array_unique(array_merge([(int) $product->page_category], $mapped[$id] ?? []));
+            // store sales on categories apply to the product's own category and its parents, not to the
+            // categories it is only mapped to (Gridbox: BaseHelper::getCategoryId)
+            $saleCats = $sales ? $this->categoryPath((int) $product->page_category) : [];
 
             $candidates = [['', (string) $product->price, (string) $product->sale_price]];
             $variations = json_decode((string) $product->variations);
@@ -1378,7 +1482,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 if (!is_numeric($price) || (float) $price <= 0) {
                     continue;
                 }
-                $value = is_numeric($sale) ? (float) $sale : $this->salePrice($sales, (float) $price, $id, $variation, $cats);
+                $value = is_numeric($sale) ? (float) $sale : $this->salePrice($sales, (float) $price, $id, $variation, $saleCats);
                 if ($value > 0 && ($min === null || $value < $min)) {
                     $min = $value;
                 }
@@ -1406,8 +1510,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
             $applies = match ((string) $sale->applies_to) {
                 '*'        => true,
-                'category' => (bool) array_filter($sale->map, fn ($m) => in_array((int) $m->item_id, $categories, true)),
-                'product'  => (bool) array_filter($sale->map, fn ($m) => (int) $m->item_id === $productId && (string) $m->variation === $variation),
+                'category' => (bool) array_intersect_key($sale->catSet, array_flip($categories)),
+                'product'  => isset($sale->prodSet[$productId . '|' . $variation]),
                 default    => false,
             };
             if ($applies) {
@@ -1418,13 +1522,96 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         return $price;
     }
 
-    /** Store sales active now for the visitor's access levels, with their product/category maps. */
-    private function activeSales(): array
+    /** Now in the site's time zone: Gridbox stores and compares publishing dates in it (DateHelper::make()). */
+    private function siteNow(): string
+    {
+        try {
+            $zone = new \DateTimeZone((string) $this->getApplication()->get('offset', 'UTC') ?: 'UTC');
+        } catch (\Throwable $e) {
+            $zone = new \DateTimeZone('UTC');
+        }
+
+        return (new \DateTime('now', $zone))->format('Y-m-d H:i:s');
+    }
+
+    /**
+     * The latest scheduled change that has already happened: a store sale starting or ending, a
+     * product appearing (created date) or ending. Part of the cache key, so a cached list does not
+     * outlive such a change (prices "from", counts).
+     */
+    private function scheduleStamp(int $appId): string
+    {
+        if (isset($this->stamps[$appId])) {
+            return $this->stamps[$appId];
+        }
+        try {
+            $db   = $this->db();
+            $now  = $db->quote($this->siteNow());
+            $null = $db->quote($db->getNullDate());
+            $max  = fn (string $column, string $table, string $where) => '(SELECT MAX(' . $column . ') FROM ' . $db->quoteName($table)
+                . ' WHERE ' . $column . ' <= ' . $now . ' AND ' . $column . ' <> ' . $null . $where . ')';
+            $app  = ' AND app_id = ' . $appId;
+            $db->setQuery('SELECT CONCAT_WS(\'|\', ' . implode(', ', [
+                $max('publish_up', '#__gridbox_store_sales', ''),
+                $max('publish_down', '#__gridbox_store_sales', ''),
+                $max('created', '#__gridbox_pages', $app),
+                $max('end_publishing', '#__gridbox_pages', $app),
+            ]) . ')');
+
+            return $this->stamps[$appId] = (string) $db->loadResult();
+        } catch (\Throwable $e) {
+            return $this->stamps[$appId] = '';
+        }
+    }
+
+    private function categoryInApp(int $categoryId, int $appId): bool
     {
         try {
             $db    = $this->db();
-            $tz    = new \DateTimeZone((string) $this->getApplication()->get('offset', 'UTC') ?: 'UTC');
-            $now   = $db->quote((new \DateTime('now', $tz))->format('Y-m-d H:i:s'));
+            $query = $db->createQuery()
+                ->select('1')
+                ->from($db->quoteName('#__gridbox_categories'))
+                ->where($db->quoteName('id') . ' = ' . $categoryId)
+                ->where($db->quoteName('app_id') . ' = ' . $appId);
+
+            return (bool) $db->setQuery($query, 0, 1)->loadResult();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /** The category and all its parents, from every category of the site (published or not, as Gridbox reads them). */
+    private function categoryPath(int $id): array
+    {
+        if ($this->parents === null) {
+            $this->parents = [];
+            try {
+                $db    = $this->db();
+                $query = $db->createQuery()->select(['id', 'parent'])->from($db->quoteName('#__gridbox_categories'));
+                foreach ($db->setQuery($query)->loadObjectList() ?: [] as $row) {
+                    $this->parents[(int) $row->id] = (int) $row->parent;
+                }
+            } catch (\Throwable $e) {
+            }
+        }
+        $path = [$id];
+        while (($id = $this->parents[$id] ?? 0) > 0 && !in_array($id, $path, true) && count($path) < 50) {
+            $path[] = $id;
+        }
+
+        return $path;
+    }
+
+    /** Store sales active now for the visitor's access levels (lowest id first), with indexed product/category maps. */
+    private function activeSales(): array
+    {
+        if ($this->sales !== null) {
+            return $this->sales;
+        }
+        $this->sales = [];
+        try {
+            $db    = $this->db();
+            $now   = $db->quote($this->siteNow());
             $null  = $db->quote($db->getNullDate());
             $query = $db->createQuery()
                 ->select('*')
@@ -1434,19 +1621,30 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 ->where('(publish_up = ' . $null . ' OR publish_up IS NULL OR publish_up <= ' . $now . ')')
                 ->where('access IN (' . implode(',', $this->viewLevels()) . ')')
                 ->order('id ASC');
-            $sales = $db->setQuery($query)->loadObjectList() ?: [];
-            foreach ($sales as $sale) {
-                $query     = $db->createQuery()
-                    ->select('*')
+            $sales = $db->setQuery($query)->loadObjectList('id') ?: [];
+            if ($sales) {
+                // the maps of all sales in one query
+                foreach ($sales as $sale) {
+                    $sale->catSet  = [];
+                    $sale->prodSet = [];
+                }
+                $query = $db->createQuery()
+                    ->select(['sale_id', 'item_id', 'variation'])
                     ->from($db->quoteName('#__gridbox_store_sales_map'))
-                    ->where('sale_id = ' . (int) $sale->id);
-                $sale->map = $db->setQuery($query)->loadObjectList() ?: [];
+                    ->where('sale_id IN (' . implode(',', array_map('intval', array_keys($sales))) . ')');
+                foreach ($db->setQuery($query)->loadObjectList() ?: [] as $m) {
+                    if ($sale = $sales[(int) $m->sale_id] ?? null) {
+                        $sale->catSet[(int) $m->item_id] = true;
+                        $sale->prodSet[(int) $m->item_id . '|' . (string) $m->variation] = true;
+                    }
+                }
             }
-
-            return $sales;
+            $this->sales = array_values($sales);
         } catch (\Throwable $e) {
-            return [];
+            $this->sales = [];
         }
+
+        return $this->sales;
     }
 
     /** The store currency the visitor sees (default, the language's, or the one picked in the currency switcher). */
@@ -1471,27 +1669,54 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return null;
         }
 
-        $list     = is_object($store->currencies ?? null) ? (array) ($store->currencies->list ?? []) : [];
-        $currency = null;
+        // the same choice as Gridbox (StoreHelper::setCurrency): the default currency, the first one of
+        // the page language (only with Associations on), the first one matching the switcher cookie
+        $list     = is_object($store->currencies ?? null) ? array_values(array_filter((array) ($store->currencies->list ?? []), 'is_object')) : [];
+        $default  = null;
         foreach ($list as $item) {
             if (!empty($item->default)) {
-                $currency = $item;
+                $default = $item;
+                break;
             }
         }
-        $lang = $this->getApplication()->getLanguage()->getTag();
-        foreach ($list as $item) {
-            if (($item->language ?? '') === $lang) {
-                $currency = $item;
+        $currency = $default;
+        if (Associations::isEnabled()) {
+            $lang = $this->getApplication()->getLanguage()->getTag();
+            foreach ($list as $item) {
+                if (($item->language ?? '') === $lang) {
+                    $currency = $item;
+                    break;
+                }
             }
         }
         $code = $this->getApplication()->getInput()->cookie->getString('gridbox-currency', '');
-        foreach ($list as $item) {
-            if ($code !== '' && ($item->code ?? '') === $code) {
-                $currency = $item;
+        if ($code !== '') {
+            foreach ($list as $item) {
+                if ((string) ($item->code ?? '') === $code) {
+                    $currency = $item;
+                    break;
+                }
             }
         }
 
         $this->currency = $currency ?? (is_object($store->currency ?? null) ? $store->currency : null);
+
+        // with automatic exchange rates Gridbox replaces the rate of every non-default currency with the fetched one
+        if ($this->currency && $this->currency !== $default && !empty($store->currencies->auto) && isset($this->currency->code)) {
+            try {
+                $query = $db->createQuery()
+                    ->select($db->quoteName('key'))
+                    ->from($db->quoteName('#__gridbox_api'))
+                    ->where($db->quoteName('service') . ' = ' . $db->quote('exchangerates_data'));
+                $rates = json_decode((string) $db->setQuery($query)->loadResult());
+                $rate  = $rates->rates->{$this->currency->code} ?? null;
+                if (is_numeric($rate) && (float) $rate > 0) {
+                    $this->currency       = clone $this->currency;
+                    $this->currency->rate = (float) $rate;
+                }
+            } catch (\Throwable $e) {
+            }
+        }
 
         return $this->currency;
     }
@@ -1566,21 +1791,21 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     {
         $app = $this->getApplication();
         if (!$app->getIdentity()?->authorise('core.edit', 'com_plugins')) {
-            return ['error' => 'You are not allowed to change plugin settings.'];
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_NOT_ALLOWED_EDIT')];
         }
 
         $raw = (string) $app->getInput()->post->getRaw('data', '');
         if ($raw === '' || strlen($raw) > 262144) {
-            return ['error' => 'The file is empty or too large (max. 256 KB).'];
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_SIZE')];
         }
         $data = json_decode($raw, true);
         if (!is_array($data) || ($data['extension'] ?? '') !== 'plg_system_bettercategories' || !is_array($data['params'] ?? null)) {
-            return ['error' => 'This is not a Better Categories settings file.'];
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_FILE')];
         }
 
         $stylesOnly = $app->getInput()->post->getCmd('scope', 'all') === 'styles';
         $known      = $this->settingKeys();
-        $params     = $this->savedParams() ?? new Registry();
+        $params     = $this->readSavedParams() ?? new Registry();
         $imported   = 0;
         $ignored    = [];
         foreach ($data['params'] as $key => $value) {
@@ -1598,7 +1823,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $imported++;
         }
         if ($imported === 0) {
-            return ['error' => 'The file contains no settings of this plugin.'];
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_EMPTY')];
         }
 
         $db    = $this->db();
@@ -1648,10 +1873,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     {
         $p = $this->settings();
         if (!$p['thumbs']) {
-            return ['error' => 'Fast thumbnails are switched off.'];
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_THUMBS_OFF')];
         }
         if (!function_exists('imagewebp')) {
-            return ['error' => 'This server\'s PHP (GD) cannot write WebP images.'];
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_NO_WEBP')];
         }
         if (function_exists('set_time_limit')) {
             @set_time_limit(60);
@@ -1829,6 +2054,12 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
      * Toggle buttons of one block: open/close a panel, close the others, close on Escape or a click
      * outside. Scoped to the block; no dependencies.
      */
+    /** CSS text-align of the alignment setting: left / right follow the writing direction (start / end), like the flex alignment does. */
+    private function textAlign(array $p): string
+    {
+        return ['left' => 'start', 'center' => 'center', 'right' => 'end'][$p['align']] ?? 'start';
+    }
+
     private function subScript(string $id): string
     {
         return '<script>(function(n){if(!n)return;'
@@ -1837,7 +2068,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             . 'var tip=n.classList.contains("bettercategories--sub-tooltip"),dr=n.classList.contains("bettercategories--sub-drawer"),ul=n.querySelector(".bettercategories-list");'
             . 'function fit(li){var s=li.querySelector(".bettercategories-sub");if(!s)return;'
             . 'if(tip){s.classList.remove("bettercategories-sub--down");s.style.setProperty("--bc-dx","0px");var r=s.getBoundingClientRect();if(r.top<8){s.classList.add("bettercategories-sub--down");r=s.getBoundingClientRect();}var w=document.documentElement.clientWidth,d=0;if(r.left<8)d=8-r.left;else if(r.right>w-8)d=w-8-r.right;s.style.setProperty("--bc-dx",Math.round(d)+"px");}'
-            . 'else if(dr&&ul){var a=ul.getBoundingClientRect(),b=li.getBoundingClientRect();if(b.width<200&&a.width>b.width+1){s.style.width=a.width+"px";s.style.marginLeft=Math.round(a.left-b.left)+"px";}else{s.style.width="";s.style.marginLeft="";}}}'
+            . 'else if(dr&&ul){var a=ul.getBoundingClientRect(),b=li.getBoundingClientRect();var rtl=getComputedStyle(li).direction==="rtl";s.style.marginLeft="";s.style.marginRight="";if(b.width<200&&a.width>b.width+1){s.style.width=a.width+"px";if(rtl)s.style.marginRight=Math.round(b.right-a.right)+"px";else s.style.marginLeft=Math.round(a.left-b.left)+"px";}else{s.style.width="";}}}'
             . 'if(tip||dr){var last=null;n.addEventListener("pointerover",function(e){var li=e.target.closest(".bettercategories-has-sub");if(li&&li!==last){last=li;fit(li);}});'
             . 'n.addEventListener("focusin",function(e){var li=e.target.closest(".bettercategories-has-sub");if(li)fit(li);});'
             . 'window.addEventListener("resize",function(){last=null;n.querySelectorAll(".bettercategories-has-sub.is-open").forEach(fit);});}'
@@ -2029,7 +2260,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 . $this->fillCss($s, $p, (int) $d['cols']);
         };
 
-        $rows[] = "$s{--bcat-gap:{$p['gap']}px;margin:{$p['marginTop']}px 0 {$p['marginBottom']}px;text-align:{$p['align']};"
+        $rows[] = "$s{--bcat-gap:{$p['gap']}px;margin:{$p['marginTop']}px 0 {$p['marginBottom']}px;text-align:{$this->textAlign($p)};"
             . ($p['textColor'] ? "color:{$p['textColor']};" : '') . '}';
         $rows[] = $block($devices[$p['device']]);
         $rows[] = "$s .bettercategories-title{margin:{$p['headTop']}px 0 {$p['headBottom']}px;text-align:inherit;" . ($p['textColor'] ? 'color:inherit;' : '') . '}';
@@ -2043,7 +2274,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $rows[] = "$s .bettercategories-count{opacity:.75;}";
         if ($p['priceFrom']) {
             $rows[] = "$s .bettercategories-price{font-size:.85em;font-weight:600;white-space:nowrap;" . ($p['priceColor'] ? "color:{$p['priceColor']};" : 'opacity:.85;')
-                . ($p['display'] === 'tiles' ? 'display:block;margin-top:2px;' : 'margin-left:.4em;') . '}';
+                . ($p['display'] === 'tiles' ? 'display:block;margin-top:2px;' : 'margin-inline-start:.4em;') . '}';
         }
 
         $justify = ['left' => 'flex-start', 'center' => 'center', 'right' => 'flex-end'][$p['align']];
@@ -2153,7 +2384,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                     break;
             }
             if ($p['style'] !== 'overlay' && $p['style'] !== 'cover') {
-                $rows[] = "$s .bettercategories-caption{text-align:{$p['align']};}";
+                $rows[] = "$s .bettercategories-caption{text-align:{$this->textAlign($p)};}";
             }
         }
 
@@ -2254,19 +2485,19 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         if ($mode === 'below') {
             $r[] = "$s .bettercategories-sub{margin-top:.4em;text-align:inherit;$color}";
             if ($p['display'] === 'tiles') {
-                $r[] = "$s .bettercategories-tile .bettercategories-sub{text-align:{$p['align']};}";
+                $r[] = "$s .bettercategories-tile .bettercategories-sub{text-align:{$this->textAlign($p)};}";
             }
 
             return implode('', $r);
         }
 
         // Toggle button: "+" that turns into "×"
-        $r[] = "$s .bettercategories-toggle{position:absolute;top:8px;right:8px;z-index:6;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333;}";
+        $r[] = "$s .bettercategories-toggle{position:absolute;top:8px;inset-inline-end:8px;z-index:6;width:30px;height:30px;padding:0;border:0;border-radius:50%;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer;display:flex;align-items:center;justify-content:center;color:#333;}";
         $r[] = "$s .bettercategories-toggle svg{display:block;width:12px;height:12px;transition:transform .3s $ease;}";
         $r[] = "$open .bettercategories-toggle svg{transform:rotate(45deg);}";
         $r[] = "$s .bettercategories-toggle:focus-visible{outline:2px solid currentColor;outline-offset:2px;}";
         if ($p['display'] !== 'tiles') {
-            $r[] = "$s .bettercategories-toggle{position:relative;top:auto;right:auto;display:inline-flex;vertical-align:middle;width:22px;height:22px;margin-left:6px;box-shadow:none;background:rgba(0,0,0,.06);}";
+            $r[] = "$s .bettercategories-toggle{position:relative;top:auto;inset-inline-end:auto;display:inline-flex;vertical-align:middle;width:22px;height:22px;margin-inline-start:6px;box-shadow:none;background:rgba(0,0,0,.06);}";
         }
 
         switch ($mode) {
@@ -2286,8 +2517,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             case 'side':
                 // Slides in from the side over the tile.
                 $r[] = "$s .bettercategories-tile{overflow:hidden;border-radius:$radius;}";
-                $r[] = "$s .bettercategories-sub{position:absolute;inset:0;z-index:5;overflow:hidden auto;overflow-wrap:break-word;scrollbar-width:thin;padding:14px 44px 14px 14px;background:$bg;$color"
-                    . "transform:translateX(102%);transition:transform .4s $ease;text-align:left;}";
+                $r[] = "$s .bettercategories-sub{position:absolute;inset:0;z-index:5;overflow:hidden auto;overflow-wrap:break-word;scrollbar-width:thin;padding:14px;padding-inline-end:44px;background:$bg;$color"
+                    . "transform:translateX(102%);transition:transform .4s $ease;text-align:start;}";
+                // right-to-left: the panel comes from the other side
+                $r[] = "[dir=rtl] $s .bettercategories-sub{transform:translateX(-102%);}";
                 $r[] = $both('.bettercategories-sub', 'transform:translateX(0);box-shadow:-6px 0 18px rgba(0,0,0,.12);');
                 break;
 
@@ -2296,15 +2529,15 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 $r[] = "$s .bettercategories-tile{perspective:1200px;}";
                 $r[] = "$s .bettercategories-card{position:relative;height:100%;transform-style:preserve-3d;transition:transform .6s $ease;}";
                 $r[] = "$s .bettercategories-card > .bettercategories-link{backface-visibility:hidden;-webkit-backface-visibility:hidden;}";
-                $r[] = "$s .bettercategories-sub{position:absolute;inset:0;z-index:5;overflow:hidden auto;overflow-wrap:break-word;scrollbar-width:thin;padding:16px 44px 16px 16px;border-radius:$radius;background:$bg;$color"
-                    . "transform:rotateY(180deg);backface-visibility:hidden;-webkit-backface-visibility:hidden;text-align:left;box-shadow:0 6px 18px rgba(0,0,0,.12);}";
+                $r[] = "$s .bettercategories-sub{position:absolute;inset:0;z-index:5;overflow:hidden auto;overflow-wrap:break-word;scrollbar-width:thin;padding:16px;padding-inline-end:44px;border-radius:$radius;background:$bg;$color"
+                    . "transform:rotateY(180deg);backface-visibility:hidden;-webkit-backface-visibility:hidden;text-align:start;box-shadow:0 6px 18px rgba(0,0,0,.12);}";
                 $r[] = $both('.bettercategories-card', 'transform:rotateY(180deg);');
                 break;
 
             case 'tooltip':
                 // A small bubble above the category.
                 $r[] = "$s .bettercategories-sub{position:absolute;left:50%;bottom:calc(100% + 10px);z-index:30;width:max-content;max-width:min(300px,90vw);padding:12px 14px;border-radius:10px;background:$bg;$color"
-                    . "box-shadow:0 10px 30px rgba(0,0,0,.18);text-align:left;opacity:0;visibility:hidden;pointer-events:none;transform:translate(calc(-50% + var(--bc-dx,0px)),6px);transition:opacity .2s,transform .2s $ease,visibility 0s linear .2s;}";
+                    . "box-shadow:0 10px 30px rgba(0,0,0,.18);text-align:start;opacity:0;visibility:hidden;pointer-events:none;transform:translate(calc(-50% + var(--bc-dx,0px)),6px);transition:opacity .2s,transform .2s $ease,visibility 0s linear .2s;}";
                 $r[] = "$s .bettercategories-sub::after{content:'';position:absolute;left:50%;top:100%;margin-left:calc(-7px - var(--bc-dx,0px));border:7px solid transparent;border-top-color:$bg;}";
                 // an invisible bridge so the pointer can move from the category to the bubble
                 $r[] = "$s .bettercategories-sub::before{content:'';position:absolute;left:0;right:0;top:100%;height:12px;}";

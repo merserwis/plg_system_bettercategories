@@ -15,6 +15,14 @@
     + '.bcat-products div{height:90px;border-radius:6px;background:#eef1f4;display:flex;align-items:center;justify-content:center;color:#9aa3ad;font-size:12px}'
     + '.bcat-note{margin-top:20px;padding:10px;border:1px dashed #c5ccd3;border-radius:6px;color:#6c757d;font-size:13px}';
 
+  const T = (key, fallback) => {
+    const text = window.Joomla && Joomla.Text ? Joomla.Text._('PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_' + key) : '';
+    return text && text !== 'PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_' + key ? text : fallback;
+  };
+  const esc = (text) => String(text).replace(/[&<>"']/g, (c) => '&#' + c.charCodeAt(0) + ';');
+  // the preview follows the writing direction of the administrator language (Arabic: right to left)
+  const dir = () => (document.documentElement.getAttribute('dir') || document.dir || 'ltr').toLowerCase() === 'rtl' ? 'rtl' : 'ltr';
+
   const form = () => document.getElementById('style-form') || document.querySelector('form[name="adminForm"]');
   const visible = (el) => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
 
@@ -33,11 +41,11 @@
 
   function document_(html, result) {
     const products = result.hideProducts
-      ? '<div class="bcat-note">Products are hidden on categories that have subcategories.</div>'
-      : '<div class="bcat-products">' + '<div>product</div>'.repeat(8) + '</div>';
-    return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+      ? '<div class="bcat-note">' + esc(T('PRODUCTS_HIDDEN', 'Products are hidden on categories that have subcategories.')) + '</div>'
+      : '<div class="bcat-products">' + ('<div>' + esc(T('PRODUCT', 'product')) + '</div>').repeat(8) + '</div>';
+    return '<!doctype html><html dir="' + dir() + '" lang="' + esc(document.documentElement.lang || 'en') + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
       + '<style>' + BASE_CSS + '</style></head><body>'
-      + (html || '<div class="bcat-note">This category has no subcategories to list.</div>') + products + '</body></html>';
+      + (html || '<div class="bcat-note">' + esc(T('NO_SUBCATEGORIES', 'This category has no subcategories to list.')) + '</div>') + products + '</body></html>';
   }
 
   function setup(panel) {
@@ -77,7 +85,7 @@
       const mine = ++seq;
       if (controller) controller.abort();
       controller = new AbortController();
-      status.textContent = 'Updating…';
+      status.textContent = T('UPDATING', 'Updating…');
       try {
         const response = await fetch(panel.dataset.bcatUrl, { method: 'POST', body: collect(select.value), credentials: 'same-origin', signal: controller.signal });
         if (!response.ok) throw new Error('HTTP ' + response.status);
@@ -86,7 +94,7 @@
         while (Array.isArray(result)) result = result[0];
         if (mine !== seq) return;
         if (!result || result.error) {
-          status.textContent = (result && result.error) || json.message || 'Preview unavailable.';
+          status.textContent = (result && result.error) || json.message || T('UNAVAILABLE', 'Preview unavailable.');
           return;
         }
         if (Array.isArray(result.categories)) {
@@ -98,7 +106,7 @@
         status.textContent = '';
       } catch (e) {
         if (e.name === 'AbortError') return;
-        if (mine === seq) status.textContent = 'Preview unavailable: ' + e.message;
+        if (mine === seq) status.textContent = T('UNAVAILABLE', 'Preview unavailable.') + ' ' + e.message;
       }
     }
 
