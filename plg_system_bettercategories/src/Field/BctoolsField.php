@@ -29,7 +29,7 @@ class BctoolsField extends FormField
         $ver = fn (string $file): string => BetterCategories::ASSET_VERSION . '.' . (int) @filemtime(JPATH_ROOT . '/media/plg_system_bettercategories/' . $file);
         $wa->registerAndUseStyle('plg_system_bettercategories.admin', 'plg_system_bettercategories/admin.css', ['version' => $ver('css/admin.css')]);
         $wa->registerAndUseScript('plg_system_bettercategories.tools', 'plg_system_bettercategories/tools.js', ['version' => $ver('js/tools.js')], ['defer' => true], ['core']);
-        foreach (['EXPORT_DONE', 'IMPORT_CONFIRM', 'IMPORT_DONE', 'IMPORT_READING', 'THUMBS_RUNNING', 'THUMBS_DONE', 'THUMBS_CLEAR_CONFIRM', 'THUMBS_CLEARED', 'WORKING', 'FAILED'] as $key) {
+        foreach (['EXPORT_DONE', 'IMPORT_CONFIRM', 'IMPORT_DONE', 'IMPORT_READING', 'THUMBS_RUNNING', 'THUMBS_DONE', 'THUMBS_CLEAR_CONFIRM', 'THUMBS_CLEARED', 'WORKING', 'FAILED', 'HELP'] as $key) {
             Text::script('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_' . $key);
         }
 

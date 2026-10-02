@@ -21,11 +21,41 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
     /**
      * A fresh install enables the plugin; an update keeps whatever the administrator chose.
      */
+    /**
+     * Since 1.4.1 the extension ships English, Polish, Ukrainian and German only: the files of the
+     * other languages installed by 1.4.0 are removed (Joomla keeps them on an update).
+     */
+    private function removeDroppedLanguages(): void
+    {
+        foreach (['ar-AA', 'cs-CZ', 'es-ES', 'fr-FR', 'hi-IN', 'lt-LT', 'sk-SK', 'zh-CN'] as $tag) {
+            $files = [
+                JPATH_ADMINISTRATOR . '/language/' . $tag . '/plg_system_bettercategories',
+                JPATH_PLUGINS . '/system/bettercategories/language/' . $tag . '/plg_system_bettercategories',
+                JPATH_SITE . '/language/' . $tag . '/mod_bettercategories',
+                JPATH_SITE . '/modules/mod_bettercategories/language/' . $tag . '/mod_bettercategories',
+            ];
+            foreach ($files as $base) {
+                foreach (['.ini', '.sys.ini'] as $ext) {
+                    if (is_file($base . $ext)) {
+                        @unlink($base . $ext);
+                    }
+                }
+            }
+            foreach ([JPATH_PLUGINS . '/system/bettercategories/language/' . $tag, JPATH_SITE . '/modules/mod_bettercategories/language/' . $tag] as $dir) {
+                if (is_dir($dir) && !(new \FilesystemIterator($dir))->valid()) {
+                    @rmdir($dir);
+                }
+            }
+        }
+    }
+
     public function postflight(string $type, InstallerAdapter $parent): void
     {
         if ($type === 'uninstall') {
             return;
         }
+
+        $this->removeDroppedLanguages();
 
         try {
             $db = Factory::getContainer()->get(DatabaseInterface::class);
