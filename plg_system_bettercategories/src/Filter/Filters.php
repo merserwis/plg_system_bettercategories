@@ -510,7 +510,8 @@ final class Filters
 
         $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
             ->createCacheController('output', ['defaultgroup' => 'plg_system_bettercategories', 'lifetime' => self::INDEX_MINUTES, 'caching' => true]);
-        $key   = md5('filter-index|' . BetterCategories::ASSET_VERSION . '|' . $appId . '|' . md5(json_encode($patterns)));
+        // the version of the reading rules is part of the key: a changed Params.php reads everything again
+        $key   = md5('filter-index|' . BetterCategories::ASSET_VERSION . '|' . (int) @filemtime(__DIR__ . '/Params.php') . '|' . $appId . '|' . md5(json_encode($patterns)));
         $index = $cache->get($key);
         $index = is_array($index) ? $index : [];
 

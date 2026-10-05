@@ -37,6 +37,12 @@ final class Params
     /** Words and signs between the two ends of a range. */
     private const SEP = '(?:\.{2,3}|…|–|—|-|−|÷|~|\bto\b|\bdo\b|\bbis\b)';
 
+    /**
+     * Designations of standards: "PN-EN 62446", "PN-HD 60364-6", "IEC 61010-1", "EN 61557-1:2007", "BS 7671".
+     * A bare "PN 16" is a nominal pressure (PN 16 bar), not a standard.
+     */
+    private const STANDARD = '/(?<![\p{L}\d])(?:PN[\s\-]+(?:EN|HD|IEC|ISO)|EN|IEC|ISO|HD|DIN|VDE|BS|UL|IEEE|ANSI|NFPA|CEI|NEN|CSA|GOST|ГОСТ|ДСТУ)(?:[\s\-]+(?:EN|IEC|ISO|HD|VDE))*[\s\-:]*\d{3,}(?:[\-:.\/]\d+)*(?![\p{L}\d])/u';
+
     /** Tokens of one item at most (a long description lists many values). */
     private const MAX_TOKENS = 160;
 
@@ -163,8 +169,17 @@ final class Params
 
         $unit = self::unitPattern($isQuery);
 
+        // numbers of standards are no values: "PN-EN 62446 do 1000 V" is a test up to 1000 V, not 62446…1000 V
+        if (preg_match_all(self::STANDARD, $rest, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+            foreach ($all as $m) {
+                $blank($m);
+            }
+        }
+
+        // a number glued to a code with a hyphen is part of a model name ("C-4A", "APS-1102A",
+        // "M10-522-10 260V"), not a value; "DC-150 kHz" is a band from DC
         // ranges: "-20…+50 °C", "0-600 V", "od -10 do 40°C", "1 mA ... 10 A"
-        $range = '/(?<![\p{L}\d.,])(?:od\s+|from\s+|von\s+)?(?<n1>' . self::NUM . ')\s*(?:' . $unit . ')?\s*' . self::SEP
+        $range = '/(?<![\p{L}\d.,])(?:(?<![\p{L}\d]-)|(?<=DC-)|(?<=AC-))(?:od\s+|from\s+|von\s+)?(?<n1>' . self::NUM . ')\s*(?:' . $unit . ')?\s*' . self::SEP
             . '\s*\+?(?<n2>' . self::NUM . ')\s*' . str_replace(['(?<prefix>', '(?<unit>'], ['(?<bprefix>', '(?<bunit>'], $unit) . '/u';
         if (preg_match_all($range, $rest, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
             foreach ($all as $m) {
@@ -182,6 +197,12 @@ final class Params
                 if ($a === null || $b === null) {
                     continue;
                 }
+                // a range of positive values is written from the lower end: "12345 do 1000 V" (no unit
+                // after the first number) is some other number followed by a value, which the single
+                // values below find; falling to negative values is a range ("0 ~ -32 V", "+25 do -100 °C")
+                if ($u1 === null && $a > $b && $b >= 0) {
+                    continue;
+                }
                 $alts = [];
                 foreach ($u2['factors'] as $i => $f2) {
                     $f1 = $u1 ? ($u1['factors'][$i] ?? $u1['factors'][0]) : $f2;
@@ -193,7 +214,7 @@ final class Params
         }
 
         // single values, also lists sharing one unit: "1000 V", "230/400 V", "1,5kV", "200 GΩ"
-        $single = '/(?<![\p{L}\d.,])(' . self::NUM . '(?:\s*\/\s*' . self::NUM . ')*)\s*' . $unit . '/u';
+        $single = '/(?<![\p{L}\d.,])(?:(?<![\p{L}\d]-)|(?<=DC-)|(?<=AC-))(' . self::NUM . '(?:\s*\/\s*' . self::NUM . ')*)\s*' . $unit . '/u';
         if (preg_match_all($single, $rest, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
             foreach ($all as $m) {
                 $u = self::unitOf($m, '', $isQuery);
