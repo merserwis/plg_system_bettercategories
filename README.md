@@ -302,6 +302,8 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 ## 📝 Changelog
 
+The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
+
 * **1.4.1** — “?” help tooltips beside the options. Languages reduced to English, Polish, Ukrainian and German (files of the other languages removed on update).
 * **1.4.0** — 11 translations (with English fallback) and right-to-left support. Store sales, currencies and publishing dates exactly as Gridbox handles them. Cache hardening, hourly clean-up and refresh on scheduled changes. Diagnostic comment off by default, errors to the Joomla log, stricter rights for thumbnails. Joomla 6 required by the installer; the older Gridbox Subcategories plugin is switched off on install.
 * **1.3.0** — Lowest price per category. `mod_bettercategories` module. One-click thumbnail generation and deletion. First row of tiles with high priority. Export / import of settings and styles. Licence changed to GPL-3.0.
