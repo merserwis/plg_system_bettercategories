@@ -76,7 +76,7 @@ final class Page
         }
         $elementId = $idm[1];
 
-        $defs = $this->filters->definitions($appId);
+        $defs = $this->forCategory($this->filters->definitions($appId), $categoryId, $categories);
         if (!$defs) {
             return null;
         }
@@ -86,7 +86,7 @@ final class Page
         }
 
         $products = $this->filters->products($appId, $categoryId, $categories, $defs);
-        $defs     = $this->filters->definitions($appId);
+        $defs     = $this->forCategory($this->filters->definitions($appId), $categoryId, $categories);
         $min      = max(0, (int) $this->params->get('filters_min_products', 2));
         if (!$state && count($products) < max(1, $min)) {
             return null;
@@ -152,6 +152,18 @@ final class Page
         }
 
         return $this->head($body, (bool) $state);
+    }
+
+    /** The filters of this category: those without a category limit, and those limited to it or one of its parents. */
+    private function forCategory(array $defs, int $categoryId, array $categories): array
+    {
+        $path = [];
+        for ($id = $categoryId, $guard = 0; $id > 0 && $guard < 50; $guard++) {
+            $path[$id] = true;
+            $id = $categories[$id]->parent ?? 0;
+        }
+
+        return array_values(array_filter($defs, fn ($def) => !$def['categories'] || array_intersect_key(array_flip($def['categories']), $path)));
     }
 
     // ---------------------------------------------------------------- page parts
@@ -314,6 +326,10 @@ final class Page
             }
             $body  = '';
             $badge = 0;
+            // a parameter only a product or two of the category mention (setting) is left out
+            if ($def['type'] === 'param' && !$s && ($facet['have'] ?? 0) < $def['minCount']) {
+                continue;
+            }
             if ($facet['range']) {
                 if ($facet['min'] === null && !$s) {
                     continue;
@@ -322,13 +338,19 @@ final class Page
                 [$unit, $round] = $def['type'] === 'price'
                     ? [trim((string) ($this->plugin->storeCurrency()->symbol ?? '')), true]
                     : [Filters::UNITS[$def['dim']] ?? '', false];
-                $ph = fn (?float $v, bool $up) => $v === null ? '' : ($round ? (string) ($up ? ceil($v) : floor($v)) : $this->shortNumber($v));
+                // pressure is shown as written in HVAC (Pa, kPa, bar) and typed back the same way
+                $words = $def['type'] === 'param' && $def['dim'] === 'pa';
+                if ($words) {
+                    $unit = '';
+                }
+                $num = fn (float $v) => $words ? str_replace("\u{00A0}", ' ', $this->filters->formatValue('pa', $v)) : $this->shortNumber($v);
+                $ph  = fn (?float $v, bool $up) => $v === null ? '' : ($round ? (string) ($up ? ceil($v) : floor($v)) : $num($v));
                 $body = '<div class="bcf-range">'
                     . '<label class="bcf-range-field"><span class="bcf-range-label">' . $t('filters_label_from', 'From') . '</span>'
-                    . '<input type="text" inputmode="decimal" autocomplete="off" name="' . $e($def['key']) . '-min" value="' . $e($s && $s['lo'] !== null ? $this->shortNumber($s['lo']) : '') . '" placeholder="' . $e($ph($facet['min'], false)) . '"></label>'
+                    . '<input type="text" inputmode="decimal" autocomplete="off" name="' . $e($def['key']) . '-min" value="' . $e($s && $s['lo'] !== null ? $num($s['lo']) : '') . '" placeholder="' . $e($ph($facet['min'], false)) . '"></label>'
                     . '<span class="bcf-range-sep" aria-hidden="true">–</span>'
                     . '<label class="bcf-range-field"><span class="bcf-range-label">' . $t('filters_label_to', 'To') . '</span>'
-                    . '<input type="text" inputmode="decimal" autocomplete="off" name="' . $e($def['key']) . '-max" value="' . $e($s && $s['hi'] !== null ? $this->shortNumber($s['hi']) : '') . '" placeholder="' . $e($ph($facet['max'], true)) . '"></label>'
+                    . '<input type="text" inputmode="decimal" autocomplete="off" name="' . $e($def['key']) . '-max" value="' . $e($s && $s['hi'] !== null ? $num($s['hi']) : '') . '" placeholder="' . $e($ph($facet['max'], true)) . '"></label>'
                     . ($unit !== '' ? '<span class="bcf-unit">' . $e($unit) . '</span>' : '')
                     . '</div>';
             } else {
@@ -411,9 +433,13 @@ final class Page
                 }
             } else {
                 $unit = $def['type'] === 'price' ? trim((string) ($this->plugin->storeCurrency()->symbol ?? '')) : (Filters::UNITS[$def['dim']] ?? '');
+                $show = fn (float $v) => $this->shortNumber($v);
+                if ($def['type'] === 'param' && $def['dim'] === 'pa') {
+                    [$unit, $show] = ['', fn (float $v) => $this->filters->formatValue('pa', $v)];
+                }
                 $text = $s['lo'] !== null && $s['hi'] !== null && abs($s['lo'] - $s['hi']) < 1e-9
-                    ? $this->shortNumber($s['lo'])
-                    : ($s['lo'] !== null ? $this->shortNumber($s['lo']) : '…') . ' – ' . ($s['hi'] !== null ? $this->shortNumber($s['hi']) : '…');
+                    ? $show($s['lo'])
+                    : ($s['lo'] !== null ? $show($s['lo']) : '…') . ' – ' . ($s['hi'] !== null ? $show($s['hi']) : '…');
                 $text .= $unit !== '' ? "\u{00A0}" . $unit : '';
                 $rest = $state;
                 unset($rest[$def['key']]);

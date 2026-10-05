@@ -179,8 +179,33 @@
     document.addEventListener('subform-row-add', (e) => add((e.detail && e.detail.row) || e.target));
   }
 
+  // "Select all / Clear all" above the parameter tick boxes of the filters (also in rows added later)
+  function initDims(scope) {
+    scope.querySelectorAll('.bcf-dims').forEach((box) => {
+      if (box.dataset.bcfDims) return;
+      box.dataset.bcfDims = '1';
+      const bar = document.createElement('div');
+      bar.className = 'bcf-dims-tools mb-2';
+      [['ALL', 'Select all', true], ['NONE', 'Clear all', false]].forEach(([key, fallback, on]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn btn-sm btn-outline-secondary me-2';
+        b.textContent = T('SELECT_' + key, fallback);
+        b.addEventListener('click', () => {
+          box.querySelectorAll('input[type="checkbox"]').forEach((c) => {
+            if (c.checked !== on) { c.checked = on; c.dispatchEvent(new Event('change', { bubbles: true })); }
+          });
+        });
+        bar.appendChild(b);
+      });
+      box.insertBefore(bar, box.firstChild);
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     if (!form()) return;
+    initDims(form());
+    document.addEventListener('subform-row-add', (e) => initDims((e.detail && e.detail.row) || e.target));
     document.querySelectorAll('[data-bctools]').forEach(setup);
     const label = window.Joomla && Joomla.Text ? Joomla.Text._('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_HELP') : '';
     initHelp(form(), label && label !== 'PLG_SYSTEM_BETTERCATEGORIES_TOOLS_HELP' ? label : 'Help');

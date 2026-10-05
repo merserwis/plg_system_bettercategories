@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.5.2-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.6.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below — which shoppers can **filter by price, product fields, technical parameters and features** read from the descriptions.
@@ -68,7 +68,7 @@ Nothing is written to the database and Gridbox files are not modified; the only 
 
 ## 🚀 Installation & Package Structure
 
-1. Download `pkg_bettercategories-1.5.2.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
+1. Download `pkg_bettercategories-1.6.0.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
 2. In the Joomla administrator go to **System → Install → Extensions** and upload the package.
 3. On a fresh install the plugin is **enabled automatically**; an update keeps whatever you chose before. If Balbooa Gridbox is not installed, the installer says so in a notice.
 4. Open **Better Categories for Gridbox** in the administrator menu (or *System → Plugins → System - Better Categories for Gridbox*) and adjust the settings.
@@ -256,7 +256,9 @@ Off by default. The panel appears on store category pages with at least *Minimum
 | Filter by | *Price*, *Gridbox field*, *Technical parameter (from the description)*, *Features (words in the description)*, *On sale*, *In stock*. |
 | Title | Empty = automatic (the field label, or the name of the parameter in the site language). |
 | Gridbox field | A list, radio, checkbox or text field of the store. |
-| Parameter | Voltage (V), current (A), power (W), apparent power (VA), frequency (Hz), resistance (Ω), capacitance (F), temperature (°C), sound level (dB), illuminance (lx), pressure (Pa, bar), energy (Wh), battery capacity (Ah), length (m), measurement category (CAT), protection rating (IP). |
+| Parameter | Tick one or more (*Select all / Clear all*): voltage (V), current (A), power (W), apparent power (VA), frequency (Hz), resistance (Ω), capacitance (F), temperature (°C, °F converted), **pressure** (Pa, hPa, kPa, mbar, bar, psi — one parameter), **relative humidity** (%RH), **air velocity** (m/s), **flow** (m³/h, l/min), **concentration** (ppm), **irradiance** (W/m²), sound level (dB), illuminance (lx), energy (Wh), battery capacity (Ah), length (m), measurement category (CAT), protection rating (IP). Each ticked parameter is a filter of its own on the site, shown only in categories whose products have it. |
+| Minimum products with the parameter | `2` — a parameter appears in a category when at least this many of its products have it. |
+| Only in categories | The filter appears only in these categories and their subcategories (any filter type). Empty = everywhere. |
 | Show as | *Values* — a tick box for each value found (`600 V`, `1000 V`, `2,5 kV`) — or *Range (from–to)*. Visitors may type prefixes in range fields: `2.5k`, `1M`. |
 | Value of a product | A description names many values of one kind (a meter: a 30 V warning, 500 V, a 1000 V range). *Highest value* (default) counts each product with its highest — usually the measuring range —, *Lowest value* with its lowest, *Any value found* with each. |
 | Features | One per line: `Name = word, other word`. A product has the feature when its title, introduction or description contains one of the words — whole words, any letter case, spaces and hyphens alike; `word*` also matches longer words. Without `=` the name itself is searched. |
@@ -347,6 +349,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.6.0** — Many technical parameters in one filter (select all / clear all), shown only where the products have them; filters limited to categories; HVACR parameters: humidity, air velocity, flow, ppm, irradiance, pressure in any unit, °F.
 * **1.5.2** — Technical parameters: numbers of standards (PN-EN 62446…), model names (C-4A) and reversed table ranges are no longer read as values.
 * **1.5.1** — Filters work with Gridbox's *default* (custom) product order. Panel in the side column next to the products. The side panel opens above sticky headers. The plugin's own log file, shown in the *Filters* tab. Diagnostic comment removed.
 * **1.5.0** — Product filters: price, Gridbox fields, technical parameters and features read from the descriptions, on sale, in stock; side bar, row above the products, side panel or next to any element; instant, linkable, `noindex`. *Reset to defaults* in the settings file tools.
