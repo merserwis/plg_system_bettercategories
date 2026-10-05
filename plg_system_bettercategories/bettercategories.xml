@@ -6,7 +6,7 @@
     <creationDate>2026-10-05</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.5.0</version>
+    <version>1.5.1</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -66,10 +66,6 @@
                 </field>
                 <field name="cache_time" type="number" default="15" min="0" max="1440" label="PLG_SYSTEM_BETTERCATEGORIES_CACHE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CACHE_DESC" />
                 <field name="first_page_only" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FIRST_PAGE_LABEL">
-                    <option value="0">JNO</option>
-                    <option value="1">JYES</option>
-                </field>
-                <field name="diagnostics" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_DIAGNOSTICS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DIAGNOSTICS_DESC">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>
@@ -306,6 +302,7 @@
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>
+                <field name="filters_status" type="bcstatus" hiddenLabel="true" showon="filters_enabled:1" />
                 <field name="filters_list" type="subform" multiple="true" layout="joomla.form.field.subform.repeatable" buttons="add,remove,move" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_LIST_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_LIST_DESC" showon="filters_enabled:1">
                     <form>
                         <field name="type" type="list" default="field" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_DESC">
@@ -334,6 +331,8 @@
                 <field name="filters_position" type="list" default="sidebar_left" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_DESC" showon="filters_enabled:1">
                     <option value="sidebar_left">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_SIDEBAR_LEFT</option>
                     <option value="sidebar_right">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_SIDEBAR_RIGHT</option>
+                    <option value="column_top">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_COLUMN_TOP</option>
+                    <option value="column_bottom">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_COLUMN_BOTTOM</option>
                     <option value="top">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_TOP</option>
                     <option value="drawer">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_DRAWER</option>
                     <option value="after_categories">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_AFTER_CATEGORIES</option>

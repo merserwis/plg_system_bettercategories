@@ -14,6 +14,7 @@ namespace Merserwis\Plugin\System\BetterCategories\Filter;
 \defined('_JEXEC') or die;
 
 use Joomla\CMS\Factory;
+use Joomla\CMS\Log\Log;
 use Joomla\CMS\Uri\Uri;
 use Joomla\Registry\Registry;
 use Merserwis\Plugin\System\BetterCategories\Extension\BetterCategories;
@@ -97,10 +98,13 @@ final class Page
         $element = substr($body, $elStart, $elEnd - $elStart);
         $total   = count($result['ids']);
         if ($state) {
-            $item = GridboxList::elementConfig($appId, $elementId);
+            [$item, $source] = GridboxList::elementConfig($appId, $elementId, $element);
             if (!$item) {
+                $this->plugin->log('Filters: settings of the product list element ' . $elementId . ' not found (app ' . $appId . ')', Log::WARNING);
+
                 return null;
             }
+
             $list    = GridboxList::render($appId, $categoryId, $item, $result['ids'], $query);
             $total   = $list['count'];
             $element = $this->replaceInner($element, 'ba-blog-posts-wrapper', $list['posts']);
@@ -152,9 +156,14 @@ final class Page
 
     // ---------------------------------------------------------------- page parts
 
-    /** Offset where the panel goes for "after the categories element" / before or after an element. */
+    /** Offset where the panel goes for "in the side column", "after the categories element" / before or after an element. */
     private function anchor(string $body, string $position, int $from): ?int
     {
+        if ($position === 'column_top' || $position === 'column_bottom') {
+            $list = strpos($body, '<div class="bcf-root ', $from);
+
+            return $list === false ? null : $this->sideColumn($body, $list, $position === 'column_bottom');
+        }
         if ($position === 'after_categories') {
             $pattern = '#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-item-categories[\s"]#i';
         } else {
@@ -169,6 +178,68 @@ final class Page
         }
 
         return $position === 'before_item' ? $m[0][1] : self::elementEnd($body, $m[0][1]);
+    }
+
+    /**
+     * The start (or end) of the content of the column next to the one with the product list: the
+     * Gridbox row of the list is divided into columns (e.g. 3 + 9), the side one holds the category
+     * tree, contacts and the like. The column before the list is preferred, else the one after it.
+     */
+    private function sideColumn(string $body, int $list, bool $bottom): ?int
+    {
+        // the <div>s open at the product list, innermost last
+        $open = [];
+        if (!preg_match_all('#<(/?)div\b([^>]*)>#i', substr($body, 0, $list), $tags, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
+            return null;
+        }
+        foreach ($tags as $tag) {
+            if ($tag[1][0] === '/') {
+                array_pop($open);
+            } else {
+                $open[] = [$tag[0][1], $tag[2][0], $tag[0][1] + strlen($tag[0][0])];
+            }
+        }
+        for ($i = count($open) - 1; $i >= 0; $i--) {
+            if (!preg_match('/\sclass="(?:[^"]*\s)?column-wrapper[\s"]/', $open[$i][1])) {
+                continue;
+            }
+            // the columns of this row: its direct child <div>s
+            $children = [];
+            $offset   = $open[$i][2];
+            $end      = self::elementEnd($body, $open[$i][0]) ?? strlen($body);
+            while ($offset < $end && preg_match('#<div\b[^>]*>#i', $body, $m, PREG_OFFSET_CAPTURE, $offset) && $m[0][1] < $end) {
+                $childEnd = self::elementEnd($body, $m[0][1]);
+                if ($childEnd === null) {
+                    break;
+                }
+                $children[] = [$m[0][1], $childEnd];
+                $offset     = $childEnd;
+            }
+            $before = $after = null;
+            foreach ($children as [$a, $b]) {
+                if ($b <= $list) {
+                    $before = [$a, $b];
+                } elseif ($a > $list && $after === null) {
+                    $after = [$a, $b];
+                }
+            }
+            $column = $before ?? $after;
+            if ($column === null) {
+                continue;
+            }
+            // inside the Gridbox column (.ba-grid-column) of that wrapper
+            if (!preg_match('#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-grid-column[\s"][^>]*>#i', $body, $m, PREG_OFFSET_CAPTURE, $column[0]) || $m[0][1] >= $column[1]) {
+                return null;
+            }
+            if (!$bottom) {
+                return $m[0][1] + strlen($m[0][0]);
+            }
+            $columnEnd = self::elementEnd($body, $m[0][1]);
+
+            return $columnEnd === null ? null : $columnEnd - strlen('</div>');
+        }
+
+        return null;
     }
 
     /** Stylesheet and script of the filters, and "noindex" for filtered lists (setting). */

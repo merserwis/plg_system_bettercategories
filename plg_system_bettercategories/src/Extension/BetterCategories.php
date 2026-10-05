@@ -39,12 +39,15 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.5.0';
+    private const VERSION    = '1.5.1';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
     private const SUB_MODES  = ['none', 'below', 'drawer', 'side', 'flip', 'tooltip'];
     private const CACHE_GROUP = 'plg_system_bettercategories';
+
+    /** Log file of the plugin, in Joomla's log folder. */
+    public const LOG_FILE = 'plg_system_bettercategories.php';
 
     /** @var int[]|null */
     private ?array $hidden = null;
@@ -123,7 +126,6 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
     public function onAfterRender(): void
     {
-        $t0  = hrtime(true);
         $app = $this->getApplication();
         if (!$app->isClient('site') || $app->getDocument()->getType() !== 'html') {
             return;
@@ -137,7 +139,6 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         // Use the settings saved in the database, not the ones handed to the plugin at start-up: some
         // sites (device-specific extensions/caches) pass phones an older copy of plugin parameters.
-        $given        = substr(md5(json_encode($this->params->toArray())), 0, 8);
         $this->params = $this->savedParams() ?? $this->params;
         // a filtered list is never hidden under the subcategories
         if ($this->params->get('filters_enabled', 0) && $this->params->get('hide_products', 0) && Page::hasFilters($input)) {
@@ -173,16 +174,14 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $this->pageCrumbs = stripos($body, 'BreadcrumbList') !== false;
 
-        $start  = hrtime(true);
         $device = $this->device();
         $config = substr(md5(json_encode($this->params->toArray())), 0, 8);
-        $status = 'off';
 
         try {
             $minutes = max(0, min(1440, (int) $this->params->get('cache_time', 15)));
             if ($minutes > 0) {
                 $key = $this->cacheKey([$config, $appId, $categoryId, $device, (int) $this->pageCrumbs, $this->scheduleStamp($appId)]);
-                [$html, $status] = $this->cached($key, $minutes, fn () => $this->render($appId, $categoryId));
+                [$html] = $this->cached($key, $minutes, fn () => $this->render($appId, $categoryId));
             } else {
                 $html = $this->render($appId, $categoryId);
             }
@@ -192,13 +191,6 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return;
         }
 
-        // Diagnostics (setting or Joomla debug): one comment line, also on pages without subcategories,
-        // to compare what desktop and phone visitors get: settings hash, device, cache state, time.
-        if ($this->params->get('diagnostics', 0) || (defined('JDEBUG') && JDEBUG)) {
-            $html .= sprintf('<!-- Better Categories %s | cfg %s%s | %s | cache %s | %.1f ms (total %.1f ms) -->',
-                self::VERSION, $config, $given !== $config ? ' (site passed ' . $given . ', ignored)' : '',
-                $device, $status, (hrtime(true) - $start) / 1e6, (hrtime(true) - $t0) / 1e6);
-        }
         $app->setBody(substr($body, 0, $pos) . $html . substr($body, $pos));
     }
 
@@ -322,11 +314,22 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
     }
 
-    /** Errors go to the Joomla log (category plg_system_bettercategories), never to visitors. */
+    /** Errors go to the plugin's own log file (logs/plg_system_bettercategories.php), never to visitors. */
     public function logError(\Throwable $e): void
     {
+        $this->log(get_class($e) . ': ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine(), Log::ERROR);
+    }
+
+    /** A line in the plugin's log file; the Filters tab shows the latest ones. */
+    public function log(string $message, int $priority = Log::WARNING): void
+    {
+        static $ready = false;
         try {
-            Log::add(get_class($e) . ': ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine(), Log::ERROR, self::CACHE_GROUP);
+            if (!$ready) {
+                Log::addLogger(['text_file' => self::LOG_FILE], Log::ALL & ~Log::DEBUG, [self::CACHE_GROUP]);
+                $ready = true;
+            }
+            Log::add($message, $priority, self::CACHE_GROUP);
         } catch (\Throwable $ignored) {
         }
     }
@@ -1826,7 +1829,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $keys = [];
         foreach ($xml->xpath('/extension/config/fields/fieldset/field') ?: [] as $field) {
             $type = strtolower((string) $field['type']);
-            if (!in_array($type, ['note', 'spacer', 'bcpreview', 'bctools'], true) && (string) $field['name'] !== '') {
+            if (!in_array($type, ['note', 'spacer', 'bcpreview', 'bctools', 'bcstatus'], true) && (string) $field['name'] !== '') {
                 $keys[] = (string) $field['name'];
             }
         }
@@ -1931,7 +1934,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         foreach ($xml->xpath('/extension/config/fields/fieldset/field') ?: [] as $field) {
             $type = strtolower((string) $field['type']);
             $name = (string) $field['name'];
-            if ($name === '' || in_array($type, ['note', 'spacer', 'bcpreview', 'bctools'], true)) {
+            if ($name === '' || in_array($type, ['note', 'spacer', 'bcpreview', 'bctools', 'bcstatus'], true)) {
                 continue;
             }
             $defaults[$name] = $type === 'subform' ? [] : (string) ($field['default'] ?? '');
