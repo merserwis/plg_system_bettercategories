@@ -2,6 +2,25 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.0 — 2026-10-05
+
+### 🔎 Many technical parameters in one filter
+
+- *Technical parameter* now takes **any number of parameters**, ticked in a list with **Select all / Clear all**. On the site every ticked parameter is a filter of its own, shown only in categories whose products have it — so one row serves every store page. Filters of earlier versions keep working as they are.
+- **Minimum products with the parameter** (default 2): a parameter mentioned by a single product of the category (often in passing) is not offered.
+- **Only in categories** — any filter can be limited to chosen categories and their subcategories, e.g. humidity, pressure and air velocity only under HVACR, voltage and measurement category only under meters. Empty = everywhere.
+
+### 🌡️ HVACR parameters
+
+- New kinds read from the descriptions: **relative humidity** (%RH), **air velocity** (m/s), **flow** (m³/h; l/min and l/h converted), **concentration** (ppm) and **irradiance** (W/m²).
+- **Pressure** in any unit is one parameter: Pa, hPa, kPa, MPa, mbar, bar and psi (shown as Pa, kPa or bar, as usual in HVAC). The former *Pressure (bar)* filters are now part of it.
+- **°F** is converted to °C, so “-4…122 °F” and “-20…50 °C” are the same range.
+- From–to fields of a parameter also take a unit: “5 bar”, “2 l/min”, “68 °F”.
+
+---
+
+**Tested on:** the 636-product test store: an HVACR category gets temperature, pressure, humidity, air velocity and flow, a meters category voltage, current, CAT and IP — from one configuration with category limits; filters by humidity and by a pressure range typed in bar. The list of subcategories identical to 1.4.1 in all 42 combinations; no PHP warnings.
+
 ## 1.5.2 — 2026-10-05
 
 ### 🐞 Fixes

@@ -31,11 +31,12 @@ final class Filters
     /** Unit symbol of each parameter kind. */
     public const UNITS = [
         'v' => 'V', 'a' => 'A', 'w' => 'W', 'va' => 'VA', 'hz' => 'Hz', 'ohm' => 'Ω', 'f' => 'F', 'c' => '°C', 'db' => 'dB',
-        'lx' => 'lx', 'pa' => 'Pa', 'bar' => 'bar', 'wh' => 'Wh', 'ah' => 'Ah', 'm' => 'm', 'cat' => '', 'ip' => '',
+        'lx' => 'lx', 'pa' => 'Pa', 'wh' => 'Wh', 'ah' => 'Ah', 'm' => 'm', 'rh' => '%RH', 'ms' => 'm/s', 'flow' => 'm³/h',
+        'ppm' => 'ppm', 'wm2' => 'W/m²', 'cat' => '', 'ip' => '',
     ];
 
-    /** Kinds shown with an SI prefix (1 kV, 200 GΩ); temperatures, decibels, categories and ratings never. */
-    private const PREFIXED = ['v', 'a', 'w', 'va', 'hz', 'ohm', 'f', 'wh', 'ah', 'm', 'pa'];
+    /** Kinds shown with an SI prefix (1 kV, 200 GΩ); temperatures, decibels, humidity, categories and ratings never. */
+    private const PREFIXED = ['v', 'a', 'w', 'va', 'hz', 'ohm', 'f', 'wh', 'ah', 'm'];
 
     /** URL prefix of every filter parameter (keeps them apart from Joomla's and Gridbox's own). */
     public const PREFIX = 'f-';
@@ -85,6 +86,24 @@ final class Filters
         $fields = $this->gridboxFields($appId);
         $used   = [];
         $defs   = [];
+        // a technical-parameter row with several parameters: one filter per parameter (title and
+        // address name from the parameter; a title of its own only with a single parameter)
+        $expanded = [];
+        foreach ($rows as $row) {
+            if (($row['type'] ?? '') !== 'param') {
+                $expanded[] = $row;
+                continue;
+            }
+            $dims = array_values(array_unique(array_filter(array_map(
+                fn ($d) => $d === 'bar' ? 'pa' : (string) $d,
+                is_array($row['dim'] ?? null) ? $row['dim'] : explode(',', (string) ($row['dim'] ?? 'v'))
+            ), fn ($d) => array_key_exists($d, self::UNITS))));
+            foreach ($dims as $dim) {
+                $expanded[] = ['dim' => $dim] + (count($dims) > 1 ? ['label' => '', 'key' => ''] : []) + $row;
+            }
+        }
+        $rows = $expanded;
+
         foreach ($rows as $i => $row) {
             $type = (string) ($row['type'] ?? '');
             if (!in_array($type, self::TYPES, true)) {
@@ -95,12 +114,16 @@ final class Filters
                 'type'      => $type,
                 'label'     => trim((string) ($row['label'] ?? '')),
                 'field'     => (int) ($row['field'] ?? 0),
-                'dim'       => (string) ($row['dim'] ?? 'v'),
+                'dim'       => is_array($row['dim'] ?? null) ? (string) reset($row['dim']) : (string) ($row['dim'] ?? 'v'),
                 'mode'      => ($row['mode'] ?? 'values') === 'range' ? 'range' : 'values',
                 'match'     => in_array($row['match'] ?? 'max', ['max', 'min', 'any'], true) ? (string) ($row['match'] ?? 'max') : 'max',
                 'logic'     => ($row['logic'] ?? '') === 'and' ? 'and' : (($row['logic'] ?? '') === 'or' ? 'or' : ($type === 'feature' ? 'and' : 'or')),
                 'sort'      => in_array($row['sort'] ?? 'auto', ['auto', 'count', 'alpha'], true) ? (string) ($row['sort'] ?? 'auto') : 'auto',
                 'collapsed' => !empty($row['collapsed']) && (string) $row['collapsed'] !== '0',
+                // a parameter group appears when at least this many products of the category have it
+                'minCount'  => max(1, (int) ($row['min_products'] ?? 2)),
+                // only in these categories and their subcategories (empty = everywhere)
+                'categories' => array_values(array_filter(array_map('intval', is_array($row['categories'] ?? null) ? $row['categories'] : explode(',', (string) ($row['categories'] ?? ''))))),
                 'features'  => [],
                 'options'   => [],
             ];
@@ -250,8 +273,8 @@ final class Filters
                 if ($raw !== '' && !str_contains($raw, '..')) {
                     [$lo, $hi] = [$raw, $raw];
                 }
-                $lo = $this->number($lo !== '' ? $lo : (string) $input->getString($key . '-min', ''));
-                $hi = $this->number($hi !== '' ? $hi : (string) $input->getString($key . '-max', ''));
+                $lo = $this->typed($def, $lo !== '' ? $lo : (string) $input->getString($key . '-min', ''));
+                $hi = $this->typed($def, $hi !== '' ? $hi : (string) $input->getString($key . '-max', ''));
                 if ($lo !== null && $hi !== null && $lo > $hi) {
                     [$lo, $hi] = [$hi, $lo];
                 }
@@ -284,6 +307,22 @@ final class Filters
     public function isRange(array $def): bool
     {
         return $def['type'] === 'price' || ($def['type'] === 'param' && $def['mode'] === 'range');
+    }
+
+    /** A typed bound: a number, or for a parameter also a value with a unit of its kind ("16 bar", "2 l/min", "68 °F"). */
+    private function typed(array $def, string $raw): ?float
+    {
+        $n = $this->number($raw);
+        if ($n !== null || $def['type'] !== 'param' || trim($raw) === '') {
+            return $n;
+        }
+        foreach (Params::query(substr($raw, 0, 40))['params'] as $p) {
+            if ($p['dim'] === $def['dim']) {
+                return (float) $p['lo'];
+            }
+        }
+
+        return null;
     }
 
     /** A typed number: "1,5", "2.5k", "10 M", "-20" (null when not a number). */
@@ -763,7 +802,8 @@ final class Filters
                 $max *= $rate;
             }
 
-            return ['range' => true, 'min' => $min, 'max' => $max, 'lo' => $selected['lo'] ?? null, 'hi' => $selected['hi'] ?? null, 'count' => count($base)];
+            return ['range' => true, 'min' => $min, 'max' => $max, 'lo' => $selected['lo'] ?? null, 'hi' => $selected['hi'] ?? null, 'count' => count($base),
+                'have' => count(array_filter($values))];
         }
 
         $counts = [];
@@ -824,7 +864,7 @@ final class Filters
             uasort($out, fn ($a, $b) => strnatcasecmp($a['label'], $b['label']));
         }
 
-        return ['range' => false, 'options' => $out, 'count' => count($base)];
+        return ['range' => false, 'options' => $out, 'count' => count($base), 'have' => count(array_filter($values))];
     }
 
     private function anyProductHas(array $values, string $slug): bool
@@ -846,6 +886,13 @@ final class Filters
         }
         if ($dim === 'ip') {
             return 'IP' . str_pad((string) (int) $v, 2, '0', STR_PAD_LEFT);
+        }
+        if ($dim === 'pa') {
+            // pressure as written in HVAC: up to 10 kPa in Pa, then kPa, from 1 bar in bar
+            $abs = abs($v);
+            [$v, $unit] = $abs >= 1e5 ? [$v / 1e5, 'bar'] : ($abs >= 1e4 ? [$v / 1e3, 'kPa'] : [$v, 'Pa']);
+
+            return str_replace('.', $this->decimalPoint(), rtrim(rtrim(number_format($v, 3, '.', ''), '0'), '.')) . "\u{00A0}" . $unit;
         }
         $prefix = '';
         if (in_array($dim, self::PREFIXED, true) && $v != 0.0) {

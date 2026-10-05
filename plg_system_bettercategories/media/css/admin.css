@@ -55,3 +55,7 @@
 .bs-help-tip p{margin:0 0 .35rem}.bs-help-tip p:last-child{margin:0}
 .bs-help-tip a{color:#9ec5fe}
 .bs-help-tip code{color:#ffd8a8}
+
+/* parameter tick boxes of a filter: several columns */
+.bcf-dims { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 1rem; }
+.bcf-dims > .bcf-dims-tools, .bcf-dims > legend { grid-column: 1 / -1; }
