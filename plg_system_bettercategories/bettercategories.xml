@@ -3,10 +3,10 @@
     <name>plg_system_bettercategories</name>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
-    <creationDate>2026-10-02</creationDate>
+    <creationDate>2026-10-05</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.4.1</version>
+    <version>1.5.0</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -300,6 +300,92 @@
                     <option value="yes">JYES</option>
                     <option value="no">JNO</option>
                 </field>
+            </fieldset>
+            <fieldset name="filters" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_DESC">
+                <field name="filters_enabled" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ENABLED_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ENABLED_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="filters_list" type="subform" multiple="true" layout="joomla.form.field.subform.repeatable" buttons="add,remove,move" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_LIST_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_LIST_DESC" showon="filters_enabled:1">
+                    <form>
+                        <field name="type" type="list" default="field" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_DESC">
+                            <option value="price">PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_PRICE</option>
+                            <option value="field">PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_FIELD</option>
+                            <option value="param">PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_PARAM</option>
+                            <option value="feature">PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_FEATURE</option>
+                            <option value="sale">PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_SALE</option>
+                            <option value="stock">PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_STOCK</option>
+                        </field>
+                        <field name="label" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_LABEL_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTER_LABEL_HINT" />
+                        <field name="field" type="gbfields" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_FIELD_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_FIELD_DESC" showon="type:field"><option value="">PLG_SYSTEM_BETTERCATEGORIES_FILTER_FIELD_SELECT</option></field>
+                        <field name="dim" type="list" default="v" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_DIM_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_DIM_DESC" showon="type:param"><option value="v">PLG_SYSTEM_BETTERCATEGORIES_DIM_V</option><option value="a">PLG_SYSTEM_BETTERCATEGORIES_DIM_A</option><option value="w">PLG_SYSTEM_BETTERCATEGORIES_DIM_W</option><option value="va">PLG_SYSTEM_BETTERCATEGORIES_DIM_VA</option><option value="hz">PLG_SYSTEM_BETTERCATEGORIES_DIM_HZ</option><option value="ohm">PLG_SYSTEM_BETTERCATEGORIES_DIM_OHM</option><option value="f">PLG_SYSTEM_BETTERCATEGORIES_DIM_F</option><option value="c">PLG_SYSTEM_BETTERCATEGORIES_DIM_C</option><option value="db">PLG_SYSTEM_BETTERCATEGORIES_DIM_DB</option><option value="lx">PLG_SYSTEM_BETTERCATEGORIES_DIM_LX</option><option value="pa">PLG_SYSTEM_BETTERCATEGORIES_DIM_PA</option><option value="bar">PLG_SYSTEM_BETTERCATEGORIES_DIM_BAR</option><option value="wh">PLG_SYSTEM_BETTERCATEGORIES_DIM_WH</option><option value="ah">PLG_SYSTEM_BETTERCATEGORIES_DIM_AH</option><option value="m">PLG_SYSTEM_BETTERCATEGORIES_DIM_M</option><option value="cat">PLG_SYSTEM_BETTERCATEGORIES_DIM_CAT</option><option value="ip">PLG_SYSTEM_BETTERCATEGORIES_DIM_IP</option></field>
+                        <field name="mode" type="list" default="values" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_MODE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_MODE_DESC" showon="type:param"><option value="values">PLG_SYSTEM_BETTERCATEGORIES_FILTER_MODE_VALUES</option><option value="range">PLG_SYSTEM_BETTERCATEGORIES_FILTER_MODE_RANGE</option></field>
+                        <field name="match" type="list" default="max" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_MATCH_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_MATCH_DESC" showon="type:param"><option value="max">PLG_SYSTEM_BETTERCATEGORIES_FILTER_MATCH_MAX</option><option value="min">PLG_SYSTEM_BETTERCATEGORIES_FILTER_MATCH_MIN</option><option value="any">PLG_SYSTEM_BETTERCATEGORIES_FILTER_MATCH_ANY</option></field>
+                        <field name="features" type="textarea" rows="7" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_FEATURES_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_FEATURES_DESC" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTER_FEATURES_HINT" showon="type:feature" />
+                        <field name="logic" type="list" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_LOGIC_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_LOGIC_DESC" showon="type:field[OR]type:feature[OR]type:param"><option value="">PLG_SYSTEM_BETTERCATEGORIES_FILTER_LOGIC_AUTO</option><option value="or">PLG_SYSTEM_BETTERCATEGORIES_FILTER_LOGIC_OR</option><option value="and">PLG_SYSTEM_BETTERCATEGORIES_FILTER_LOGIC_AND</option></field>
+                        <field name="sort" type="list" default="auto" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_SORT_LABEL" showon="type:field[OR]type:feature"><option value="auto">PLG_SYSTEM_BETTERCATEGORIES_FILTER_SORT_AUTO</option><option value="count">PLG_SYSTEM_BETTERCATEGORIES_FILTER_SORT_COUNT</option><option value="alpha">PLG_SYSTEM_BETTERCATEGORIES_FILTER_SORT_ALPHA</option></field>
+                        <field name="key" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_KEY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_KEY_DESC" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTER_KEY_HINT" />
+                        <field name="collapsed" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_COLLAPSED_LABEL">
+                            <option value="0">JNO</option>
+                            <option value="1">JYES</option>
+                        </field>
+                    </form>
+                </field>
+                <field name="filters_position" type="list" default="sidebar_left" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_DESC" showon="filters_enabled:1">
+                    <option value="sidebar_left">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_SIDEBAR_LEFT</option>
+                    <option value="sidebar_right">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_SIDEBAR_RIGHT</option>
+                    <option value="top">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_TOP</option>
+                    <option value="drawer">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_DRAWER</option>
+                    <option value="after_categories">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_AFTER_CATEGORIES</option>
+                    <option value="before_item">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_BEFORE_ITEM</option>
+                    <option value="after_item">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_AFTER_ITEM</option>
+                </field>
+                <field name="filters_item_id" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_ITEM_ID_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ITEM_ID_DESC" hint="item-1234567890" showon="filters_position:before_item[OR]filters_position:after_item" />
+                <field name="filters_mobile" type="list" default="drawer" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_MOBILE_DESC" showon="filters_enabled:1">
+                    <option value="drawer">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_MOBILE_DRAWER</option>
+                    <option value="same">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_MOBILE_SAME</option>
+                </field>
+                <field name="filters_apply" type="list" default="auto" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_APPLY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_APPLY_DESC" showon="filters_enabled:1">
+                    <option value="auto">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_APPLY_AUTO</option>
+                    <option value="button">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_APPLY_BUTTON</option>
+                </field>
+                <field name="filters_counts" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_COUNTS_LABEL" showon="filters_enabled:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="filters_hide_empty" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_HIDE_EMPTY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_HIDE_EMPTY_DESC" showon="filters_enabled:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="filters_more" type="number" default="6" min="0" max="100" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_MORE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_MORE_DESC" showon="filters_enabled:1" />
+                <field name="filters_min_products" type="number" default="2" min="1" max="1000" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_MIN_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_MIN_DESC" showon="filters_enabled:1" />
+                <field name="filters_noindex" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_NOINDEX_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_NOINDEX_DESC" showon="filters_enabled:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="filters_width" type="number" default="260" min="160" max="600" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_WIDTH_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_WIDTH_DESC" showon="filters_enabled:1" />
+                <field name="filters_font_size" type="number" default="15" min="10" max="30" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_FONT_LABEL" showon="filters_enabled:1" />
+                <field name="filters_accent" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ACCENT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
+                <field name="filters_bg" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_BG_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
+                <field name="filters_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
+                <field name="filters_texts_note" type="note" class="alert alert-light" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXTS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXTS_DESC" showon="filters_enabled:1" />
+                <field name="filters_title" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_TITLE_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_button" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_BUTTON_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_results" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_RESULTS_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_show" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_SHOW_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_clear" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_CLEAR_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_apply" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_APPLY_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_none" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_NONE_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_more" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_MORE_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_less" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_LESS_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_from" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_FROM_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_to" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_TO_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_price" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_PRICE_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_sale" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_SALE_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_sale_option" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_SALE_OPTION_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_stock" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_STOCK_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_stock_option" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_STOCK_OPTION_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_features" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_FEATURES_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
             </fieldset>
         </fields>
     </config>

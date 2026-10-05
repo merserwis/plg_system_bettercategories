@@ -1,5 +1,5 @@
 /**
- * Better Categories for Gridbox — administrator tools: export / import of the settings and
+ * Better Categories for Gridbox — administrator tools: export / import / reset of the settings and
  * generating / deleting the tile thumbnails (com_ajax actions of the plugin).
  */
 (() => {
@@ -66,6 +66,17 @@
 
       if (action === 'import') {
         box.querySelector('[data-bctools-file]').click();
+      }
+
+      if (action === 'reset') {
+        const keep = box.querySelector('[data-bctools-keep]');
+        if (!window.confirm(T('RESET_CONFIRM', 'Reset the settings to their defaults and save now? Unsaved changes in this form are lost.'))) return;
+        busy(true); say(T('WORKING', 'Working…'));
+        try {
+          await call(url, { bc_action: 'reset', keep_site: keep && keep.checked ? '1' : '0' }, false);
+          say(T('RESET_DONE', 'The defaults are restored. Reloading…'));
+          setTimeout(() => window.location.reload(), 900);
+        } catch (e) { fail(e); }
       }
 
       if (action === 'thumbs') {

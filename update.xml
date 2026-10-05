@@ -6,6 +6,26 @@
         <element>pkg_bettercategories</element>
         <type>package</type>
         <client>site</client>
+        <version>1.5.0</version>
+        <infourl title="Better Categories for Gridbox">https://github.com/merserwis/plg_system_bettercategories</infourl>
+        <downloads>
+            <downloadurl type="full" format="zip">https://github.com/merserwis/plg_system_bettercategories/releases/download/v1.5.0/pkg_bettercategories-1.5.0.zip</downloadurl>
+        </downloads>
+        <sha256>da58433b06bfafa8158be65a6d5eb49fc40ab9028a391bcd1f6af10cd1ad3b98</sha256>
+        <tags>
+            <tag>stable</tag>
+        </tags>
+        <maintainer>Merserwis</maintainer>
+        <maintainerurl>https://github.com/merserwis/</maintainerurl>
+        <targetplatform name="joomla" version="6\..*"/>
+        <php_minimum>8.2</php_minimum>
+    </update>
+    <update>
+        <name>Better Categories for Gridbox</name>
+        <description>Better Categories for Gridbox — subcategory links and tiles on Gridbox store category pages, with a module for any page.</description>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <client>site</client>
         <version>1.4.1</version>
         <infourl title="Better Categories for Gridbox">https://github.com/merserwis/plg_system_bettercategories</infourl>
         <downloads>
