@@ -1,0 +1,118 @@
+/* Better Categories for Gridbox — product filters on store category pages. */
+.bcf-root, .bcf-panel, .bcf-side {
+  --bcf-accent-c: var(--bcf-accent, var(--primary, #2f6fde));
+  --bcf-bg-c: var(--bcf-bg, #fff);
+  --bcf-color-c: var(--bcf-color, inherit);
+  --bcf-line: rgba(127, 127, 127, .28);
+  --bcf-size: var(--bcf-font, 15px);
+  box-sizing: border-box;
+}
+.bcf-root *, .bcf-panel *, .bcf-side * { box-sizing: border-box; }
+/* above the overlay layer Gridbox puts over columns and sections */
+.bcf-root, .bcf-side { position: relative; z-index: 2; }
+/* Gridbox columns are flex boxes: without this the block grows with its content */
+.bcf-root, .bcf-side, .bcf-root > .bcf-panel { width: 100%; min-width: 0; max-width: 100%; }
+
+/* ---- layouts */
+.bcf-layout { display: flex; align-items: flex-start; gap: 28px; width: 100%; min-width: 0; }
+.bcf-layout > .bcf-main { flex: 1 1 auto; min-width: 0; }
+.bcf-layout > .bcf-panel { flex: 0 0 var(--bcf-width, 260px); width: var(--bcf-width, 260px); position: sticky; top: 16px; max-height: calc(100vh - 32px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; padding-inline-end: 4px; }
+.bcf-root.bcf-pos-top > .bcf-panel { margin-bottom: 16px; }
+
+/* ---- the form */
+.bcf-form { font-size: var(--bcf-size); line-height: 1.4; color: var(--bcf-color-c); margin: 0; }
+/* Gridbox themes size body, div, p, ul… directly: everything inside follows the panel's size */
+.bcf-form div, .bcf-form p, .bcf-form ul, .bcf-form li, .bcf-form label, .bcf-form span, .bcf-form summary, .bcf-form input, .bcf-form button, .bcf-form a { font-size: inherit; line-height: inherit; letter-spacing: normal; }
+.bcf-bar span, .bcf-bar a, .bcf-bar p, .bcf-bar button { line-height: 1.3; letter-spacing: normal; }
+.bcf-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px; }
+.bcf-title { font-weight: 700; font-size: 1.1em; }
+.bcf-close { display: none; }
+.bcf-group { border-bottom: 1px solid var(--bcf-line); padding: 10px 0; margin: 0; }
+.bcf-group:first-child { border-top: 1px solid var(--bcf-line); }
+.bcf-group-title { display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: 600; list-style: none; padding: 2px 0; user-select: none; }
+.bcf-group-title::-webkit-details-marker { display: none; }
+.bcf-group-title::after { content: ""; margin-inline-start: auto; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .2s; opacity: .6; }
+.bcf-group[open] > .bcf-group-title::after { transform: rotate(-135deg); }
+.bcf-group-body { padding-top: 8px; }
+.bcf-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4em; height: 1.4em; padding: 0 .35em; border-radius: 999px; background: var(--bcf-accent-c); color: #fff; font-size: .75em; font-weight: 700; line-height: 1; }
+.bcf-options { list-style: none; margin: 0; padding: 0; }
+.bcf-option { margin: 0; padding: 0; }
+.bcf-option label { display: flex; align-items: center; gap: 8px; padding: 4px 0; cursor: pointer; margin: 0; font-weight: 400; }
+.bcf-option input { width: 17px; height: 17px; margin: 0; flex: 0 0 auto; accent-color: var(--bcf-accent-c); }
+.bcf-option-label { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.bcf-count { flex: 0 0 auto; font-size: .82em; opacity: .6; font-variant-numeric: tabular-nums; }
+.bcf-option.is-empty label { opacity: .45; cursor: default; }
+.bcf-group:not(.is-expanded) .bcf-extra { display: none; }
+.bcf-more { background: none; border: 0; padding: 4px 0; margin: 2px 0 0; color: var(--bcf-accent-c); cursor: pointer; font: inherit; font-size: .92em; text-decoration: underline; }
+.bcf-range { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto; align-items: end; gap: 6px; }
+.bcf-range-field { display: flex; flex-direction: column; gap: 2px; min-width: 0; margin: 0; }
+.bcf-range-label { font-size: .8em; opacity: .7; }
+.bcf-range input { width: 100%; min-width: 0; height: 36px; padding: 4px 8px; border: 1px solid var(--bcf-line); border-radius: 6px; background: var(--bcf-bg-c); color: inherit; font: inherit; }
+.bcf-range input:focus { outline: 2px solid var(--bcf-accent-c); outline-offset: 0; border-color: transparent; }
+.bcf-range-sep { padding-bottom: 8px; opacity: .6; }
+.bcf-unit { padding-bottom: 8px; font-size: .9em; opacity: .75; }
+.bcf-foot { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 12px; }
+.bcf-apply, .bcf-show { border: 0; border-radius: 6px; background: var(--bcf-accent-c); color: #fff; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
+/* with the script every change applies at once; without it the form is submitted with the button */
+.bcf-js .bcf-auto .bcf-apply { display: none; }
+.bcf-show { display: none; }
+.bcf-reset { color: var(--bcf-accent-c); font-size: .92em; }
+
+/* ---- the bar above the products */
+.bcf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; font-size: var(--bcf-size, 15px); line-height: 1.3; }
+.bcf-bar > * { font-size: inherit; }
+.bcf-bar:empty { display: none; }
+.bcf-total { font-weight: 600; margin-inline-end: 4px; }
+.bcf-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--bcf-line); border-radius: 999px; color: inherit; text-decoration: none; font-size: .9em; background: var(--bcf-bg-c); }
+.bcf-chip:hover, .bcf-chip:focus-visible { border-color: var(--bcf-accent-c); color: var(--bcf-accent-c); }
+.bcf-chip--clear { border-style: dashed; }
+.bcf-none { flex-basis: 100%; margin: 6px 0 0; }
+.bcf-toggle { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border: 1px solid var(--bcf-line); border-radius: 8px; background: var(--bcf-bg-c); color: inherit; font: inherit; font-weight: 600; cursor: pointer; }
+.bcf-toggle[hidden] { display: none; }
+
+/* ---- loading */
+.bcf-root.is-loading .ba-blog-posts-wrapper, .bcf-root.is-loading .bcf-bar { opacity: .45; transition: opacity .15s; pointer-events: none; }
+
+/* ---- drawer (phones, or the "drawer" position) */
+.bcf-panel.bcf-is-drawer { position: fixed; inset: 0; z-index: 100000; display: block; width: auto; max-height: none; pointer-events: none; visibility: hidden; }
+.bcf-is-drawer .bcf-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); opacity: 0; transition: opacity .25s; }
+.bcf-is-drawer .bcf-form { position: absolute; inset-block: 0; inset-inline-start: 0; width: min(88vw, 380px); background: var(--bcf-bg-c); color: var(--bcf-color, #222); padding: 16px 18px 0; overflow: auto; transform: translateX(-100%); transition: transform .25s ease; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0, 0, 0, .25); }
+[dir="rtl"] .bcf-is-drawer .bcf-form { transform: translateX(100%); }
+.bcf-is-drawer .bcf-groups { flex: 1 1 auto; }
+.bcf-is-drawer .bcf-foot { position: sticky; bottom: 0; background: var(--bcf-bg-c); padding: 12px 0 16px; margin-top: 8px; border-top: 1px solid var(--bcf-line); }
+.bcf-is-drawer .bcf-show { display: inline-block; flex: 1 1 auto; }
+.bcf-is-drawer .bcf-close { display: inline-flex; background: none; border: 0; padding: 6px; color: inherit; cursor: pointer; }
+.bcf-panel.bcf-is-drawer.is-open { pointer-events: auto; visibility: visible; }
+.bcf-panel.bcf-is-drawer.is-open .bcf-backdrop { opacity: 1; }
+.bcf-panel.bcf-is-drawer.is-open .bcf-form { transform: none; }
+.bcf-layout.bcf-is-drawer { display: block; }
+html.bcf-lock, html.bcf-lock body { overflow: hidden; }
+
+/* a narrow window of a desktop browser: the drawer as on phones */
+@media (max-width: 768px) {
+  .bcf-layout.bcf-m-drawer { display: block; }
+  .bcf-panel.bcf-m-drawer { position: fixed; inset: 0; z-index: 100000; display: block; width: auto; max-height: none; pointer-events: none; visibility: hidden; }
+  .bcf-m-drawer .bcf-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); opacity: 0; transition: opacity .25s; }
+  .bcf-panel.bcf-m-drawer .bcf-form { position: absolute; inset-block: 0; inset-inline-start: 0; width: min(88vw, 380px); background: var(--bcf-bg-c); color: var(--bcf-color, #222); padding: 16px 18px 0; overflow: auto; transform: translateX(-100%); transition: transform .25s ease; display: flex; flex-direction: column; }
+  .bcf-m-drawer .bcf-foot { position: sticky; bottom: 0; background: var(--bcf-bg-c); padding: 12px 0 16px; border-top: 1px solid var(--bcf-line); }
+  .bcf-m-drawer .bcf-show { display: inline-block; flex: 1 1 auto; }
+  .bcf-m-drawer .bcf-close { display: inline-flex; background: none; border: 0; padding: 6px; color: inherit; cursor: pointer; }
+  .bcf-panel.bcf-m-drawer.is-open { pointer-events: auto; visibility: visible; }
+  .bcf-panel.bcf-m-drawer.is-open .bcf-backdrop { opacity: 1; }
+  .bcf-panel.bcf-m-drawer.is-open .bcf-form { transform: none; }
+  .bcf-m-drawer .bcf-toggle[hidden] { display: inline-flex; }
+  .bcf-side.bcf-m-drawer { display: contents; }
+}
+
+/* ---- "top" position: the groups side by side, each opening as a menu */
+.bcf-pos-top:not(.bcf-is-drawer) .bcf-form { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; }
+.bcf-pos-top:not(.bcf-is-drawer) .bcf-head { margin: 0; align-self: center; }
+.bcf-pos-top:not(.bcf-is-drawer) .bcf-groups { display: flex; flex-wrap: wrap; gap: 8px; }
+.bcf-pos-top:not(.bcf-is-drawer) .bcf-group { position: relative; border: 1px solid var(--bcf-line); border-radius: 8px; padding: 7px 12px; }
+.bcf-pos-top:not(.bcf-is-drawer) .bcf-group-body { position: absolute; z-index: 50; top: calc(100% + 6px); inset-inline-start: 0; width: max(240px, 100%); max-height: 60vh; overflow: auto; background: var(--bcf-bg-c); border: 1px solid var(--bcf-line); border-radius: 8px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+.bcf-pos-top:not(.bcf-is-drawer) .bcf-foot { padding: 0; align-self: center; }
+.bcf-pos-top:not(.bcf-is-drawer) .bcf-reset { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bcf-is-drawer .bcf-form, .bcf-is-drawer .bcf-backdrop, .bcf-m-drawer .bcf-form, .bcf-group-title::after { transition: none; }
+}

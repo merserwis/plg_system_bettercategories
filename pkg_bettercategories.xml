@@ -2,8 +2,8 @@
 <extension type="package" method="upgrade">
     <name>Better Categories for Gridbox Package</name>
     <packagename>bettercategories</packagename>
-    <version>1.4.1</version>
-    <creationDate>2026-10-02</creationDate>
+    <version>1.5.0</version>
+    <creationDate>2026-10-05</creationDate>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>

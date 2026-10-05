@@ -2,6 +2,38 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.5.0 — 2026-10-05
+
+Product filters on store category pages, and a reset of the settings to their defaults.
+
+### 🔎 Product filters (off by default)
+
+- A new **Filters** tab. Switch on *Product filters* and the store category pages get a filter panel; the product list stays Gridbox's own (cards, sorting, page size, pagination type) — it only shows the matching products.
+- **What to filter by**, in any order and number:
+  - **Price** — from–to, in the currency the visitor sees, with sale prices, store sales and variations as Gridbox calculates them. Products without a price (price on request) are left out of a price filter.
+  - **Gridbox fields** — the options of list, radio and checkbox fields (e.g. *Producer*); text fields list every text used.
+  - **Technical parameters from the description** — values with a unit read from the product title, introduction and description: voltage, current, power, frequency, resistance, capacitance, temperature, sound level, illuminance, pressure, energy, battery capacity, length, measurement category (CAT I–IV) and protection rating (IP). “1 kV” and “1000 V” are the same value. Shown as tick boxes of the values found or as from–to fields; a product counts with its highest value (e.g. the measuring range), its lowest, or every value found.
+  - **Features from the description** — one per line, `True RMS = true rms, trms`: a product has the feature when its title or description contains one of the words (whole words, `*` for longer words).
+  - **On sale** and **In stock**.
+- **Panel position:** a side bar on the left or right of the products, one row above the products (each filter opens as a menu), a *Filters* button with a side panel, under Gridbox's categories element (e.g. in the page's side column) or before / after any Gridbox element.
+- **On phones** a *Filters* button opens the panel from the side, with *Show N products* to close it (also in narrow desktop windows). Optional: the same position as on computers.
+- **Counts that help:** every option shows how many products it would give with the filters already chosen; options that would give none are hidden (or greyed out). Within one filter any chosen option is enough — or all of them, the default for features. Long lists show 6 options and *Show more*.
+- **Above the products:** the number of products found, the chosen filters as chips to remove one by one, and *Clear all*.
+- **Instant:** a change shows the products at once, without reloading the page; the address follows (`?f-producer=sonel,metrel&f-price=100..500`), so a filtered list can be linked, bookmarked, paged, sorted and opened again with *Back*. Optional: an *Apply* button. Without JavaScript the panel works as a plain form.
+- **SEO:** filtered lists get `noindex, follow` (setting), so search engines keep indexing the category page itself.
+- **Texts in the site language:** English, Polish, Ukrainian and German, or your own texts in the settings. Colours, width and font size of the panel are settings too.
+- Subcategories shown above the products stay above the filter bar, and a list hidden under the subcategories (*Hide products until the last category*) appears as soon as a filter is chosen.
+- The parameters and features of the products are read once and kept in the cache; only products saved since are read again.
+
+### ♻️ Reset to defaults
+
+- *Settings file* has a new **Reset to defaults** button: every setting gets the value of a fresh installation, saved at once. By default this site's store IDs, element IDs, category images and filters are kept (a tick box).
+- *Export styles only* and *Import styles only* also leave out the filters (they refer to this site's Gridbox fields).
+
+---
+
+**Tested on:** Joomla 6.1.3 (Atum), PHP 8.5, Gridbox 2.20.3.1, a store of 636 products: every filter type alone and combined, ranges with open ends and typed prefixes (`2.5k`, `1M`), unknown values in the address (ignored), pagination, sorting and *Back* in a real browser on desktop and phone, all panel positions, export / import / reset. No PHP warnings from the extension. With filters off — and with filters on — the list of subcategories is identical to 1.4.1 in all 42 tested combinations. Update from 1.4.1 keeps all settings.
+
 ## 1.4.1 — 2026-10-02
 
 ### ❓ Help tooltips

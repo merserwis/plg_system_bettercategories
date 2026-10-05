@@ -29,6 +29,7 @@ use Joomla\CMS\Uri\Uri;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\Priority;
 use Joomla\Event\SubscriberInterface;
+use Merserwis\Plugin\System\BetterCategories\Filter\Page;
 
 final class BetterCategories extends CMSPlugin implements SubscriberInterface
 {
@@ -38,7 +39,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.4.1';
+    private const VERSION    = '1.5.0';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -69,8 +70,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     /** Thumbnails folder (under the site root) and the time one request may spend creating them. */
     private const THUMB_DIR    = 'media/plg_system_bettercategories/thumbs';
 
-    /** Settings that belong to one site (store IDs, category IDs, element IDs): kept by a "styles only" import. */
-    private const SITE_KEYS = ['app_ids', 'item_id', 'category_images'];
+    /** Settings that belong to one site (store IDs, category IDs, element IDs, filters of its fields): kept by a "styles only" import and, on request, by a reset. */
+    private const SITE_KEYS = ['app_ids', 'item_id', 'category_images', 'filters_list', 'filters_item_id'];
 
     /** Seconds one request may spend creating thumbnails (the administrator "generate" action allows more). */
     private float $thumbBudget = 1.5;
@@ -114,6 +115,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'onAjaxBettercategories'   => 'onAjax',
             'onExtensionAfterSave'     => 'onExtensionAfterSave',
             'onBetterCategoriesModule' => 'onModule',
+            // Gridbox's own event at the start of its page processing: the filtered product list is
+            // in place before Gridbox adds lazy loading and adaptive images to it
+            'onBeforeRenderGridbox'    => 'onBeforeRenderGridbox',
         ];
     }
 
@@ -135,6 +139,11 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         // sites (device-specific extensions/caches) pass phones an older copy of plugin parameters.
         $given        = substr(md5(json_encode($this->params->toArray())), 0, 8);
         $this->params = $this->savedParams() ?? $this->params;
+        // a filtered list is never hidden under the subcategories
+        if ($this->params->get('filters_enabled', 0) && $this->params->get('hide_products', 0) && Page::hasFilters($input)) {
+            $this->params = clone $this->params;
+            $this->params->set('hide_products', 0);
+        }
 
         // Search, filters, tag and author listings stay as Gridbox renders them.
         foreach (['search', 'query', 'tag', 'author'] as $key) {
@@ -191,6 +200,64 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 $device, $status, (hrtime(true) - $start) / 1e6, (hrtime(true) - $t0) / 1e6);
         }
         $app->setBody(substr($body, 0, $pos) . $html . substr($body, $pos));
+    }
+
+    /**
+     * Product filters (setting, off by default): the panel, the bar above the products and Gridbox's
+     * product list rendered again for the matching products. Runs at the start of Gridbox's page
+     * processing, so Gridbox still adds lazy loading and adaptive images to the new list.
+     */
+    public function onBeforeRenderGridbox(): void
+    {
+        $app = $this->getApplication();
+        if (!$app->isClient('site') || $app->getDocument()->getType() !== 'html') {
+            return;
+        }
+        $input = $app->getInput();
+        if ($input->getCmd('option') !== 'com_gridbox' || $input->getCmd('view') !== 'blog' || $input->getCmd('tmpl') === 'component') {
+            return;
+        }
+        $params = $this->savedParams() ?? $this->params;
+        if (!$params->get('filters_enabled', 0)) {
+            return;
+        }
+        // Gridbox's search, its own "items filter", tag and author listings stay as they are
+        foreach (['search', 'query', 'tag', 'author'] as $key) {
+            if (trim((string) $input->get($key, '', 'raw')) !== '') {
+                return;
+            }
+        }
+        $appId      = $input->getInt('app', 0);
+        $categoryId = $input->getInt('id', 0);
+        if ($appId <= 0 || !ComponentHelper::isEnabled('com_gridbox')) {
+            return;
+        }
+
+        $this->loadLanguage();
+        $saved        = $this->params;
+        $this->params = $params;
+        try {
+            if (!$this->isEnabledApp($appId) || ($categoryId > 0 && !$this->categoryInApp($categoryId, $appId))) {
+                return;
+            }
+            $categories = $this->loadCategories($appId);
+            if ($categoryId > 0 && !isset($categories[$categoryId])) {
+                return;
+            }
+            // products hidden under the subcategories: nothing to filter until a filter is chosen
+            $hasChildren = (bool) array_filter($categories, fn ($cat) => $cat->parent === $categoryId);
+            $listHidden  = $hasChildren && (bool) $params->get('hide_products', 0)
+                && !($params->get('first_page_only', 1) && $input->getInt('page', 1) > 1);
+
+            $body = (new Page($this, $params, $this->device()))->process($app->getBody(), $appId, $categoryId, $categories, $listHidden);
+            if ($body !== null) {
+                $app->setBody($body);
+            }
+        } catch (\Throwable $e) {
+            $this->logError($e);
+        } finally {
+            $this->params = $saved;
+        }
     }
 
     /**
@@ -256,7 +323,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     }
 
     /** Errors go to the Joomla log (category plg_system_bettercategories), never to visitors. */
-    private function logError(\Throwable $e): void
+    public function logError(\Throwable $e): void
     {
         try {
             Log::add(get_class($e) . ': ' . $e->getMessage() . ' @ ' . basename($e->getFile()) . ':' . $e->getLine(), Log::ERROR, self::CACHE_GROUP);
@@ -391,7 +458,13 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 break;
         }
 
-        // before_products, and the fallback when the chosen anchor is not on the page
+        // before_products, and the fallback when the chosen anchor is not on the page; with product filters
+        // above their bar (number of products, chosen filters)
+        $mark = strpos($body, Page::MARK_START, $bodyStart);
+        if ($mark !== false) {
+            return $mark;
+        }
+
         return $this->findElementStart($body, '#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-item-blog-posts[\s"]#i', $bodyStart);
     }
 
@@ -420,13 +493,13 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
     // ---------------------------------------------------------------- data
 
-    private function db(): DatabaseInterface
+    public function db(): DatabaseInterface
     {
         return Factory::getContainer()->get(DatabaseInterface::class);
     }
 
     /** @return int[] */
-    private function viewLevels(): array
+    public function viewLevels(): array
     {
         if ($this->levels === null) {
             $user         = $this->getApplication()->getIdentity();
@@ -441,7 +514,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
      *
      * @return array<int, object>
      */
-    private function loadCategories(int $appId): array
+    public function loadCategories(int $appId): array
     {
         $db    = $this->db();
         $lang  = $this->getApplication()->getLanguage()->getTag();
@@ -527,7 +600,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
      * Published, currently live, visible products of the store (#__gridbox_pages AS p), without
      * the subscription add-ons Gridbox hides from listings. Selects nothing yet.
      */
-    private function visibleProductsQuery(): \Joomla\Database\QueryInterface
+    public function visibleProductsQuery(): \Joomla\Database\QueryInterface
     {
         $db     = $this->db();
         $now    = $db->quote($this->siteNow());
@@ -647,7 +720,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     /**
      * Device class from the User-Agent: "mobile" (phones), "tablet" or "desktop" (iPadOS reports a desktop Mac).
      */
-    private function device(): string
+    public function device(): string
     {
         if ($this->deviceClass === null) {
             $ua = (string) ($this->getApplication()->getInput()->server->getString('HTTP_USER_AGENT', ''));
@@ -678,7 +751,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $action = $app->getInput()->post->getCmd('bc_action', 'preview');
         // actions that write files or settings need the right to edit plugins, not only to see them
-        if (in_array($action, ['import', 'thumbs', 'thumbs_clear'], true) && !$app->getIdentity()->authorise('core.edit', 'com_plugins')) {
+        if (in_array($action, ['import', 'reset', 'thumbs', 'thumbs_clear'], true) && !$app->getIdentity()->authorise('core.edit', 'com_plugins')) {
             $app->setHeader('status', '403', true);
             $this->ajaxResult($event, ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_NOT_ALLOWED_EDIT')]);
 
@@ -691,6 +764,11 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
         if ($action === 'thumbs_clear') {
             $this->ajaxResult($event, $this->clearThumbnails());
+
+            return;
+        }
+        if ($action === 'reset') {
+            $this->ajaxResult($event, $this->resetSettings($app->getInput()->post->getInt('keep_site', 1) === 1));
 
             return;
         }
@@ -1502,7 +1580,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     }
 
     /** Price after the first store sale that applies (Gridbox's own rule order). */
-    private function salePrice(array $sales, float $price, int $productId, string $variation, array $categories): float
+    public function salePrice(array $sales, float $price, int $productId, string $variation, array $categories): float
     {
         foreach ($sales as $sale) {
             if (empty($sale->discount)) {
@@ -1581,7 +1659,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     }
 
     /** The category and all its parents, from every category of the site (published or not, as Gridbox reads them). */
-    private function categoryPath(int $id): array
+    public function categoryPath(int $id): array
     {
         if ($this->parents === null) {
             $this->parents = [];
@@ -1603,7 +1681,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     }
 
     /** Store sales active now for the visitor's access levels (lowest id first), with indexed product/category maps. */
-    private function activeSales(): array
+    public function activeSales(): array
     {
         if ($this->sales !== null) {
             return $this->sales;
@@ -1648,7 +1726,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     }
 
     /** The store currency the visitor sees (default, the language's, or the one picked in the currency switcher). */
-    private function storeCurrency(): ?object
+    public function storeCurrency(): ?object
     {
         if ($this->currency !== false) {
             return $this->currency;
@@ -1837,6 +1915,47 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $this->cleanCaches();
 
         return ['ok' => true, 'imported' => $imported, 'ignored' => array_slice($ignored, 0, 50), 'version' => (string) ($data['version'] ?? '')];
+    }
+
+    /**
+     * All settings back to the defaults of the settings form (the values of a fresh installation);
+     * with $keepSite this site's store IDs, element IDs, category images and filters stay.
+     */
+    private function resetSettings(bool $keepSite): array
+    {
+        $xml = @simplexml_load_file(JPATH_PLUGINS . '/system/bettercategories/bettercategories.xml');
+        if (!$xml) {
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_GENERIC')];
+        }
+        $defaults = [];
+        foreach ($xml->xpath('/extension/config/fields/fieldset/field') ?: [] as $field) {
+            $type = strtolower((string) $field['type']);
+            $name = (string) $field['name'];
+            if ($name === '' || in_array($type, ['note', 'spacer', 'bcpreview', 'bctools'], true)) {
+                continue;
+            }
+            $defaults[$name] = $type === 'subform' ? [] : (string) ($field['default'] ?? '');
+        }
+        if ($keepSite) {
+            $saved = ($this->readSavedParams() ?? new Registry())->toArray();
+            foreach (self::SITE_KEYS as $key) {
+                if (array_key_exists($key, $saved)) {
+                    $defaults[$key] = $saved[$key];
+                }
+            }
+        }
+
+        $db    = $this->db();
+        $query = $db->createQuery()
+            ->update($db->quoteName('#__extensions'))
+            ->set($db->quoteName('params') . ' = ' . $db->quote(json_encode($defaults, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))
+            ->where($db->quoteName('type') . ' = ' . $db->quote('plugin'))
+            ->where($db->quoteName('folder') . ' = ' . $db->quote('system'))
+            ->where($db->quoteName('element') . ' = ' . $db->quote('bettercategories'));
+        $db->setQuery($query)->execute();
+        $this->cleanCaches();
+
+        return ['ok' => true, 'count' => count($defaults)];
     }
 
     /** A settings value: text (max. 5000 characters) or a list of such values (max. 5 levels, 500 items). */
