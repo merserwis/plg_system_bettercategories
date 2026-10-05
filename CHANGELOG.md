@@ -2,6 +2,24 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.5.1 — 2026-10-05
+
+### 🐞 Fixes
+
+- **Filters did nothing on stores with the “Default” product order.** When the Gridbox product list is set to its custom order (*Default* in the sorting menu), choosing a filter showed the unfiltered category instead of the matching products. The plugin asked the database for the order in a form that both products and categories have, the query failed and the plugin gave up. The order is now handed over exactly as Gridbox does it, and filtered lists keep Gridbox's custom order.
+- **The side panel opened under the header.** On sites with a sticky header the top of the panel (and its title) was hidden behind the menu. The open panel is now placed above everything on the page.
+- The settings of the product list element are also found when the list is part of a Gridbox **global item** or the store uses Gridbox's default layout.
+
+### ✨ Changes
+
+- **New panel position: in the side column next to the products** (at the top or at the bottom of it) — the column beside the product list in the same Gridbox row, e.g. with the category tree or the product advisers. Found automatically; on phones the *Filters* button is used as before.
+- **The plugin's own log file:** errors go to `administrator/logs/plg_system_bettercategories.php`, and the **Filters** tab shows the latest lines, so a problem can be seen without access to the server.
+- **The diagnostic HTML comment was removed** (the *Diagnostic comment* setting is gone).
+
+---
+
+**Tested on:** Joomla 6.1.3, PHP 8.5, Gridbox 2.20.3.1, the 636-product test store with the list set to the custom order, as on merserwis.pl: the problem reproduced and fixed; filtered lists in Gridbox's order, sorting and pages; both side-column positions; the side panel on a phone. No PHP warnings from the extension; the list of subcategories unchanged.
+
 ## 1.5.0 — 2026-10-05
 
 Product filters on store category pages, and a reset of the settings to their defaults.

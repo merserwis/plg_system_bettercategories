@@ -31,33 +31,84 @@ final class GridboxList
         return class_exists($helper) && method_exists($helper, 'getBlogPostsQuery') && method_exists($helper, 'getRecentPostsHTML');
     }
 
-    /** Settings of a Gridbox element of the app layout (null when not found). */
-    public static function elementConfig(int $appId, string $elementId): ?object
+    /**
+     * Settings of the product list element and where they were found: the layout of the store app,
+     * a Gridbox global item (#__gridbox_library), the element Gridbox rendered last, or the default
+     * layout of the app type (then the page size is the number of products Gridbox showed).
+     *
+     * @return array{0: object|null, 1: string} settings, source
+     */
+    public static function elementConfig(int $appId, string $elementId, string $elementHtml = ''): array
     {
+        $db   = Factory::getContainer()->get(DatabaseInterface::class);
+        $type = '';
         try {
-            $db    = Factory::getContainer()->get(DatabaseInterface::class);
             $query = $db->createQuery()
                 ->select($db->quoteName(['app_items', 'type']))
                 ->from($db->quoteName('#__gridbox_app'))
                 ->where($db->quoteName('id') . ' = ' . $appId);
-            $row   = $db->setQuery($query)->loadObject();
-            $json  = (string) ($row->app_items ?? '');
-            if ($json === '' && $row && preg_match('/^[a-z_-]+$/', (string) $row->type)) {
-                // the default layout of the app type, as Gridbox reads it (BlogModel)
-                $file = JPATH_ROOT . '/components/com_gridbox/tmpl/layout/apps/' . $row->type . '/app.json';
-                $json = is_file($file) ? (string) file_get_contents($file) : '';
+            $row  = $db->setQuery($query)->loadObject();
+            $type = preg_match('/^[a-z_-]+$/', (string) ($row->type ?? '')) ? (string) $row->type : '';
+            $item = self::itemOf((string) ($row->app_items ?? ''), $elementId);
+            if ($item) {
+                return [$item, 'app'];
             }
-            $items = json_decode($json);
-            $item  = is_object($items) ? ($items->{$elementId} ?? null) : null;
         } catch (\Throwable $e) {
-            $item = null;
-        }
-        if (!is_object($item)) {
-            $helper = self::HELPER;
-            $item   = class_exists($helper) && is_object($helper::$editItem ?? null) && ($helper::$editItem->type ?? '') === 'blog-posts' ? $helper::$editItem : null;
         }
 
-        return $item;
+        // a global item ("[global item=…]" in the layout) keeps its elements in the library
+        try {
+            $query = $db->createQuery()
+                ->select($db->quoteName('item'))
+                ->from($db->quoteName('#__gridbox_library'))
+                ->where($db->quoteName('global_item') . ' <> ' . $db->quote(''))
+                ->where($db->quoteName('item') . ' LIKE ' . $db->quote('%' . $db->escape('"' . $elementId . '"', true) . '%', false));
+            foreach ($db->setQuery($query)->loadColumn() ?: [] as $json) {
+                $library = json_decode((string) $json);
+                $item    = self::itemOf(json_encode($library->items ?? null), $elementId);
+                if ($item) {
+                    return [$item, 'global item'];
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        $helper = self::HELPER;
+        if (class_exists($helper) && is_object($helper::$editItem ?? null) && ($helper::$editItem->type ?? '') === 'blog-posts') {
+            return [$helper::$editItem, 'last element'];
+        }
+
+        // the default layout of the app type (Gridbox itself uses it while the app has none)
+        $file = $type !== '' ? JPATH_ROOT . '/components/com_gridbox/tmpl/layout/apps/' . $type . '/app.json' : '';
+        $all  = $file !== '' && is_file($file) ? json_decode((string) file_get_contents($file)) : null;
+        $item = self::itemOf(json_encode($all), $elementId);
+        if (!$item && is_object($all)) {
+            foreach ($all as $candidate) {
+                if (is_object($candidate) && ($candidate->type ?? '') === 'blog-posts') {
+                    $item = $candidate;
+                    break;
+                }
+            }
+        }
+        if ($item) {
+            $item  = clone $item;
+            $shown = preg_match_all('/<div\b[^>]*\sclass="ba-blog-post[\s"]/i', $elementHtml);
+            if ($shown > 0 && str_contains($elementHtml, 'ba-blog-posts-pagination')) {
+                $item->limit = $shown;
+            }
+
+            return [$item, 'default layout'];
+        }
+
+        return [null, 'not found'];
+    }
+
+    private static function itemOf(string $json, string $elementId): ?object
+    {
+        $items = $json !== '' ? json_decode($json) : null;
+        $item  = is_object($items) ? ($items->{$elementId} ?? null) : null;
+
+        return is_object($item) && ($item->type ?? 'blog-posts') === 'blog-posts' ? $item : null;
     }
 
     /**
@@ -82,9 +133,13 @@ final class GridboxList
         $default    = (string) ($item->order ?? 'created');
         $default    = in_array($default, self::ORDERS, true) ? $default : 'created';
         $order      = (string) $input->getString('sort-by', '');
-        // only orders Gridbox offers: the order goes into SQL
-        $sortList = $helper::getBlogPostsSortingList($default === 'order_list');
-        $order    = isset($sortList[$order]) ? $order : $default;
+        // only orders Gridbox offers in the sorting menu (with "default" when the element is set to it):
+        // the order goes into SQL
+        $offered = $helper::getBlogPostsSortingList($default === 'order_list');
+        $order   = isset($offered[$order]) ? $order : $default;
+        // the list GridboxHelper::getBlogPosts itself decides with: "order_list" is not in it, so it
+        // becomes "p.order_list ASC" (a bare order_list is ambiguous: categories have one too)
+        $sortList = $helper::getBlogPostsSortingList();
 
         if (!$ids) {
             return ['posts' => $helper::getEmptyList(), 'pagination' => '', 'count' => 0];
@@ -145,7 +200,7 @@ final class GridboxList
         }
 
         $url = $helper::getGridboxCategoryLinks($categoryId, $appId) . ($filter !== '' ? '&' . $filter : '');
-        if (isset($sortList[(string) $input->getString('sort-by', '')])) {
+        if (isset($offered[(string) $input->getString('sort-by', '')])) {
             $url .= '&sort-by=' . $order;
         }
 

@@ -74,9 +74,9 @@
 .bcf-root.is-loading .ba-blog-posts-wrapper, .bcf-root.is-loading .bcf-bar { opacity: .45; transition: opacity .15s; pointer-events: none; }
 
 /* ---- drawer (phones, or the "drawer" position) */
-.bcf-panel.bcf-is-drawer { position: fixed; inset: 0; z-index: 100000; display: block; width: auto; max-height: none; pointer-events: none; visibility: hidden; }
+.bcf-panel.bcf-is-drawer { position: fixed; inset: 0; z-index: 2147483000; display: block; width: auto; max-height: none; pointer-events: none; visibility: hidden; }
 .bcf-is-drawer .bcf-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); opacity: 0; transition: opacity .25s; }
-.bcf-is-drawer .bcf-form { position: absolute; inset-block: 0; inset-inline-start: 0; width: min(88vw, 380px); background: var(--bcf-bg-c); color: var(--bcf-color, #222); padding: 16px 18px 0; overflow: auto; transform: translateX(-100%); transition: transform .25s ease; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0, 0, 0, .25); }
+.bcf-is-drawer .bcf-form { position: absolute; inset-block: 0; inset-inline-start: 0; width: min(88vw, 380px); background: var(--bcf-bg-c); color: var(--bcf-color, #222); padding: max(16px, env(safe-area-inset-top)) 18px 0; overflow: auto; transform: translateX(-100%); transition: transform .25s ease; display: flex; flex-direction: column; box-shadow: 0 0 30px rgba(0, 0, 0, .25); }
 [dir="rtl"] .bcf-is-drawer .bcf-form { transform: translateX(100%); }
 .bcf-is-drawer .bcf-groups { flex: 1 1 auto; }
 .bcf-is-drawer .bcf-foot { position: sticky; bottom: 0; background: var(--bcf-bg-c); padding: 12px 0 16px; margin-top: 8px; border-top: 1px solid var(--bcf-line); }
@@ -91,7 +91,7 @@ html.bcf-lock, html.bcf-lock body { overflow: hidden; }
 /* a narrow window of a desktop browser: the drawer as on phones */
 @media (max-width: 768px) {
   .bcf-layout.bcf-m-drawer { display: block; }
-  .bcf-panel.bcf-m-drawer { position: fixed; inset: 0; z-index: 100000; display: block; width: auto; max-height: none; pointer-events: none; visibility: hidden; }
+  .bcf-panel.bcf-m-drawer { position: fixed; inset: 0; z-index: 2147483000; display: block; width: auto; max-height: none; pointer-events: none; visibility: hidden; }
   .bcf-m-drawer .bcf-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, .45); opacity: 0; transition: opacity .25s; }
   .bcf-panel.bcf-m-drawer .bcf-form { position: absolute; inset-block: 0; inset-inline-start: 0; width: min(88vw, 380px); background: var(--bcf-bg-c); color: var(--bcf-color, #222); padding: 16px 18px 0; overflow: auto; transform: translateX(-100%); transition: transform .25s ease; display: flex; flex-direction: column; }
   .bcf-m-drawer .bcf-foot { position: sticky; bottom: 0; background: var(--bcf-bg-c); padding: 12px 0 16px; border-top: 1px solid var(--bcf-line); }

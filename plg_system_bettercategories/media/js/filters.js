@@ -101,9 +101,28 @@
     }
   }
 
+  // an open side panel is moved to <body>: inside the page it would stay under a sticky header
+  // (Gridbox sections and our list create their own stacking layers)
+  let home = null;
+  function lift(p) {
+    if (getComputedStyle(p).position !== 'fixed' || p.parentNode === document.body) return;
+    home = document.createComment('bcf-panel');
+    p.parentNode.insertBefore(home, p);
+    document.body.appendChild(p);
+  }
+  function putBack() {
+    const p = panel();
+    if (home && home.parentNode && p && p.parentNode === document.body) {
+      home.parentNode.insertBefore(p, home);
+    }
+    if (home && home.parentNode) home.remove();
+    home = null;
+  }
+
   function open(focus) {
     const p = panel();
     if (!p) return;
+    lift(p);
     p.classList.add('is-open');
     document.documentElement.classList.add('bcf-lock');
     document.querySelectorAll('[data-bcf-open]').forEach((b) => b.setAttribute('aria-expanded', 'true'));
@@ -118,6 +137,8 @@
     if (!p || !p.classList.contains('is-open')) return;
     p.classList.remove('is-open');
     document.documentElement.classList.remove('bcf-lock');
+    // back into the page once the slide-out is over
+    setTimeout(() => { if (!p.classList.contains('is-open')) putBack(); }, 300);
     document.querySelectorAll('[data-bcf-open]').forEach((b) => b.setAttribute('aria-expanded', 'false'));
     const toggle = document.querySelector('[data-bcf-open]');
     toggle && toggle.focus();

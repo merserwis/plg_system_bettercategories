@@ -26,7 +26,7 @@ use Merserwis\Plugin\System\BetterCategories\Extension\BetterCategories;
 final class Filters
 {
     public const TYPES     = ['price', 'field', 'param', 'feature', 'sale', 'stock'];
-    public const POSITIONS = ['sidebar_left', 'sidebar_right', 'top', 'drawer', 'after_categories', 'before_item', 'after_item'];
+    public const POSITIONS = ['sidebar_left', 'sidebar_right', 'column_top', 'column_bottom', 'top', 'drawer', 'after_categories', 'before_item', 'after_item'];
 
     /** Unit symbol of each parameter kind. */
     public const UNITS = [
