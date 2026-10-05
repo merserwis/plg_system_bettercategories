@@ -2,6 +2,17 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.5.2 — 2026-10-05
+
+### 🐞 Fixes
+
+- **Technical parameters no longer read numbers of standards and model names as values.** “Tests to PN-EN 62446 up to 1000 V DC” gave the voltage range 1000…62 446 V (shown as *62,446 kV*): the number of the standard and the next value were taken for a range. Now skipped:
+  - designations of standards — PN-EN, PN-HD, EN, IEC, ISO, DIN, VDE, BS, UL… (a nominal pressure such as “PN 16 bar” stays a value);
+  - numbers glued to a model name with a hyphen — “C-4A”, “APS-1102A”, “M10-522-10 260V” (“DC-150 kHz” still reads as a band up to 150 kHz);
+  - a “range” written from a larger number down to a smaller positive one without a unit after the first (“5 700~1000 A” in a table); ranges falling to negative values stay (“0 ~ -32 V”, “+25 to -100 °C”).
+- On the 636-product test store this removes wrong values from 45 products (e.g. 4 MΩ from “IEC61557-4 MΩ”, 50.26 kV from “M10-522-50 260V”, 1102 A from “APS-1102A”) and recovers a range the standard number had hidden (110 A…199.9 kA).
+- The parameters of all products are read again after the update (automatically, on the next visit of each category). Filter addresses with a value that no longer exists show the unfiltered category.
+
 ## 1.5.1 — 2026-10-05
 
 ### 🐞 Fixes
