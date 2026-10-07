@@ -2,6 +2,15 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.1 — 2026-10-07
+
+### 🌍 Languages
+
+- The extension now ships **English (default), German, Polish, French, Czech and Dutch** — the settings follow the language of the Joomla administrator, the filter panel and the texts on the site the language of the site; any other language shows English, also text by text where a translation lacks one.
+- **French, Czech and Dutch** translated in full (plugin settings, module, tools, filter panel).
+- **German and Polish** reviewed against the English texts and corrected.
+- **Ukrainian removed**; its files left by earlier versions are removed on update, so those sites show English.
+
 ## 1.6.0 — 2026-10-05
 
 ### 🔎 Many technical parameters in one filter

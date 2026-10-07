@@ -28,7 +28,7 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **A module for any page (new in 1.3.0):** `mod_bettercategories` shows the list of any store category — or the store home — in a module position or a Gridbox *Joomla Module* element, e.g. on the home page, with the plugin's styles and its own overrides.
 * **Faster first view (new in 1.3.0):** thumbnails can be generated for the whole store with one click, and the first row of tiles loads with high priority (better LCP in PageSpeed).
 * **Settings file (new in 1.3.0):** export all settings or only the styles to a JSON file and import them on another site.
-* **4 administrator languages:** English (default), Polish, Ukrainian and German. The language follows the Joomla administrator language; for other languages the texts are in English. Right-to-left sites get a mirrored list: side panels, toggle buttons and the back arrow follow the writing direction.
+* **6 administrator languages:** English (default), German, Polish, French, Czech and Dutch. The language follows the Joomla administrator language; for other languages the texts are in English. Right-to-left sites get a mirrored list: side panels, toggle buttons and the back arrow follow the writing direction.
 * **Product filters (new in 1.5.0):** price, Gridbox list fields, **technical parameters read from the product descriptions** (1000 V = 1 kV, CAT IV, IP67, from–to ranges) and **features** found in them (*Bluetooth*, *True RMS*), on sale, in stock — in a side bar, one row above the products, a side panel behind a *Filters* button or next to any Gridbox element; a side panel on phones. Counts at every option, chips of the chosen filters, instant results without reloading, linkable addresses, `noindex` for filtered lists. Off by default. See [Filters](#filters).
 * **Reset to defaults (new in 1.5.0):** one button brings back the settings of a fresh installation, keeping this site's store IDs and filters if you wish.
 * **Help tooltips (new in 1.4.1):** a “?” beside every option shows its description on hover, keyboard focus or a click.
@@ -247,7 +247,7 @@ Off by default. The panel appears on store category pages with at least *Minimum
 | Minimum number of products | `2` | |
 | Filtered pages: noindex | Yes | Filtered lists get `<meta name="robots" content="noindex, follow">`. |
 | Side bar width, font size, accent, background and text colour | 260 px, 15 px, theme | Empty colours follow the Gridbox theme (`--primary` for the accent). |
-| Texts on the site | *(empty)* | Panel title, button, *N products*, *Show N products*, *Clear all*, *Apply*, *No products…*, *Show more / less*, *From / To*, titles of the price, sale, stock and features filters. Empty = the text of the site language (English, Polish, Ukrainian, German). `%d` = the number of products. |
+| Texts on the site | *(empty)* | Panel title, button, *N products*, *Show N products*, *Clear all*, *Apply*, *No products…*, *Show more / less*, *From / To*, titles of the price, sale, stock and features filters. Empty = the text of the site language (English, German, Polish, French, Czech, Dutch). `%d` = the number of products. |
 
 **Each filter:**
 
@@ -349,6 +349,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.6.1** — Languages: English, German, Polish, French, Czech and Dutch (Ukrainian removed); German and Polish texts reviewed.
 * **1.6.0** — Many technical parameters in one filter (select all / clear all), shown only where the products have them; filters limited to categories; HVACR parameters: humidity, air velocity, flow, ppm, irradiance, pressure in any unit, °F.
 * **1.5.2** — Technical parameters: numbers of standards (PN-EN 62446…), model names (C-4A) and reversed table ranges are no longer read as values.
 * **1.5.1** — Filters work with Gridbox's *default* (custom) product order. Panel in the side column next to the products. The side panel opens above sticky headers. The plugin's own log file, shown in the *Filters* tab. Diagnostic comment removed.

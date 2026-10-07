@@ -22,12 +22,12 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
      * A fresh install enables the plugin; an update keeps whatever the administrator chose.
      */
     /**
-     * Since 1.4.1 the extension ships English, Polish, Ukrainian and German only: the files of the
-     * other languages installed by 1.4.0 are removed (Joomla keeps them on an update).
+     * Since 1.6.1 the extension ships English, German, Polish, French, Czech and Dutch: the files of
+     * the other languages installed by earlier versions are removed (Joomla keeps them on an update).
      */
     private function removeDroppedLanguages(): void
     {
-        foreach (['ar-AA', 'cs-CZ', 'es-ES', 'fr-FR', 'hi-IN', 'lt-LT', 'sk-SK', 'zh-CN'] as $tag) {
+        foreach (['ar-AA', 'es-ES', 'hi-IN', 'lt-LT', 'sk-SK', 'uk-UA', 'zh-CN'] as $tag) {
             $files = [
                 JPATH_ADMINISTRATOR . '/language/' . $tag . '/plg_system_bettercategories',
                 JPATH_PLUGINS . '/system/bettercategories/language/' . $tag . '/plg_system_bettercategories',
