@@ -3,10 +3,10 @@
     <name>plg_system_bettercategories</name>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
-    <creationDate>2026-10-07</creationDate>
+    <creationDate>2026-10-12</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.6.1</version>
+    <version>1.6.2</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -117,6 +117,12 @@
                 <field name="padding_side_mobile" type="number" default="16" min="0" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_PADDING_SIDE_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_PADDING_SIDE_DESC" />
                 <field name="heading_margin_top" type="number" default="0" min="-100" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_MARGIN_TOP_LABEL" />
                 <field name="heading_margin_bottom" type="number" default="16" min="-100" max="200" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_MARGIN_BOTTOM_LABEL" />
+                <field name="product_cards_spacer" type="spacer" hr="true" />
+                <field name="product_cards_align" type="radio" layout="joomla.form.field.radio.switcher" default="1"
+                    label="PLG_SYSTEM_BETTERCATEGORIES_CARDS_ALIGN_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CARDS_ALIGN_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
             </fieldset>
 
             <fieldset name="typography" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TYPOGRAPHY" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TYPOGRAPHY_DESC">

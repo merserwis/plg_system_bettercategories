@@ -2,6 +2,15 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.2 — 2026-10-12
+
+### 🧱 Product cards in even rows (tab *Layout*, on by default)
+
+- With Gridbox’s **Masonry** layout every product card goes right under the one above it: a shorter title or description moved the whole column up, so the rows of a category did not line up and the prices stood at different heights.
+- Now the cards of a row start together and are as tall as the tallest one, and the price sits at the bottom of every card — on one line across the row. The description takes the free space, so nothing is cut or stretched.
+- Works with the Masonry and Grid layouts of the product list, on every page of the list (also the next pages); phones with one column look as before. Gridbox’s files are not changed — a small style in the page head. Switch: *Layout → Product cards in even rows*.
+- Checked on the merserwis.pl category *Analizatory spalin*: the rows that were shifted by 20 px start together, all prices of a row on one line.
+
 ## 1.6.1 — 2026-10-07
 
 ### 🌍 Languages

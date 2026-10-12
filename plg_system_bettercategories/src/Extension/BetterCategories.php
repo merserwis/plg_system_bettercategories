@@ -39,7 +39,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.6.1';
+    private const VERSION    = '1.6.2';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -140,6 +140,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         // Use the settings saved in the database, not the ones handed to the plugin at start-up: some
         // sites (device-specific extensions/caches) pass phones an older copy of plugin parameters.
         $this->params = $this->savedParams() ?? $this->params;
+        $this->alignProductCards($app, $input);
         // a filtered list is never hidden under the subcategories
         if ($this->params->get('filters_enabled', 0) && $this->params->get('hide_products', 0) && Page::hasFilters($input)) {
             $this->params = clone $this->params;
@@ -193,6 +194,34 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $app->setBody(substr($body, 0, $pos) . $html . substr($body, $pos));
     }
+
+    /**
+     * Product cards in even rows (setting, on by default): with Gridbox's Masonry layout every card of
+     * a product list goes right under the one above it, so a shorter title or description moves the
+     * whole column up and the rows do not line up. Here the cards of a row start together, are as
+     * tall as the tallest one, and the price with the buttons sits at the bottom of each card — the
+     * same in every row. Applies to the product list (.ba-item-blog-posts) of the store pages of the
+     * apps this plugin works on, also on the next pages of a list; Gridbox's files are not changed.
+     */
+    private function alignProductCards($app, $input): void
+    {
+        if (!(int) $this->params->get('product_cards_align', 1)) {
+            return;
+        }
+        $appId = $input->getInt('app', 0);
+        if ($appId <= 0 || !$this->isEnabledApp($appId)) {
+            return;
+        }
+        $body = $app->getBody();
+        $head = stripos($body, '</head>');
+        if ($head === false || stripos($body, 'ba-item-blog-posts') === false || str_contains($body, 'id="bettercategories-cards"')) {
+            return;
+        }
+        $app->setBody(substr($body, 0, $head) . '<style id="bettercategories-cards">' . self::CARDS_CSS . '</style>' . substr($body, $head));
+    }
+
+    /** see alignProductCards(): Masonry rows made even, the description takes the free space so the price ends at the bottom */
+    private const CARDS_CSS = '.ba-item-blog-posts .ba-blog-posts-wrapper.ba-masonry-layout{grid-auto-rows:auto!important;align-items:stretch!important}.ba-item-blog-posts .ba-blog-posts-wrapper.ba-masonry-layout>.ba-blog-post,.ba-item-blog-posts .ba-blog-posts-wrapper.ba-grid-layout>.ba-blog-post{grid-row-end:auto!important;display:flex!important;flex-direction:column;height:auto!important}.ba-item-blog-posts .ba-blog-posts-wrapper>.ba-blog-post>.ba-blog-post-content{flex:1 1 auto;display:flex;flex-direction:column}.ba-item-blog-posts .ba-blog-posts-wrapper>.ba-blog-post>.ba-blog-post-content>.ba-blog-post-intro-wrapper{flex-grow:1}.ba-item-blog-posts .ba-blog-posts-wrapper>.ba-blog-post>.ba-blog-post-content:not(:has(>.ba-blog-post-intro-wrapper))>.ba-blog-post-add-to-cart-wrapper{margin-top:auto!important}';
 
     /**
      * Product filters (setting, off by default): the panel, the bar above the products and Gridbox's
