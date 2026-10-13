@@ -109,12 +109,17 @@
       if (!chosen) return;
       if (chosen.size > 262144) { say(T('FAILED', 'Failed: ') + '256 KB', true); return; }
       const stylesOnly = box.querySelector('[data-bctools-styles]').checked;
-      if (!window.confirm(T('IMPORT_CONFIRM', 'Import the settings from this file? Unsaved changes in this form are lost.'))) return;
+      const filtersOnly = !!box.querySelector('[data-bctools-filters]')?.checked;
+      if (!window.confirm(filtersOnly
+        ? T('IMPORT_FILTERS_CONFIRM', 'Add the filters of this file to the saved ones? Unsaved changes in this form are lost.')
+        : T('IMPORT_CONFIRM', 'Import the settings from this file? Unsaved changes in this form are lost.'))) return;
       busy(true); say(T('IMPORT_READING', 'Importing…'));
       try {
         const text = await chosen.text();
-        const r = await call(url, { bc_action: 'import', scope: stylesOnly ? 'styles' : 'all', data: text }, false);
-        say(fill(T('IMPORT_DONE', 'Imported %imported% settings. Reloading…'), r));
+        const r = await call(url, { bc_action: 'import', scope: filtersOnly ? 'filters' : (stylesOnly ? 'styles' : 'all'), data: text }, false);
+        say(filtersOnly
+          ? fill(T('IMPORT_FILTERS_DONE', 'Added %added% and replaced %replaced% filters. Reloading…'), r)
+          : fill(T('IMPORT_DONE', 'Imported %imported% settings. Reloading…'), r));
         setTimeout(() => window.location.reload(), 900);
       } catch (e) { fail(e); }
     });

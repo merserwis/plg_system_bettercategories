@@ -29,7 +29,7 @@ class BctoolsField extends FormField
         $ver = fn (string $file): string => BetterCategories::ASSET_VERSION . '.' . (int) @filemtime(JPATH_ROOT . '/media/plg_system_bettercategories/' . $file);
         $wa->registerAndUseStyle('plg_system_bettercategories.admin', 'plg_system_bettercategories/admin.css', ['version' => $ver('css/admin.css')]);
         $wa->registerAndUseScript('plg_system_bettercategories.tools', 'plg_system_bettercategories/tools.js', ['version' => $ver('js/tools.js')], ['defer' => true], ['core']);
-        foreach (['EXPORT_DONE', 'IMPORT_CONFIRM', 'IMPORT_DONE', 'IMPORT_READING', 'THUMBS_RUNNING', 'THUMBS_DONE', 'THUMBS_CLEAR_CONFIRM', 'THUMBS_CLEARED', 'WORKING', 'FAILED', 'HELP', 'RESET_CONFIRM', 'RESET_DONE', 'SELECT_ALL', 'SELECT_NONE'] as $key) {
+        foreach (['EXPORT_DONE', 'IMPORT_CONFIRM', 'IMPORT_DONE', 'IMPORT_FILTERS_CONFIRM', 'IMPORT_FILTERS_DONE', 'IMPORT_READING', 'THUMBS_RUNNING', 'THUMBS_DONE', 'THUMBS_CLEAR_CONFIRM', 'THUMBS_CLEARED', 'WORKING', 'FAILED', 'HELP', 'RESET_CONFIRM', 'RESET_DONE', 'SELECT_ALL', 'SELECT_NONE'] as $key) {
             Text::script('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_' . $key);
         }
 
@@ -45,6 +45,7 @@ class BctoolsField extends FormField
             $body = '<p class="small text-muted mb-2">' . Text::_('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_SETTINGS_DESC') . '</p>'
                 . '<div class="bcat-tools-buttons">' . $btn('export', 'EXPORT_ALL', 'btn-primary') . $btn('export_styles', 'EXPORT_STYLES') . $btn('import', 'IMPORT') . $btn('reset', 'RESET', 'btn-outline-danger') . '</div>'
                 . '<label class="bcat-tools-check"><input type="checkbox" data-bctools-styles> ' . Text::_('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_IMPORT_STYLES_ONLY') . '</label>'
+                . '<label class="bcat-tools-check"><input type="checkbox" data-bctools-filters> ' . Text::_('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_IMPORT_FILTERS_ONLY') . '</label>'
                 . '<label class="bcat-tools-check"><input type="checkbox" data-bctools-keep checked> ' . Text::_('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_RESET_KEEP_SITE') . '</label>'
                 . '<input type="file" accept=".json,application/json" hidden data-bctools-file>';
         }

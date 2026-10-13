@@ -2,6 +2,15 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.4 — 2026-10-13
+
+### ✨ Filters
+
+- **Not in categories** (new field of every filter): the filter never appears in these categories and their subcategories. A general filter of a parent category (e.g. temperature, pressure and concentration for the whole HVACR department) can now leave out a subcategory that has filters of its own — on merserwis.pl the *Flue gas analysers* showed “800 °C (2)”, “8000 ppm (1)”, “3 m (2)”, values that say nothing about these instruments.
+- **Only add the filters of a file** (*Settings file* → tick box beside *Import from file…*): the filters of a settings file are added to the saved ones and everything else stays — a filter with the same *Name in the address* is replaced, the others are added at the end, filters are switched on. A file of ready filters for one category can be imported, corrected and imported again without touching the other filters.
+- **Features: a star at the end of any word of a phrase.** `ciąg* komin*` finds *ciągu kominowego* and *ciąg kominowy*; before, a star counted only at the very end of the phrase.
+- **Sub- and superscripts read as plain characters.** Descriptions write gas formulas as O<sub>2</sub>, CO<sub>2</sub>, NO<sub>2</sub>, SO<sub>2</sub>: they were read as “O 2”, “NO 2”, so a feature `NO2` never matched and a feature `NO` matched NO<sub>2</sub> as well. Now O<sub>2</sub> reads `O2` and m<sup>3</sup> `m3` (technical parameters unchanged: checked on the 17 flue gas analysers of merserwis.pl and the 636 products of the test shop).
+
 ## 1.6.3 — 2026-10-13
 
 ### ✨ Changes

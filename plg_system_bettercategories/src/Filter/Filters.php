@@ -123,7 +123,10 @@ final class Filters
                 // a parameter group appears when at least this many products of the category have it
                 'minCount'  => max(1, (int) ($row['min_products'] ?? 2)),
                 // only in these categories and their subcategories (empty = everywhere)
-                'categories' => array_values(array_filter(array_map('intval', is_array($row['categories'] ?? null) ? $row['categories'] : explode(',', (string) ($row['categories'] ?? ''))))),
+                'categories' => self::ids($row['categories'] ?? null),
+                // never in these categories and their subcategories (e.g. a general filter of a parent
+                // category that a subcategory replaces with its own filters)
+                'exclude'    => self::ids($row['exclude'] ?? null),
                 'features'  => [],
                 'options'   => [],
             ];
@@ -210,19 +213,31 @@ final class Filters
         return $cache[$appId] = $rows;
     }
 
-    /** Regular expression of a feature: any of the words, as whole words ("bluetooth", "true rms", "bezprzewod*"). */
-    private function wordsPattern(array $words): string
+    /** Category IDs of a setting (a list, or text "1,2,3"). */
+    private static function ids($value): array
+    {
+        return array_values(array_filter(array_map('intval', is_array($value) ? $value : explode(',', (string) $value))));
+    }
+
+    /**
+     * Regular expression of a feature: any of the words, as whole words ("bluetooth", "true rms",
+     * "bezprzewod*"). A star ends any word of a phrase: "ciąg* komin*" finds "ciągu kominowego".
+     */
+    public static function wordsPattern(array $words): string
     {
         $parts = [];
         foreach ($words as $word) {
-            $open  = str_ends_with($word, '*');
-            $word  = rtrim($word, '*');
+            $tokens = preg_split('/[\s\-]+/u', trim($word)) ?: [$word];
+            $tokens = array_values(array_filter($tokens, fn ($t) => trim($t, '*') !== ''));
+            if (!$tokens) {
+                continue;
+            }
             // spaces and hyphens inside a phrase match each other ("true rms" = "true-rms" = "TrueRMS")
-            $body  = implode('[\s\-]*', array_map(fn ($p) => preg_quote($p, '/'), preg_split('/[\s\-]+/u', $word) ?: [$word]));
-            $parts[] = $body . ($open ? '' : '(?![\p{L}\d])');
+            $body = implode('[\s\-]*', array_map(fn ($t) => preg_quote(rtrim($t, '*'), '/') . (str_ends_with($t, '*') ? '[\p{L}\d]*' : ''), $tokens));
+            $parts[] = $body . (str_ends_with(end($tokens), '*') ? '' : '(?![\p{L}\d])');
         }
 
-        return '/(?<![\p{L}\d])(?:' . implode('|', $parts) . ')/iu';
+        return $parts ? '/(?<![\p{L}\d])(?:' . implode('|', $parts) . ')/iu' : '/(?!)/';
     }
 
     private function slug(string $title, string $fallback, array $taken): string
@@ -569,7 +584,7 @@ final class Filters
                     ->from($db->quoteName('#__gridbox_pages'))
                     ->where($db->quoteName('id') . ' IN (' . implode(',', $chunk) . ')');
                 foreach ($db->setQuery($query)->loadObjectList() ?: [] as $row) {
-                    $text = $this->plainText((string) $row->title . "\n" . (string) $row->intro_text . "\n" . (string) $row->params);
+                    $text = self::plainText((string) $row->title . "\n" . (string) $row->intro_text . "\n" . (string) $row->params);
                     $byDim = [];
                     foreach (Params::extract($text, false)['params'] as $p) {
                         if (count($byDim[$p['dim']] ?? []) < 60) {
@@ -600,10 +615,14 @@ final class Filters
         unset($product);
     }
 
-    /** Text of a product: tags removed (with a space in their place), entities decoded, spaces collapsed. */
-    private function plainText(string $html): string
+    /**
+     * Text of a product: tags removed (with a space in their place — except sub- and superscripts, so
+     * O<sub>2</sub> reads "O2" and m<sup>3</sup> "m3"), entities decoded, spaces collapsed.
+     */
+    public static function plainText(string $html): string
     {
         $html = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $html) ?? $html;
+        $html = preg_replace('#</?(?:sub|sup)\b[^>]*>#i', '', $html) ?? $html;
         $text = html_entity_decode(strip_tags(str_replace('<', ' <', $html)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
         return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);

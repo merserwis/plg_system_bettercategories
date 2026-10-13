@@ -39,7 +39,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.6.3';
+    private const VERSION    = '1.6.4';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -1913,7 +1913,11 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_FILE')];
         }
 
-        $stylesOnly = $app->getInput()->post->getCmd('scope', 'all') === 'styles';
+        $scope = $app->getInput()->post->getCmd('scope', 'all');
+        if ($scope === 'filters') {
+            return $this->importFilters($data['params']['filters_list'] ?? null);
+        }
+        $stylesOnly = $scope === 'styles';
         $known      = $this->settingKeys();
         $params     = $this->readSavedParams() ?? new Registry();
         $imported   = 0;
@@ -1947,6 +1951,69 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $this->cleanCaches();
 
         return ['ok' => true, 'imported' => $imported, 'ignored' => array_slice($ignored, 0, 50), 'version' => (string) ($data['version'] ?? '')];
+    }
+
+    /**
+     * The filters of a settings file added to the saved ones (the other settings and filters stay): a
+     * filter with the same "Name in the address" as a saved one replaces it, the others are added at
+     * the end. Filters are switched on.
+     */
+    private function importFilters($rows): array
+    {
+        if (!is_array($rows) || !$rows) {
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_NO_FILTERS')];
+        }
+        $params = $this->readSavedParams() ?? new Registry();
+        $list   = $params->get('filters_list');
+        $list   = is_object($list) ? (array) json_decode(json_encode($list), true) : (is_array($list) ? $list : []);
+        $next   = 0;
+        $byKey  = [];
+        foreach ($list as $name => $row) {
+            if (preg_match('/^filters_list(\d+)$/', (string) $name, $m)) {
+                $next = max($next, (int) $m[1] + 1);
+            }
+            $key = is_array($row) ? trim((string) ($row['key'] ?? '')) : '';
+            if ($key !== '') {
+                $byKey[$key] = (string) $name;
+            }
+        }
+        $added    = 0;
+        $replaced = 0;
+        foreach (array_values($rows) as $row) {
+            $row = $this->cleanValue($row, 1);
+            if (!is_array($row) || !in_array((string) ($row['type'] ?? ''), ['price', 'field', 'param', 'feature', 'sale', 'stock'], true)) {
+                continue;
+            }
+            $key = trim((string) ($row['key'] ?? ''));
+            if ($key !== '' && isset($byKey[$key])) {
+                $list[$byKey[$key]] = $row;
+                $replaced++;
+            } else {
+                $name        = 'filters_list' . $next++;
+                $list[$name] = $row;
+                if ($key !== '') {
+                    $byKey[$key] = $name;
+                }
+                $added++;
+            }
+        }
+        if ($added + $replaced === 0) {
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_NO_FILTERS')];
+        }
+        $params->set('filters_list', $list);
+        $params->set('filters_enabled', '1');
+
+        $db    = $this->db();
+        $query = $db->createQuery()
+            ->update($db->quoteName('#__extensions'))
+            ->set($db->quoteName('params') . ' = ' . $db->quote($params->toString()))
+            ->where($db->quoteName('type') . ' = ' . $db->quote('plugin'))
+            ->where($db->quoteName('folder') . ' = ' . $db->quote('system'))
+            ->where($db->quoteName('element') . ' = ' . $db->quote('bettercategories'));
+        $db->setQuery($query)->execute();
+        $this->cleanCaches();
+
+        return ['ok' => true, 'added' => $added, 'replaced' => $replaced];
     }
 
     /**

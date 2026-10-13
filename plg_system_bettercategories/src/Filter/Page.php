@@ -154,7 +154,10 @@ final class Page
         return $this->head($body, (bool) $state);
     }
 
-    /** The filters of this category: those without a category limit, and those limited to it or one of its parents. */
+    /**
+     * The filters of this category: those without a category limit, and those limited to it or one of
+     * its parents — but not those that leave it (or one of its parents) out.
+     */
     private function forCategory(array $defs, int $categoryId, array $categories): array
     {
         $path = [];
@@ -163,7 +166,8 @@ final class Page
             $id = $categories[$id]->parent ?? 0;
         }
 
-        return array_values(array_filter($defs, fn ($def) => !$def['categories'] || array_intersect_key(array_flip($def['categories']), $path)));
+        return array_values(array_filter($defs, fn ($def) => (!$def['categories'] || array_intersect_key(array_flip($def['categories']), $path))
+            && !array_intersect_key(array_flip($def['exclude'] ?? []), $path)));
     }
 
     // ---------------------------------------------------------------- page parts
