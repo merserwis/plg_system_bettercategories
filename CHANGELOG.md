@@ -2,6 +2,12 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.5 — 2026-10-13
+
+### ✨ Filters
+
+- **A phrase with a comma in double quotes.** The words of a feature are separated by commas, so a phrase like `CO 0-10,000ppm` (descriptions write thousands with a comma) fell apart into “CO 0-10” and “000ppm”, and “000ppm” then matched every “10,000ppm” of any product. Now `"CO 0-10,000ppm"` in double quotes is one phrase; everything else reads as before.
+
 ## 1.6.4 — 2026-10-13
 
 ### ✨ Filters

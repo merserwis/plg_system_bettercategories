@@ -161,7 +161,7 @@ final class Filters
                         continue;
                     }
                     [$label, $words] = array_pad(array_map('trim', explode('=', $line, 2)), 2, '');
-                    $words = array_values(array_filter(array_map('trim', preg_split('/[,;]/u', $words !== '' ? $words : $label) ?: []), fn ($w) => $w !== '' && $w !== '*'));
+                    $words = self::splitWords($words !== '' ? $words : $label);
                     if ($label === '' || !$words || count($def['features']) >= 100) {
                         continue;
                     }
@@ -211,6 +211,26 @@ final class Filters
         }
 
         return $cache[$appId] = $rows;
+    }
+
+    /**
+     * The words of a feature: separated by commas or semicolons; a phrase in double quotes keeps its
+     * commas ("CO 0-10,000ppm" — descriptions write thousands with a comma).
+     *
+     * @return string[]
+     */
+    public static function splitWords(string $words): array
+    {
+        preg_match_all('/"([^"]*)"|[^,;"]+/u', $words, $m, PREG_SET_ORDER);
+        $out = [];
+        foreach ($m as $part) {
+            $word = trim(isset($part[1]) && $part[1] !== '' ? $part[1] : ($part[0][0] === '"' ? '' : $part[0]));
+            if ($word !== '' && trim($word, '*') !== '') {
+                $out[] = $word;
+            }
+        }
+
+        return $out;
     }
 
     /** Category IDs of a setting (a list, or text "1,2,3"). */
