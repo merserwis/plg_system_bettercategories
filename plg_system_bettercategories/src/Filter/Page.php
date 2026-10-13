@@ -124,6 +124,13 @@ final class Page
             $element = $this->sortingUrl($element, $query);
         }
         $tools = $this->tools($defs, $state, $total, $limit, $viewToggle, $showAll, $all, $allMax);
+        // in the row of Gridbox's sorting menu ("Default"), right before it, when the list has that row
+        if ($tools !== '' && (preg_match('#<div\b[^>]*\sclass="(?:[^"]*\s)?blog-posts-sorting-wrapper[\s"][^>]*>#i', $element, $hm, PREG_OFFSET_CAPTURE)
+            || preg_match('#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-blog-posts-header[\s"][^>]*>#i', $element, $hm, PREG_OFFSET_CAPTURE))) {
+            $at      = $hm[0][1] + strlen($hm[0][0]);
+            $element = substr($element, 0, $at) . str_replace('<div class="bcf-tools">', '<div class="bcf-tools bcf-tools--sort">', $tools) . substr($element, $at);
+            $tools   = '';
+        }
 
         $position = (string) $this->params->get('filters_position', 'sidebar_left');
         $position = in_array($position, Filters::POSITIONS, true) ? $position : 'sidebar_left';
@@ -182,7 +189,8 @@ final class Page
     }
 
     /**
-     * The view buttons (grid / list) and "show all" / "in pages" for the bar above the list.
+     * The view buttons (grid / list, an icon and its name) and "show all" / "in pages": in the row of
+     * Gridbox's sorting menu when the list has one, else in the bar above the list.
      *
      * @param int $limit products on a page of the list (Gridbox element), 0 = unknown
      */
@@ -205,9 +213,9 @@ final class Page
             $list = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 5h4v4H4zM10 6h10v2H10zM4 10h4v4H4zM10 11h10v2H10zM4 15h4v4H4zM10 16h10v2H10z" fill="currentColor"/></svg>';
             $out .= '<div class="bcf-view" role="group" aria-label="' . $e($this->filters->text('filters_label_view', 'View')) . '">'
                 . '<button type="button" class="bcf-view-btn" data-bcf-view="grid" aria-pressed="false" title="' . $e($this->filters->text('filters_label_grid', 'Grid')) . '">' . $grid
-                . '<span class="visually-hidden">' . $e($this->filters->text('filters_label_grid', 'Grid')) . '</span></button>'
+                . '<span class="bcf-view-label">' . $e($this->filters->text('filters_label_grid', 'Grid')) . '</span></button>'
                 . '<button type="button" class="bcf-view-btn" data-bcf-view="list" aria-pressed="false" title="' . $e($this->filters->text('filters_label_list', 'List')) . '">' . $list
-                . '<span class="visually-hidden">' . $e($this->filters->text('filters_label_list', 'List')) . '</span></button></div>';
+                . '<span class="bcf-view-label">' . $e($this->filters->text('filters_label_list', 'List')) . '</span></button></div>';
         }
 
         return $out !== '' ? '<div class="bcf-tools">' . $out . '</div>' : '';
@@ -515,11 +523,10 @@ final class Page
         }
 
         $label = $this->filters->text('filters_label_results', '%d products');
-        $out   = '<div class="bcf-bar" data-bcf-bar>'
-            . '<button type="button" class="bcf-toggle" data-bcf-open aria-controls="bcf-form" aria-expanded="false"' . ($drawer ? '' : ' hidden') . '>'
+        $out   = '<div class="bcf-bar" data-bcf-bar>' . (!$defs ? '' : '<button type="button" class="bcf-toggle" data-bcf-open aria-controls="bcf-form" aria-expanded="false"' . ($drawer ? '' : ' hidden') . '>'
             . '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 6h16M7 12h10M10 18h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
             . '<span>' . $e($this->filters->text('filters_label_button', 'Filters')) . '</span>'
-            . ($chosen ? '<span class="bcf-badge">' . $chosen . '</span>' : '') . '</button>';
+            . ($chosen ? '<span class="bcf-badge">' . $chosen . '</span>' : '') . '</button>');
         if ($state) {
             $out .= '<span class="bcf-total" role="status">' . $e(str_replace('%d', (string) $total, $label)) . '</span>'
                 . $chips

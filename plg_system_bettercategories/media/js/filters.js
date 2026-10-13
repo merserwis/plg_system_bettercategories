@@ -230,8 +230,24 @@
     if (form()) load(window.location.href, false);
   });
 
+  // the buttons next to Gridbox's sorting menu take its text size, weight, font and colour
+  function matchSorting() {
+    document.querySelectorAll('.bcf-tools--sort').forEach((tools) => {
+      const sel = tools.parentElement && tools.parentElement.querySelector('.blog-posts-sorting');
+      if (!sel) return;
+      const c = getComputedStyle(sel);
+      tools.style.setProperty('--bcf-sort-size', c.fontSize);
+      tools.style.setProperty('--bcf-sort-weight', c.fontWeight);
+      tools.style.setProperty('--bcf-sort-font', c.fontFamily);
+      tools.style.setProperty('--bcf-sort-color', c.color);
+      // the same space below as the menu, so both stand on one line
+      if (sel.parentElement === tools.parentElement) tools.style.setProperty('--bcf-sort-mb', c.marginBottom);
+    });
+  }
+
   // grid / list view of the products: a class on the root, remembered in this browser
   function syncView() {
+    matchSorting();
     const r = root();
     if (!r) return;
     const list = r.classList.contains('bcf-view-list');

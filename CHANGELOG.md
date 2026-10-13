@@ -2,6 +2,15 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.10 — 2026-10-13
+
+### 🎛 “Show all” and grid / list next to the sorting menu
+
+- **One row with “Default”.** *Show all (N)* and the grid / list switch now stand right before Gridbox's sorting menu, in its row and on its line (when the list has a sorting menu; otherwise they stay in the bar above the list, as before). They take the menu's text size, weight, font and colour, so all three look alike.
+- **Grid / list buttons with their names.** Each button shows its icon and its name (*Grid*, *List*) with room around them inside the frame, instead of a 36 px icon box. The names were meant to be hidden for screen readers only, but Gridbox templates do not have Joomla's `visually-hidden` class, so they showed squeezed into the buttons. On screens up to 420 px only the icons are shown.
+- On phones the row wraps: the buttons above, the sorting menu below (Gridbox makes the menu as wide as its longest option).
+- A category without filters no longer gets a *Filters* button on phones.
+
 ## 1.6.9 — 2026-10-13
 
 ### 🎯 One features filter for the whole store
