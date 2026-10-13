@@ -2,6 +2,12 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.3 — 2026-10-13
+
+### ✨ Changes
+
+- **Close goes to the Gridbox panel.** **Close**, **Save & Close** and **Save** then **Close** in the Better Categories settings now go to the Gridbox panel instead of the list of plugins, as in MerTools (when Gridbox is installed; otherwise the list of plugins as before).
+
 ## 1.6.2 — 2026-10-12
 
 ### 🧱 Product cards in even rows (tab *Layout*, on by default)
