@@ -118,8 +118,9 @@
         const text = await chosen.text();
         const r = await call(url, { bc_action: 'import', scope: filtersOnly ? 'filters' : (stylesOnly ? 'styles' : 'all'), data: text }, false);
         say(filtersOnly
-          ? fill(T('IMPORT_FILTERS_DONE', 'Filters added: %added%, replaced: %replaced%, removed: %removed%. Reloading…'), r)
+          ? fill(T('IMPORT_FILTERS_DONE', 'Filters added: %added%, replaced: %replaced%, removed: %removed%. Reloading…'), r) + (r.missing ? ' ' + r.missing : '')
           : fill(T('IMPORT_DONE', 'Imported %imported% settings. Reloading…'), r));
+        if (filtersOnly && r.missing) { window.alert(r.missing); }
         setTimeout(() => window.location.reload(), 900);
       } catch (e) { fail(e); }
     });

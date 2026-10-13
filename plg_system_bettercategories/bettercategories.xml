@@ -6,7 +6,7 @@
     <creationDate>2026-10-13</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.6.8</version>
+    <version>1.6.9</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -384,6 +384,10 @@
                     <option value="1">JYES</option>
                 </field>
                 <field name="filters_hide_empty" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_HIDE_EMPTY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_HIDE_EMPTY_DESC" showon="filters_enabled:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="filters_hide_common" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_HIDE_COMMON_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_HIDE_COMMON_DESC" showon="filters_enabled:1">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>

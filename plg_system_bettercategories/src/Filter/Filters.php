@@ -947,11 +947,26 @@ final class Filters
                 break;
         }
 
+        // a feature every product of the category has narrows nothing: not offered (unless chosen)
+        $common = [];
+        if ($def['type'] === 'feature' && count($products) > 1 && $this->params->get('filters_hide_common', 1)) {
+            $have = [];
+            foreach ($values as $list) {
+                foreach (array_unique($list) as $slug) {
+                    $have[(string) $slug] = ($have[(string) $slug] ?? 0) + 1;
+                }
+            }
+            $common = array_filter($have, fn ($n) => $n >= count($products));
+        }
+
         $out = [];
         foreach ($options as $slug => $label) {
             $slug  = (string) $slug;
             $count = $counts[$slug] ?? 0;
             $isOn  = isset($chosen[$slug]);
+            if (!$isOn && isset($common[$slug])) {
+                continue;
+            }
             if (!$isOn && !isset($counts[$slug]) && $def['type'] === 'field' && !$this->anyProductHas($values, $slug)) {
                 // an option no product of this category has at all: never shown
                 continue;

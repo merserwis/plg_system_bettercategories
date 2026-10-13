@@ -40,7 +40,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.6.8';
+    private const VERSION    = '1.6.9';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -1998,8 +1998,11 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     /**
      * The filters of a settings file added to the saved ones (the other settings and filters stay): a
      * filter with the same "Name in the address" as a saved one replaces it, the others are added at
-     * the end — or at the start with "first": "1". A row {"key": "…", "remove": "1"} removes the saved
-     * filter of that name. Filters are switched on.
+     * the end — at the start with "first": "1", or right after another filter with "after": "<its name>". A row {"key": "…", "remove": "1"} removes the saved
+     * filter of that name. Categories may be given by their address ("categories_path",
+     * "exclude_path": "srhvacr/hvacr/analizatory-spalin") — the IDs differ from site to site; a row
+     * whose categories are not found on this site is left out (it would show everywhere). Filters are
+     * switched on.
      */
     private function importFilters($rows): array
     {
@@ -2023,10 +2026,35 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $added    = 0;
         $replaced = 0;
         $removed  = 0;
+        $missing  = [];
+        $paths    = null;
         foreach (array_values($rows) as $row) {
             $row = $this->cleanValue($row, 1);
             if (!is_array($row)) {
                 continue;
+            }
+            foreach (['categories_path' => 'categories', 'exclude_path' => 'exclude'] as $from => $to) {
+                if (!isset($row[$from])) {
+                    continue;
+                }
+                $paths ??= $this->categoryPaths();
+                $ids    = [];
+                $lost   = [];
+                foreach (is_array($row[$from]) ? $row[$from] : explode(',', (string) $row[$from]) as $path) {
+                    $path = trim(strtolower((string) $path), " /\t\n\r");
+                    if ($path === '') {
+                        continue;
+                    }
+                    $found = array_keys(array_filter($paths, fn ($p) => $p === $path || str_ends_with($p, '/' . $path)));
+                    $found ? array_push($ids, ...$found) : $lost[] = $path;
+                }
+                unset($row[$from]);
+                if ($lost && $to === 'categories') {
+                    // limited to categories this site does not have: left out rather than shown everywhere
+                    array_push($missing, ...$lost);
+                    continue 2;
+                }
+                $row[$to] = array_values(array_unique(array_map('strval', $ids)));
             }
             $key = trim((string) ($row['key'] ?? ''));
             if (!empty($row['remove']) && (string) $row['remove'] !== '0') {
@@ -2040,13 +2068,20 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 continue;
             }
             $first = !empty($row['first']) && (string) $row['first'] !== '0';
-            unset($row['first'], $row['remove']);
+            $after = trim((string) ($row['after'] ?? ''));
+            unset($row['first'], $row['remove'], $row['after']);
             if ($key !== '' && isset($byKey[$key])) {
                 $list[$byKey[$key]] = $row;
                 $replaced++;
             } else {
                 $name = 'filters_list' . $next++;
-                $list = $first ? [$name => $row] + $list : $list + [$name => $row];
+                if ($after !== '' && isset($byKey[$after])) {
+                    // right after the filter of that name (e.g. a price filter after the manufacturer)
+                    $at   = array_search($byKey[$after], array_keys($list), true) + 1;
+                    $list = array_slice($list, 0, $at, true) + [$name => $row] + array_slice($list, $at, null, true);
+                } else {
+                    $list = $first ? [$name => $row] + $list : $list + [$name => $row];
+                }
                 if ($key !== '') {
                     $byKey[$key] = $name;
                 }
@@ -2054,7 +2089,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
         }
         if ($added + $replaced + $removed === 0) {
-            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_NO_FILTERS')];
+            return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_NO_FILTERS') . ($missing ? ' ' . Text::sprintf('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_IMPORT_FILTERS_MISSING', implode(', ', $missing)) : '')];
         }
         $params->set('filters_list', $list);
         $params->set('filters_enabled', '1');
@@ -2069,7 +2104,39 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $db->setQuery($query)->execute();
         $this->cleanCaches();
 
-        return ['ok' => true, 'added' => $added, 'replaced' => $replaced, 'removed' => $removed];
+        return ['ok' => true, 'added' => $added, 'replaced' => $replaced, 'removed' => $removed,
+            'missing' => $missing ? Text::sprintf('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_IMPORT_FILTERS_MISSING', implode(', ', array_unique($missing))) : ''];
+    }
+
+    /**
+     * The address of every store category, by its aliases from the top: id => "srhvacr/hvacr/analizatory-spalin"
+     * (all store apps; unpublished ones too, so a filter can be set up before a category goes live).
+     *
+     * @return array<int, string>
+     */
+    private function categoryPaths(): array
+    {
+        $db    = $this->db();
+        $query = $db->createQuery()
+            ->select($db->quoteName(['c.id', 'c.parent', 'c.alias']))
+            ->from($db->quoteName('#__gridbox_categories', 'c'))
+            ->join('INNER', $db->quoteName('#__gridbox_app', 'a'), $db->quoteName('a.id') . ' = ' . $db->quoteName('c.app_id'))
+            ->where($db->quoteName('a.type') . ' = ' . $db->quote('products'));
+        $rows = [];
+        foreach ($db->setQuery($query)->loadObjectList() ?: [] as $r) {
+            $rows[(int) $r->id] = [(int) $r->parent, strtolower((string) $r->alias)];
+        }
+        $paths = [];
+        foreach ($rows as $id => [$parent, $alias]) {
+            $chain = [$alias];
+            for ($p = $parent, $guard = 0; $p > 0 && isset($rows[$p]) && $guard < 50; $guard++) {
+                array_unshift($chain, $rows[$p][1]);
+                $p = $rows[$p][0];
+            }
+            $paths[$id] = implode('/', $chain);
+        }
+
+        return $paths;
     }
 
     /**
@@ -2113,7 +2180,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         return ['ok' => true, 'count' => count($defaults)];
     }
 
-    /** A settings value: text (max. 5000 characters) or a list of such values (max. 5 levels, 500 items). */
+    /** A settings value: text (max. 30000 bytes) or a list of such values (max. 5 levels, 500 items). */
     private function cleanValue($value, int $depth)
     {
         if (is_bool($value)) {
@@ -2122,7 +2189,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         if (is_int($value) || is_float($value) || is_string($value)) {
             $value = (string) $value;
 
-            return strlen($value) <= 5000 ? $value : null;
+            // long enough for a list of features with their words (a store-wide filter runs to several kB)
+            return strlen($value) <= 30000 ? $value : null;
         }
         if (is_array($value) && $depth < 5 && count($value) <= 500) {
             $out = [];

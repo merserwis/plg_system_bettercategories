@@ -2,6 +2,19 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.9 — 2026-10-13
+
+### 🎯 One features filter for the whole store
+
+- **Features every product has are not offered.** A feature all products of a category have narrows nothing, so it is no longer shown there (unless chosen) — it appears in the categories where only some products have it. One general filter such as *Application* can now serve every category: each shows only the features that tell its products apart. Option *Hide features every product has* in the *Filters* tab (on).
+
+### 📥 Filters files that fit any site
+
+- **Categories by address.** In a filters file (*Only add the filters of the file*) a filter may name its categories by their address instead of IDs: `"categories_path": ["srhvacr/hvacr/analizatory-spalin"]` (the whole path from the top category, or its end), and `"exclude_path"` the same way. Category IDs differ from site to site — a file made on a copy of the site gave the filters of one category to unrelated ones.
+- A filter whose categories this site does not have is **left out** instead of being shown everywhere, and the import says which addresses were not found.
+- **Place in the list.** A filter of the file can go right after another one: `"after": "producent"` (by *Name in the address*) — so a store-wide price or application filter lands next to the manufacturer instead of at the end.
+- Long texts are no longer dropped: a value of a settings file may now have up to 30 000 bytes (it was 5 000 — a store-wide features list is longer, and such a filter was imported with no features).
+
 ## 1.6.8 — 2026-10-13
 
 ### ✨ Icons of categories and filter groups
