@@ -40,7 +40,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.6.10';
+    private const VERSION    = '1.6.11';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -381,8 +381,39 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     }
 
     /** Clears this plugin's cache and the page caches that may hold pages rendered with old settings. */
+    /**
+     * Gridbox's joined style sheets (templates/gridbox/css/min/<md5 of the file names>.min.css) are named
+     * by the list of files, not by their content: after an update of this plugin Gridbox kept serving
+     * the old filters.css inside them. They are removed — as Gridbox does when its cache is cleared —
+     * and made again with the current files on the next page view. The pages kept by MerTools are
+     * marked as stale too (Joomla's page cache is emptied by cleanCaches), so no kept page asks for a
+     * joined file that is being made again.
+     */
+    public static function refreshGridboxStyles(): void
+    {
+        foreach (glob(JPATH_ROOT . '/templates/gridbox/css/min/*.min.css') ?: [] as $file) {
+            if (strpos(basename($file), 'index.') !== 0) {
+                @unlink($file);
+            }
+        }
+        $bases = [JPATH_SITE . '/cache', JPATH_ADMINISTRATOR . '/cache'];
+        try {
+            $path = (string) Factory::getApplication()->get('cache_path', '');
+            if ($path !== '') {
+                $bases[] = $path;
+            }
+        } catch (\Throwable $e) {
+        }
+        foreach (array_unique($bases) as $base) {
+            if (is_dir($base . '/mertools_page')) {
+                @file_put_contents($base . '/mertools_page/purged', sprintf('%.6F', microtime(true)), LOCK_EX);
+            }
+        }
+    }
+
     private function cleanCaches(): void
     {
+        self::refreshGridboxStyles();
         $factory = Factory::getContainer()->get(CacheControllerFactoryInterface::class);
         foreach (array_unique([JPATH_SITE . '/cache', JPATH_ADMINISTRATOR . '/cache', JPATH_CACHE]) as $base) {
             foreach ([self::CACHE_GROUP, 'com_plugins', 'page', 'gridbox'] as $group) {

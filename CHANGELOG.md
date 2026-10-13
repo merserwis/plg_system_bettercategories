@@ -2,6 +2,13 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.11 — 2026-10-13
+
+### 🎛 Buttons on the left, new look really shown
+
+- **On the left of the sorting row.** The grid / list switch and *Show all (N)* now stand at the start of the row of Gridbox's sorting menu — *Default* stays on the right — in this order: grid / list first, then *Show all*.
+- **The new look reaches the site.** With Gridbox's *CSS minification* on, Gridbox joins the style sheets of a page into one file named after the list of files, not their content — so after an update it kept serving the previous `filters.css` (the grid / list buttons stayed small, their names squeezed). The update and every save of the settings now remove Gridbox's joined style sheets (as Gridbox does when its cache is cleared) and mark the pages kept by MerTools and Joomla's page cache as stale; Gridbox makes the joined files again, with the current styles, on the next page view.
+
 ## 1.6.10 — 2026-10-13
 
 ### 🎛 “Show all” and grid / list next to the sorting menu

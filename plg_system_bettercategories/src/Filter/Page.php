@@ -197,15 +197,16 @@ final class Page
     private function tools(array $defs, array $state, int $total, int $limit, bool $viewToggle, bool $showAll, bool $all, int $allMax): string
     {
         $e   = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
-        $out = '';
+        $out     = '';
+        $allLink = '';
         if ($showAll && ($all || ($limit > 0 && $total > $limit))) {
             $url = $this->url($defs, $state);
             if ($all) {
-                $out .= '<a class="bcf-all-link" href="' . $e($url) . '" rel="nofollow">' . $e($this->filters->text('filters_label_paged', 'Show in pages')) . '</a>';
+                $allLink = '<a class="bcf-all-link" href="' . $e($url) . '" rel="nofollow">' . $e($this->filters->text('filters_label_paged', 'Show in pages')) . '</a>';
             } else {
                 $url .= (str_contains($url, '?') ? '&' : '?') . 'bc-all=1';
                 $label = str_replace('%d', (string) min($total, $allMax), $this->filters->text('filters_label_all', 'Show all (%d)'));
-                $out .= '<a class="bcf-all-link" href="' . $e($url) . '" rel="nofollow">' . $e($label) . '</a>';
+                $allLink = '<a class="bcf-all-link" href="' . $e($url) . '" rel="nofollow">' . $e($label) . '</a>';
             }
         }
         if ($viewToggle) {
@@ -217,6 +218,9 @@ final class Page
                 . '<button type="button" class="bcf-view-btn" data-bcf-view="list" aria-pressed="false" title="' . $e($this->filters->text('filters_label_list', 'List')) . '">' . $list
                 . '<span class="bcf-view-label">' . $e($this->filters->text('filters_label_list', 'List')) . '</span></button></div>';
         }
+
+        // the view first, then "show all"
+        $out .= $allLink;
 
         return $out !== '' ? '<div class="bcf-tools">' . $out . '</div>' : '';
     }

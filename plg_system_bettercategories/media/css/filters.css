@@ -71,9 +71,9 @@
 .bcf-view { display: inline-flex; border: 1px solid var(--bcf-line); border-radius: 8px; overflow: hidden; }
 .bcf-view-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; width: auto; height: auto; min-height: 34px; margin: 0; padding: 6px 14px; border: 0; background: transparent; color: inherit; font: inherit; font-size: .9em; line-height: 1.2; white-space: nowrap; cursor: pointer; opacity: .6; }
 .bcf-view-btn svg { flex: none; width: 1.1em; height: 1.1em; }
-/* in the row of Gridbox's sorting menu: right before "Default", in its size and weight (taken from it by the script) */
+/* in the row of Gridbox's sorting menu: on the left, "Default" stays on the right; its size and weight (taken from it by the script) */
 .ba-blog-posts-header:has(> .bcf-tools--sort), .blog-posts-sorting-wrapper:has(> .bcf-tools--sort) { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 10px 24px; }
-.bcf-tools--sort { margin: 0 0 var(--bcf-sort-mb, 0); gap: 18px; font-family: var(--bcf-sort-font, inherit); font-size: var(--bcf-sort-size, 16px); font-weight: var(--bcf-sort-weight, 700); color: var(--bcf-sort-color, inherit); line-height: 1.2; }
+.bcf-tools--sort { margin: 0 0 var(--bcf-sort-mb, 0); margin-inline-end: auto; gap: 18px; font-family: var(--bcf-sort-font, inherit); font-size: var(--bcf-sort-size, 16px); font-weight: var(--bcf-sort-weight, 700); color: var(--bcf-sort-color, inherit); line-height: 1.2; }
 .bcf-tools--sort .bcf-all-link { font-size: 1em; font-weight: inherit; }
 @media (max-width: 420px) { .bcf-view-label { display: none; } .bcf-view-btn { padding-inline: 12px; } }
 .bcf-view-btn + .bcf-view-btn { border-inline-start: 1px solid var(--bcf-line); }

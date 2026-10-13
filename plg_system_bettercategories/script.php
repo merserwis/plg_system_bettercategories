@@ -57,6 +57,26 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
 
         $this->removeDroppedLanguages();
 
+        // Gridbox's joined style sheets still hold the previous filters.css (named by the file list, not
+        // the content): removed, Gridbox makes them again with the new files; pages kept by MerTools are
+        // marked stale. Done here, not through the plugin class: the old class may be loaded in this request.
+        foreach (glob(JPATH_ROOT . '/templates/gridbox/css/min/*.min.css') ?: [] as $file) {
+            if (strpos(basename($file), 'index.') !== 0) {
+                @unlink($file);
+            }
+        }
+        $bases = [JPATH_SITE . '/cache', JPATH_ADMINISTRATOR . '/cache', (string) Factory::getApplication()->get('cache_path', '')];
+        foreach (array_unique(array_filter($bases)) as $base) {
+            if (is_dir($base . '/mertools_page')) {
+                @file_put_contents($base . '/mertools_page/purged', sprintf('%.6F', microtime(true)), LOCK_EX);
+            }
+            try {
+                Factory::getContainer()->get(\Joomla\CMS\Cache\CacheControllerFactoryInterface::class)
+                    ->createCacheController('callback', ['defaultgroup' => 'page', 'cachebase' => $base])->clean('page');
+            } catch (\Throwable $e) {
+            }
+        }
+
         try {
             $db = Factory::getContainer()->get(DatabaseInterface::class);
 
