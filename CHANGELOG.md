@@ -2,6 +2,23 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.8 — 2026-10-13
+
+### ✨ Icons of categories and filter groups
+
+- **Category icons.** The table *Own category images* is now *Own category images and icons*: next to the image of a category, an **icon** — chosen from the **Font Awesome Free** icons in a window with a search (by name and words, in English: *fire*, *gas*, *phone*) and the styles *solid*, *regular*, *brands*, or typed as classes of another icon font the site loads (e.g. `zmdi zmdi-flash`, `flaticon-…`) — and/or an **icon file** of the media manager (SVG, PNG, WebP).
+- **Where they show:** in text lists before the name (*Icons in text lists*, on), in tiles (*Icons in tiles*): in the picture's place where a category has no picture (default), instead of the picture, small before the name, or off. *Icon size* (0 = automatic: the size of the text, 42 % of the tile) and *Icon colour* (empty = the text, in tiles the links).
+- **Filter group icons.** Every filter has an *Icon* and an *Icon file*: the icon goes before the title of the group in the panel, in the accent colour of the filters.
+- **No extra loading on the site.** A Font Awesome icon is put into the page as inline SVG in the colour of the text: no font or style sheet is loaded and only the icons used reach the visitor, so nothing clashes with the icon fonts of the template (Gridbox ships Font Awesome 5, Joomla 6 Font Awesome 6). Other icon classes are shown as `<i>` with the site's own font; a file as an image.
+- The table of category images and icons takes the whole width of the form and one line per category (the media fields without the large preview).
+- Font Awesome Free 6.7.2 (icons CC BY 4.0, the sprites in `media/plg_system_bettercategories/icons/fa` with their licence) — the same version as Joomla 6. SVG files: add `svg` to the legal extensions in the Media options of Joomla first.
+
+### 🧭 Product list: grid / list and “Show all”
+
+- **Grid / list switch** at the end of the bar above the products: the products as a grid (as Gridbox shows them) or as a list — one a row, the whole photo in a square on the left, the name, description and price beside it. The view changes at once without loading the page, the visitor's browser remembers it (also after filtering and on other categories), and it is set before the cards are painted (the small script is kept in place for Gridbox's deferred loading). *View at first*: grid or list.
+- **“Show all (N)”** at the end of the bar when a category has more products than one page of the list: all of them on one page — with the filters and the order chosen, which also keep it while filtering — up to *“Show all”: at most* (default 300); **“Show in pages”** goes back. Such a page is not indexed (like a filtered one).
+- Both also in categories **without filters** (the bar then holds only these buttons). Options in the *Filters* tab (*Grid / list switch*, *“Show all” button*, both on), texts in *Texts on the site*.
+
 ## 1.6.7 — 2026-10-13
 
 ### 🐞 Filters

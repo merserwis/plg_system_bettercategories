@@ -42,6 +42,12 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 
 ---
 
+## 🎨 Icons (1.6.8)
+
+Categories and filter groups can have icons: **Font Awesome Free** icons chosen in a searchable window, classes of any other icon font the site already loads, or an icon file of the media manager. Font Awesome icons are put into the page as inline SVG (no font or style sheet to load, no clash with the template's icon fonts, only the icons used). Categories: in text lists before the name; in tiles where there is no picture, instead of the picture, or small before the name. Filters: before the title of the group.
+
+Icons: [Font Awesome Free](https://fontawesome.com) 6.7.2 by Fonticons, Inc., licensed [CC BY 4.0](https://fontawesome.com/license/free) (licence file in `media/plg_system_bettercategories/icons/fa/LICENSE.txt`).
+
 ## 🛠️ How It Works
 
 ```mermaid
@@ -269,6 +275,8 @@ Off by default. The panel appears on store category pages with at least *Minimum
 | Order of the options | As in Gridbox / the list, most products first, or alphabetical. |
 | Name in the address | The filter's name in the address, `?f-name=…`. Empty = from the title. |
 | Collapsed at first | The filter starts closed (it opens by itself while one of its options is chosen). |
+
+**Grid / list and “Show all” (1.6.8).** The bar above the products ends with two view buttons (grid as Gridbox shows it, or a list with the photo on the left — remembered in the visitor's browser) and, when the category has more products than one page, **Show all (N)** — every product on one page (up to a limit, default 300, with the filters and order chosen; not indexed) and **Show in pages** back. Also in categories without filters.
 
 **Addresses.** A filtered list has a readable address, e.g. `/shop/meters?f-producer=sonel,metrel&f-voltage=1000&f-price=100..500` — values joined with commas, ranges as `from..to` (either end may be empty). It can be linked and bookmarked, Gridbox's sorting and pagination keep it, and *Back* in the browser returns to the previous choice. Values that no longer exist in the address are ignored. Gridbox's own search, its *Items filter* (`?query=`), tag and author listings are left as they are.
 

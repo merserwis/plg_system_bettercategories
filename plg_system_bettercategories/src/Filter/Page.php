@@ -76,11 +76,17 @@ final class Page
         }
         $elementId = $idm[1];
 
+        // the bar above the list: grid / list view and "show all" — also in categories without filters
+        $viewToggle = (bool) $this->params->get('list_view_toggle', 1);
+        $showAll    = (bool) $this->params->get('show_all', 1);
+        $allMax     = max(20, min(2000, (int) $this->params->get('show_all_max', 300)));
+        $all        = $showAll && Factory::getApplication()->getInput()->getInt('bc-all', 0) === 1;
+
         $defs = $this->forCategory($this->filters->definitions($appId), $categoryId, $categories);
-        if (!$defs) {
+        if (!$defs && !$viewToggle && !$showAll) {
             return null;
         }
-        $state = $this->filters->state($defs);
+        $state = $defs ? $this->filters->state($defs) : [];
         if ($listHidden && !$state) {
             return null;
         }
@@ -94,35 +100,56 @@ final class Page
         $result = $this->filters->apply($products, $defs, $state);
         $state  = $result['state'];
         $query  = $this->filters->queryString($defs, $state);
+        if ($all) {
+            $query .= ($query !== '' ? '&' : '') . 'bc-all=1';
+        }
 
         $element = substr($body, $elStart, $elEnd - $elStart);
         $total   = count($result['ids']);
-        if ($state) {
+        $limit   = 0;
+        if ($state || $all || $showAll) {
             [$item, $source] = GridboxList::elementConfig($appId, $elementId, $element);
             if (!$item) {
                 $this->plugin->log('Filters: settings of the product list element ' . $elementId . ' not found (app ' . $appId . ')', Log::WARNING);
 
                 return null;
             }
-
-            $list    = GridboxList::render($appId, $categoryId, $item, $result['ids'], $query);
+            $limit = max(1, (int) ($item->limit ?? 12));
+        }
+        if ($state || $all) {
+            $list    = GridboxList::render($appId, $categoryId, $item, $result['ids'], $query, $all ? $allMax : 0);
             $total   = $list['count'];
             $element = $this->replaceInner($element, 'ba-blog-posts-wrapper', $list['posts']);
             $element = $this->replaceInner($element, 'ba-blog-posts-pagination-wrapper', $list['pagination']);
             $element = $this->sortingUrl($element, $query);
         }
+        $tools = $this->tools($defs, $state, $total, $limit, $viewToggle, $showAll, $all, $allMax);
 
         $position = (string) $this->params->get('filters_position', 'sidebar_left');
         $position = in_array($position, Filters::POSITIONS, true) ? $position : 'sidebar_left';
-        $drawer   = $position === 'drawer' || ($this->device === 'mobile' && $this->params->get('filters_mobile', 'drawer') === 'drawer');
+        $drawer   = $defs && ($position === 'drawer' || ($this->device === 'mobile' && $this->params->get('filters_mobile', 'drawer') === 'drawer'));
         $classes  = 'bcf-pos-' . str_replace('_', '-', $position) . ' bcf-dev-' . $this->device
             . ($drawer ? ' bcf-is-drawer' : '') . ($this->params->get('filters_mobile', 'drawer') === 'drawer' ? ' bcf-m-drawer' : '')
-            . ((string) $this->params->get('filters_apply', 'auto') === 'auto' ? ' bcf-auto' : '');
+            . ((string) $this->params->get('filters_apply', 'auto') === 'auto' ? ' bcf-auto' : '')
+            . ($viewToggle ? ' bcf-view-' . ($this->params->get('list_view_default', 'grid') === 'list' ? 'list' : 'grid') : '')
+            . ($all ? ' bcf-all' : '');
         $style    = $this->styleVars();
+        // the visitor's own view at once (before the cards are painted), not after the deferred script
+        // (exclude-deffer: Gridbox's deferred loading would move it to the end of the page)
+        $early = $viewToggle ? '<script class="exclude-deffer">(function(){try{var v=localStorage.getItem("bcf-view");if(v!=="list"&&v!=="grid")return;'
+            . 'document.querySelectorAll(".bcf-root.bcf-view-grid,.bcf-root.bcf-view-list").forEach(function(r){r.classList.remove("bcf-view-grid","bcf-view-list");r.classList.add("bcf-view-"+v);});}catch(e){}})()</script>' : '';
+
+        if (!$defs) {
+            // no filters in this category: the bar (view, show all) above the list only
+            $block = '<div class="bcf-root bcf-nofilters ' . $classes . '"' . $style . '>' . self::MARK
+                . $this->bar($defs, $result['facets'], $state, $total, false, $tools) . $early . $element . '</div>';
+
+            return $this->head(substr($body, 0, $elStart) . $block . substr($body, $elEnd), $all);
+        }
 
         // in one row above the products every filter opens as a menu: all closed at first
         $form  = $this->form($defs, $result['facets'], $state, $total, $classes, $style, $position === 'top' && !$drawer);
-        $bar   = $this->bar($defs, $result['facets'], $state, $total, $drawer);
+        $bar   = $this->bar($defs, $result['facets'], $state, $total, $drawer, $tools) . $early;
         // the subcategories (inserted later, "above the products") go above the bar: see MARK
         $block = self::MARK . $bar . $element;
 
@@ -151,7 +178,39 @@ final class Page
             }
         }
 
-        return $this->head($body, (bool) $state);
+        return $this->head($body, $state || $all);
+    }
+
+    /**
+     * The view buttons (grid / list) and "show all" / "in pages" for the bar above the list.
+     *
+     * @param int $limit products on a page of the list (Gridbox element), 0 = unknown
+     */
+    private function tools(array $defs, array $state, int $total, int $limit, bool $viewToggle, bool $showAll, bool $all, int $allMax): string
+    {
+        $e   = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
+        $out = '';
+        if ($showAll && ($all || ($limit > 0 && $total > $limit))) {
+            $url = $this->url($defs, $state);
+            if ($all) {
+                $out .= '<a class="bcf-all-link" href="' . $e($url) . '" rel="nofollow">' . $e($this->filters->text('filters_label_paged', 'Show in pages')) . '</a>';
+            } else {
+                $url .= (str_contains($url, '?') ? '&' : '?') . 'bc-all=1';
+                $label = str_replace('%d', (string) min($total, $allMax), $this->filters->text('filters_label_all', 'Show all (%d)'));
+                $out .= '<a class="bcf-all-link" href="' . $e($url) . '" rel="nofollow">' . $e($label) . '</a>';
+            }
+        }
+        if ($viewToggle) {
+            $grid = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" fill="currentColor"/></svg>';
+            $list = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 5h4v4H4zM10 6h10v2H10zM4 10h4v4H4zM10 11h10v2H10zM4 15h4v4H4zM10 16h10v2H10z" fill="currentColor"/></svg>';
+            $out .= '<div class="bcf-view" role="group" aria-label="' . $e($this->filters->text('filters_label_view', 'View')) . '">'
+                . '<button type="button" class="bcf-view-btn" data-bcf-view="grid" aria-pressed="false" title="' . $e($this->filters->text('filters_label_grid', 'Grid')) . '">' . $grid
+                . '<span class="visually-hidden">' . $e($this->filters->text('filters_label_grid', 'Grid')) . '</span></button>'
+                . '<button type="button" class="bcf-view-btn" data-bcf-view="list" aria-pressed="false" title="' . $e($this->filters->text('filters_label_list', 'List')) . '">' . $list
+                . '<span class="visually-hidden">' . $e($this->filters->text('filters_label_list', 'List')) . '</span></button></div>';
+        }
+
+        return $out !== '' ? '<div class="bcf-tools">' . $out . '</div>' : '';
     }
 
     /**
@@ -386,7 +445,8 @@ final class Page
             }
             $open    = !$menus && (!$def['collapsed'] || $badge > 0);
             $groups .= '<details class="bcf-group bcf-group--' . $e($def['type']) . '" data-bcf-key="' . $e($def['key']) . '"' . ($open ? ' open' : '') . '>'
-                . '<summary class="bcf-group-title"><span class="bcf-group-name">' . $e($def['label']) . '</span>'
+                . '<summary class="bcf-group-title">' . ($def['icon'] !== '' || $def['iconFile'] !== '' ? $this->plugin->iconHtml($def['icon'], $def['iconFile']) : '')
+                . '<span class="bcf-group-name">' . $e($def['label']) . '</span>'
                 . ($badge > 0 ? '<span class="bcf-badge">' . $badge . '</span>' : '') . '</summary>'
                 . '<div class="bcf-group-body">' . $body . '</div></details>';
         }
@@ -413,7 +473,7 @@ final class Page
     }
 
     /** The bar above the products: drawer button, number of products, chosen filters, "clear all". */
-    private function bar(array $defs, array $facets, array $state, int $total, bool $drawer): string
+    private function bar(array $defs, array $facets, array $state, int $total, bool $drawer, string $tools = ''): string
     {
         $e      = fn ($s) => htmlspecialchars((string) $s, ENT_QUOTES, 'UTF-8');
         $chips  = '';
@@ -469,7 +529,7 @@ final class Page
             }
         }
 
-        return $out . '</div>';
+        return $out . $tools . '</div>';
     }
 
     private function chip(string $label, string $url): string

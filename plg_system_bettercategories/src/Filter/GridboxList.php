@@ -119,7 +119,7 @@ final class GridboxList
      *
      * @return array{posts: string, pagination: string, count: int}
      */
-    public static function render(int $appId, int $categoryId, object $item, array $ids, string $filter): array
+    public static function render(int $appId, int $categoryId, object $item, array $ids, string $filter, int $all = 0): array
     {
         $helper = self::HELPER;
         $app    = Factory::getApplication();
@@ -146,10 +146,13 @@ final class GridboxList
         }
         $idList = implode(',', array_map('intval', $ids));
 
-        // as GridboxHelper::getBlogPosts
+        // as GridboxHelper::getBlogPosts; "show all": every product (up to $all) on one page
         $start = ($page - 1) * $limit;
         $rows  = $limit;
-        if ($pagination !== '') {
+        if ($all > 0) {
+            $start = 0;
+            $rows  = $all;
+        } elseif ($pagination !== '') {
             $rows  = $start + $limit;
             $start = 0;
         }
@@ -204,7 +207,7 @@ final class GridboxList
             $url .= '&sort-by=' . $order;
         }
 
-        return ['posts' => $posts, 'pagination' => self::pagination($url, $page - 1, $limit, $total, $pagination), 'count' => $total];
+        return ['posts' => $posts, 'pagination' => $all > 0 ? '' : self::pagination($url, $page - 1, $limit, $total, $pagination), 'count' => $total];
     }
 
     /** Gridbox's pagination (GridboxHelper::getBlogPagination) for a given number of products. */

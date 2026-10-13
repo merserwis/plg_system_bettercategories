@@ -138,6 +138,9 @@ final class Filters
                 'exclude'    => self::ids($row['exclude'] ?? null),
                 'features'  => [],
                 'options'   => [],
+                // an icon before the title of the group (Font Awesome classes, other icon classes, or a file)
+                'icon'      => trim((string) ($row['icon'] ?? '')),
+                'iconFile'  => trim((string) ($row['icon_file'] ?? '')),
             ];
 
             if ($type === 'field') {

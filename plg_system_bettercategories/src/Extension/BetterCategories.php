@@ -30,6 +30,7 @@ use Joomla\Database\DatabaseInterface;
 use Joomla\Event\Priority;
 use Joomla\Event\SubscriberInterface;
 use Merserwis\Plugin\System\BetterCategories\Filter\Page;
+use Merserwis\Plugin\System\BetterCategories\Icon\Icons;
 
 final class BetterCategories extends CMSPlugin implements SubscriberInterface
 {
@@ -39,7 +40,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.6.7';
+    private const VERSION    = '1.6.8';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -939,6 +940,38 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         return $this->hidden;
     }
 
+    /**
+     * Icons chosen in the plugin settings (the rows of "own category images"): category id => the
+     * icon HTML (a Font Awesome icon inline, a file, or the classes of another icon font).
+     *
+     * @return array<int, string>
+     */
+    private function categoryIcons(): array
+    {
+        $icons = [];
+        foreach ((array) $this->params->get('category_images', []) as $row) {
+            $row = (array) $row;
+            $id  = (int) ($row['category'] ?? 0);
+            if ($id > 0) {
+                $html = $this->iconHtml((string) ($row['icon'] ?? ''), (string) ($row['icon_file'] ?? ''));
+                if ($html !== '') {
+                    $icons[$id] = $html;
+                }
+            }
+        }
+
+        return $icons;
+    }
+
+    /** The HTML of an icon (see Icon\Icons): a file, a Font Awesome icon as inline SVG, or font classes. */
+    public function iconHtml(string $icon, string $file): string
+    {
+        static $icons = null;
+        $icons ??= new Icons(JPATH_ROOT . '/media/plg_system_bettercategories/icons/fa');
+
+        return $icons->html($icon, $file, 'bc-icon', fn (string $f): string => $this->imageUrl($f));
+    }
+
     /** @return array<int, string> category id => image chosen in the plugin settings */
     private function manualImages(): array
     {
@@ -1023,6 +1056,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $this->addTopProductImages($appId, $categories);
         }
         $manual = $p['display'] === 'tiles' ? $this->manualImages() : [];
+        $icons  = $this->categoryIcons();
 
         // Visible subcategories of every category: "last level" counters and the "what is inside" panels.
         $kids = [];
@@ -1062,8 +1096,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
             $liClass = $sub !== '' ? ' bettercategories-has-sub' : '';
 
+            $icon = $icons[$cat->id] ?? '';
             if ($p['display'] !== 'tiles') {
-                $items .= '<li class="bettercategories-item' . $liClass . '"><a class="bettercategories-link" href="' . $url . '">' . $title . '</a>' . $countHtml . $toggle . $sub . '</li>';
+                $items .= '<li class="bettercategories-item' . $liClass . '"><a class="bettercategories-link" href="' . $url . '">'
+                    . ($p['iconText'] && $icon !== '' ? $icon : '') . $title . '</a>' . $countHtml . $toggle . $sub . '</li>';
                 continue;
             }
 
@@ -1074,17 +1110,23 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             if ($image === '' && $p['popularImage']) {
                 $image = $cat->topImage;
             }
+            // the icon in the picture's place: always ("instead of the picture") or where there is no picture
+            $iconTile = $icon !== '' && ($p['iconTiles'] === 'replace' || ($p['iconTiles'] === 'fallback' && $image === ''));
+            if ($iconTile) {
+                $image = '';
+            }
             // Small WebP copies (srcset) when enabled and possible; the original image otherwise.
             [$thumb, $srcset] = $this->thumbnail($image, $p);
             $src = htmlspecialchars($thumb !== '' ? $thumb : $this->imageUrl($image), ENT_QUOTES, 'UTF-8');
             $set = $srcset !== '' ? ' srcset="' . htmlspecialchars($srcset, ENT_QUOTES, 'UTF-8') . '" sizes="' . $sizes . '"' : '';
 
             $front = '<a class="bettercategories-link" href="' . $url . '">'
-                . '<span class="bettercategories-media' . ($src === '' ? ' bettercategories-media--empty' : '') . '">'
+                . '<span class="bettercategories-media' . ($iconTile ? ' bettercategories-media--icon' : ($src === '' ? ' bettercategories-media--empty' : '')) . '">'
+                . ($iconTile ? $icon : '')
                 . ($src !== '' ? '<img src="' . $src . '"' . $set . ' alt="' . $title . '"' . ($count <= $firstRow ? ' fetchpriority="high"' : ' loading="lazy"') . ' decoding="async">' : '')
                 . ($p['hover'] === 'shine' ? '<span class="bettercategories-shine" aria-hidden="true"></span>' : '')
                 . '</span>'
-                . '<span class="bettercategories-caption"><span class="bettercategories-name">' . $title . '</span>' . $countHtml . '</span>'
+                . '<span class="bettercategories-caption"><span class="bettercategories-name">' . ($p['iconTiles'] === 'name' ? $icon : '') . $title . '</span>' . $countHtml . '</span>'
                 . '</a>';
             // Card flip: the front (tile) and the back (subcategories) turn together; the button stays outside.
             $body = $sub !== '' && $p['subMode'] === 'flip' ? $toggle . '<div class="bettercategories-card">' . $front . $sub . '</div>' : $front . $toggle . $sub;
@@ -2401,6 +2443,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'priceFrom'    => (bool) $this->params->get('price_from', 0),
             'priceLabel'   => $this->printfLabel((string) $this->params->get('price_from_label', 'from %s'), 'from %s', 's'),
             'priceColor'   => $this->cssColor((string) $this->params->get('price_color', '')),
+            'iconText'     => (bool) $this->params->get('icon_text', 1),
+            'iconTiles'    => $pick('icon_tiles', ['fallback', 'replace', 'name', 'off'], 'fallback'),
+            'iconSize'     => $int('icon_size', 0, 0, 400),
+            'iconColor'    => $this->cssColor((string) $this->params->get('icon_color', '')),
         ];
     }
 
@@ -2504,6 +2550,22 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $rows[] = "$s .bettercategories-link:hover,$s .bettercategories-link:focus{color:{$p['hoverColor']};}";
         }
         $rows[] = "$s .bettercategories-count{opacity:.75;}";
+        // icons: inline before the name (size of the text, or the chosen size), big in a tile's picture place
+        $iconSize = $p['iconSize'] > 0 && $p['display'] !== 'tiles' ? $p['iconSize'] . 'px' : '1.15em';
+        $rows[] = "$s .bc-icon{display:inline-block;flex:none;width:$iconSize;height:$iconSize;vertical-align:-.18em;margin-inline-end:.45em;object-fit:contain;"
+            . ($p['iconColor'] ? "color:{$p['iconColor']};" : '') . '}';
+        $rows[] = "$s i.bc-icon{width:auto;height:auto;font-size:$iconSize;line-height:1;}";
+        // a link with an icon: the icon stays beside the name, a long name wraps beside it
+        $rows[] = "$s .bettercategories-link:has(> .bc-icon){display:inline-flex;align-items:baseline;}";
+        $rows[] = "$s .bettercategories-link > .bc-icon{align-self:flex-start;margin-top:.12em;vertical-align:0;}";
+        if ($p['display'] === 'tiles') {
+            $tileIcon = $p['iconSize'] > 0 ? $p['iconSize'] . 'px' : '42%';
+            $rows[] = "$s .bettercategories-media--icon{display:flex;align-items:center;justify-content:center;container-type:inline-size;}";
+            $rows[] = "$s .bettercategories-media--icon .bc-icon{width:$tileIcon;height:$tileIcon;margin:0;vertical-align:0;"
+                . ($p['iconColor'] ? '' : 'color:' . ($p['linkColor'] ?: 'currentColor') . ';') . 'transition:transform .35s ease;}';
+            $rows[] = "$s .bettercategories-media--icon i.bc-icon{width:auto;height:auto;font-size:" . ($p['iconSize'] > 0 ? $p['iconSize'] . 'px' : '42cqw') . ';}';
+            $rows[] = "$s .bettercategories-link:hover .bettercategories-media--icon .bc-icon{transform:scale(1.06);}";
+        }
         if ($p['priceFrom']) {
             $rows[] = "$s .bettercategories-price{font-size:.85em;font-weight:600;white-space:nowrap;" . ($p['priceColor'] ? "color:{$p['priceColor']};" : 'opacity:.85;')
                 . ($p['display'] === 'tiles' ? 'display:block;margin-top:2px;' : 'margin-inline-start:.4em;') . '}';

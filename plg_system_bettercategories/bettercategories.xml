@@ -6,7 +6,7 @@
     <creationDate>2026-10-13</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.6.7</version>
+    <version>1.6.8</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -19,6 +19,7 @@
     <media folder="media" destination="plg_system_bettercategories">
         <folder>css</folder>
         <folder>js</folder>
+        <folder>icons</folder>
     </media>
     <languages folder="language">
         <language tag="en-GB">en-GB/plg_system_bettercategories.ini</language>
@@ -222,9 +223,23 @@
                         <field name="category" type="gbcategories" addfieldprefix="Merserwis\Plugin\System\BetterCategories\Field" label="PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_LABEL">
                             <option value="">PLG_SYSTEM_BETTERCATEGORIES_CATEGORY_SELECT</option>
                         </field>
-                        <field name="image" type="media" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_LABEL" />
+                        <field name="image" type="media" preview="false" label="PLG_SYSTEM_BETTERCATEGORIES_IMAGE_LABEL" />
+                        <field name="icon" type="bcicon" addfieldprefix="Merserwis\Plugin\System\BetterCategories\Field" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_LABEL" />
+                        <field name="icon_file" type="media" preview="false" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_FILE_LABEL" />
                     </form>
                 </field>
+                <field name="icon_text" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_TEXT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ICON_TEXT_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="icon_tiles" type="list" default="fallback" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_TILES_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ICON_TILES_DESC">
+                    <option value="fallback">PLG_SYSTEM_BETTERCATEGORIES_ICON_TILES_FALLBACK</option>
+                    <option value="replace">PLG_SYSTEM_BETTERCATEGORIES_ICON_TILES_REPLACE</option>
+                    <option value="name">PLG_SYSTEM_BETTERCATEGORIES_ICON_TILES_NAME</option>
+                    <option value="off">PLG_SYSTEM_BETTERCATEGORIES_ICON_TILES_OFF</option>
+                </field>
+                <field name="icon_size" type="number" default="0" min="0" max="400" filter="integer" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_SIZE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ICON_SIZE_DESC" />
+                <field name="icon_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ICON_COLOR_DESC" />
             </fieldset>
             <fieldset name="subcategories" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SUB" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SUB_DESC">
                 <field name="preview_subcategories" type="bcpreview" hiddenLabel="true" />
@@ -325,6 +340,8 @@
                             <option value="stock">PLG_SYSTEM_BETTERCATEGORIES_FILTER_TYPE_STOCK</option>
                         </field>
                         <field name="label" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_LABEL_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTER_LABEL_HINT" />
+                        <field name="icon" type="bcicon" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_ICON_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_ICON_DESC" />
+                        <field name="icon_file" type="media" preview="false" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_FILE_LABEL" />
                         <field name="field" type="gbfields" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_FIELD_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_FIELD_DESC" showon="type:field"><option value="">PLG_SYSTEM_BETTERCATEGORIES_FILTER_FIELD_SELECT</option></field>
                         <field name="dim" type="checkboxes" default="v" class="bcf-dims" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_DIM_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_DIM_DESC" showon="type:param"><option value="v">PLG_SYSTEM_BETTERCATEGORIES_DIM_V</option><option value="a">PLG_SYSTEM_BETTERCATEGORIES_DIM_A</option><option value="w">PLG_SYSTEM_BETTERCATEGORIES_DIM_W</option><option value="va">PLG_SYSTEM_BETTERCATEGORIES_DIM_VA</option><option value="hz">PLG_SYSTEM_BETTERCATEGORIES_DIM_HZ</option><option value="ohm">PLG_SYSTEM_BETTERCATEGORIES_DIM_OHM</option><option value="f">PLG_SYSTEM_BETTERCATEGORIES_DIM_F</option><option value="c">PLG_SYSTEM_BETTERCATEGORIES_DIM_C</option><option value="pa">PLG_SYSTEM_BETTERCATEGORIES_DIM_PA</option><option value="rh">PLG_SYSTEM_BETTERCATEGORIES_DIM_RH</option><option value="ms">PLG_SYSTEM_BETTERCATEGORIES_DIM_MS</option><option value="flow">PLG_SYSTEM_BETTERCATEGORIES_DIM_FLOW</option><option value="ppm">PLG_SYSTEM_BETTERCATEGORIES_DIM_PPM</option><option value="wm2">PLG_SYSTEM_BETTERCATEGORIES_DIM_WM2</option><option value="db">PLG_SYSTEM_BETTERCATEGORIES_DIM_DB</option><option value="lx">PLG_SYSTEM_BETTERCATEGORIES_DIM_LX</option><option value="wh">PLG_SYSTEM_BETTERCATEGORIES_DIM_WH</option><option value="ah">PLG_SYSTEM_BETTERCATEGORIES_DIM_AH</option><option value="m">PLG_SYSTEM_BETTERCATEGORIES_DIM_M</option><option value="cat">PLG_SYSTEM_BETTERCATEGORIES_DIM_CAT</option><option value="ip">PLG_SYSTEM_BETTERCATEGORIES_DIM_IP</option></field>
                         <field name="min_products" type="number" default="2" min="1" max="1000" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_MIN_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_MIN_DESC" showon="type:param" />
@@ -376,6 +393,19 @@
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>
+                <field name="list_view_toggle" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_LIST_VIEW_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_LIST_VIEW_DESC" showon="filters_enabled:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="list_view_default" type="list" default="grid" label="PLG_SYSTEM_BETTERCATEGORIES_LIST_VIEW_DEFAULT_LABEL" showon="filters_enabled:1[AND]list_view_toggle:1">
+                    <option value="grid">PLG_SYSTEM_BETTERCATEGORIES_LIST_VIEW_GRID</option>
+                    <option value="list">PLG_SYSTEM_BETTERCATEGORIES_LIST_VIEW_LIST</option>
+                </field>
+                <field name="show_all" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_SHOW_ALL_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SHOW_ALL_DESC" showon="filters_enabled:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="show_all_max" type="number" default="300" min="20" max="2000" filter="integer" label="PLG_SYSTEM_BETTERCATEGORIES_SHOW_ALL_MAX_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SHOW_ALL_MAX_DESC" showon="filters_enabled:1[AND]show_all:1" />
                 <field name="filters_width" type="number" default="260" min="160" max="600" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_WIDTH_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_WIDTH_DESC" showon="filters_enabled:1" />
                 <field name="filters_font_size" type="number" default="15" min="10" max="30" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_FONT_LABEL" showon="filters_enabled:1" />
                 <field name="filters_accent" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ACCENT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
@@ -389,6 +419,8 @@
                 <field name="filters_label_clear" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_CLEAR_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
                 <field name="filters_label_apply" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_APPLY_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
                 <field name="filters_label_none" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_NONE_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+                <field name="filters_label_all" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_ALL_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1[AND]show_all:1" />
+                <field name="filters_label_paged" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_PAGED_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1[AND]show_all:1" />
                 <field name="filters_label_more" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_MORE_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
                 <field name="filters_label_less" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_LESS_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
                 <field name="filters_label_from" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_FROM_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />

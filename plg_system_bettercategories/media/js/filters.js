@@ -42,6 +42,8 @@
       if (r && (r.min !== '' || r.max !== '')) parts.push(key + '=' + encodeURIComponent(r.min) + '..' + encodeURIComponent(r.max));
     });
     if (sort) parts.push('sort-by=' + encodeURIComponent(sort));
+    // "show all" stays while filtering
+    if (root() && root().classList.contains('bcf-all')) parts.push('bc-all=1');
     return f.getAttribute('action') + (parts.length ? '?' + parts.join('&') : '');
   }
 
@@ -75,6 +77,7 @@
       if (g) g.open = true;
     }
     bind();
+    syncView();
     if (window.app && app.lazyLoad && typeof app.lazyLoad.check === 'function') app.lazyLoad.check();
     window.dispatchEvent(new Event('resize'));
     return true;
@@ -180,6 +183,8 @@
       more.textContent = on ? more.dataset.less : more.dataset.more;
       return;
     }
+    const viewBtn = t.closest('[data-bcf-view]');
+    if (viewBtn) { e.preventDefault(); setView(viewBtn.dataset.bcfView); return; }
     if (t.closest('[data-bcf-open]')) { open(true); return; }
     if (t.closest('[data-bcf-close]')) { e.preventDefault(); close(); return; }
     const link = t.closest('a[data-bcf-link]');
@@ -225,6 +230,38 @@
     if (form()) load(window.location.href, false);
   });
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind);
-  else bind();
+  // grid / list view of the products: a class on the root, remembered in this browser
+  function syncView() {
+    const r = root();
+    if (!r) return;
+    const list = r.classList.contains('bcf-view-list');
+    document.querySelectorAll('[data-bcf-view]').forEach((b) => b.setAttribute('aria-pressed', String((b.dataset.bcfView === 'list') === list)));
+  }
+  function setView(view) {
+    const r = root();
+    if (!r || (view !== 'grid' && view !== 'list')) return;
+    r.classList.remove('bcf-view-grid', 'bcf-view-list');
+    r.classList.add('bcf-view-' + view);
+    try { localStorage.setItem('bcf-view', view); } catch (e) { /* private mode */ }
+    syncView();
+    // Gridbox's masonry and lazy images measure again
+    window.dispatchEvent(new Event('resize'));
+    if (window.app && app.lazyLoad && typeof app.lazyLoad.check === 'function') app.lazyLoad.check();
+  }
+
+  const start = () => {
+    bind();
+    // the remembered view, also when the early script of the page did not run
+    try {
+      const v = localStorage.getItem('bcf-view');
+      const r = root();
+      if (r && (v === 'grid' || v === 'list') && (r.classList.contains('bcf-view-grid') || r.classList.contains('bcf-view-list'))) {
+        r.classList.remove('bcf-view-grid', 'bcf-view-list');
+        r.classList.add('bcf-view-' + v);
+      }
+    } catch (e) { /* private mode */ }
+    syncView();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();

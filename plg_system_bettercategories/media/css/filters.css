@@ -33,6 +33,8 @@
 .bcf-group-title::-webkit-details-marker { display: none; }
 .bcf-group-title::after { content: ""; margin-inline-start: auto; width: 8px; height: 8px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); transition: transform .2s; opacity: .6; }
 .bcf-group[open] > .bcf-group-title::after { transform: rotate(-135deg); }
+.bcf-group-title .bc-icon { flex: none; width: 1.15em; height: 1.15em; object-fit: contain; color: var(--bcf-accent-c, currentColor); }
+.bcf-group-title i.bc-icon { width: auto; height: auto; font-size: 1.1em; line-height: 1; }
 .bcf-group-body { padding-top: 8px; }
 .bcf-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 1.4em; height: 1.4em; padding: 0 .35em; border-radius: 999px; background: var(--bcf-accent-c); color: #fff; font-size: .75em; font-weight: 700; line-height: 1; }
 .bcf-options { list-style: none; margin: 0; padding: 0; }
@@ -62,6 +64,31 @@
 .bcf-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 14px; font-size: var(--bcf-size, 15px); line-height: 1.3; }
 .bcf-bar > * { font-size: inherit; }
 .bcf-bar:empty { display: none; }
+/* the view buttons and "show all", at the end of the bar */
+.bcf-tools { display: flex; align-items: center; gap: 10px; margin-inline-start: auto; }
+.bcf-all-link { color: var(--bcf-accent-c); font-weight: 600; text-decoration: none; white-space: nowrap; font-size: .95em; }
+.bcf-all-link:hover, .bcf-all-link:focus-visible { text-decoration: underline; }
+.bcf-view { display: inline-flex; border: 1px solid var(--bcf-line); border-radius: 8px; overflow: hidden; }
+.bcf-view-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 34px; margin: 0; padding: 0; border: 0; background: transparent; color: inherit; cursor: pointer; opacity: .55; }
+.bcf-view-btn + .bcf-view-btn { border-inline-start: 1px solid var(--bcf-line); }
+.bcf-view-btn[aria-pressed="true"] { opacity: 1; color: var(--bcf-accent-c); background: color-mix(in srgb, var(--bcf-accent-c) 10%, transparent); }
+.bcf-view-btn:hover, .bcf-view-btn:focus-visible { opacity: 1; outline: 0; }
+.bcf-view-btn:focus-visible { box-shadow: inset 0 0 0 2px var(--bcf-accent-c); }
+/* list view: one product a row, the picture on the left */
+.bcf-root.bcf-view-list .ba-blog-posts-wrapper { display: flex !important; flex-direction: column !important; gap: var(--bcf-list-gap, 18px) !important; grid-template-columns: none !important; height: auto !important; }
+.bcf-root.bcf-view-list .ba-blog-posts-wrapper > .ba-blog-post { display: flex !important; flex-direction: row !important; align-items: center; gap: 22px; width: 100% !important; max-width: none !important; margin: 0 !important; grid-row-end: auto !important; position: static !important; transform: none !important; height: auto !important; }
+.bcf-root.bcf-view-list .ba-blog-post > .ba-blog-post-image { flex: 0 0 clamp(110px, 22%, 220px); width: auto !important; max-width: none !important; height: auto !important; aspect-ratio: 1 / 1; margin: 0 !important; }
+/* the whole photo in the square (Gridbox crops it to fill its fixed height) */
+.bcf-root.bcf-view-list .ba-blog-post-image > a { background-size: contain !important; background-position: center !important; background-repeat: no-repeat !important; }
+.bcf-root.bcf-view-list .ba-blog-post-image img { width: 100% !important; height: 100% !important; object-fit: contain !important; }
+.bcf-root.bcf-view-list .ba-blog-post > .ba-blog-post-content { flex: 1 1 auto; min-width: 0; display: flex !important; flex-direction: column; align-items: flex-start; text-align: start !important; padding-top: 0 !important; }
+.bcf-root.bcf-view-list .ba-blog-post .ba-blog-post-intro-wrapper { flex-grow: 0 !important; }
+.bcf-root.bcf-view-list .ba-blog-post .ba-blog-post-title-wrapper, .bcf-root.bcf-view-list .ba-blog-post .ba-blog-post-title, .bcf-root.bcf-view-list .ba-blog-post .ba-blog-post-info-wrapper, .bcf-root.bcf-view-list .ba-blog-post .ba-blog-post-intro-wrapper { text-align: start !important; width: 100%; }
+.bcf-root.bcf-view-list .ba-blog-post .ba-blog-post-add-to-cart-wrapper { margin-top: 8px !important; justify-content: flex-start !important; }
+@media (max-width: 600px) {
+  .bcf-root.bcf-view-list .ba-blog-post > .ba-blog-post-image { flex-basis: 34%; }
+  .bcf-root.bcf-view-list .ba-blog-posts-wrapper > .ba-blog-post { gap: 12px; align-items: flex-start; }
+}
 .bcf-total { font-weight: 600; margin-inline-end: 4px; }
 .bcf-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--bcf-line); border-radius: 999px; color: inherit; text-decoration: none; font-size: .9em; background: var(--bcf-bg-c); }
 .bcf-chip:hover, .bcf-chip:focus-visible { border-color: var(--bcf-accent-c); color: var(--bcf-accent-c); }
