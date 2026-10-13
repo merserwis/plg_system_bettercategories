@@ -2,6 +2,14 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.12 — 2026-10-13
+
+### 🎨 Styles that always arrive
+
+- **The styles of the filters and of the bar now go into the page itself** (a `<style>` block, about 13 kB, only on pages with the filters or the bar), not as a linked `filters.css`. With Gridbox's CSS minification the linked file ended up in Gridbox's joined style sheet, whose address changes only with Gridbox's own version — Cloudflare and browsers keep such a file for a year, so after an update of this plugin visitors still got the previous styles (the grid / list buttons stayed small, their names touching the frame).
+- **The whole row on the left:** grid / list, *Show all (N)* and Gridbox's *Default* menu right after them. The menu is as wide as the chosen option in Chrome and Edge (in other browsers its text stands on the left of its box).
+- Grid / list buttons: 16 px of space on each side of the icon and name.
+
 ## 1.6.11 — 2026-10-13
 
 ### 🎛 Buttons on the left, new look really shown

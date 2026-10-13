@@ -329,12 +329,17 @@ final class Page
         return null;
     }
 
-    /** Stylesheet and script of the filters, and "noindex" for filtered lists (setting). */
+    /**
+     * Styles and script of the filters, and "noindex" for filtered lists (setting). The styles go into
+     * the page itself: with Gridbox's CSS minification a linked filters.css ends up in Gridbox's joined
+     * file, whose address only changes with Gridbox's own version — Cloudflare and browsers then kept
+     * the previous styles for a year after an update of this plugin (1.6.12).
+     */
     private function head(string $body, bool $filtered): string
     {
         $root = Uri::root(true) . '/media/plg_system_bettercategories/';
         $ver  = fn (string $file) => BetterCategories::ASSET_VERSION . '.' . (int) @filemtime(JPATH_ROOT . '/media/plg_system_bettercategories/' . $file);
-        $css  = '<link rel="stylesheet" href="' . $root . 'css/filters.css?' . $ver('css/filters.css') . '">';
+        $css  = '<style id="bettercategories-filters">' . self::filtersCss() . '</style>';
         $js   = '<script src="' . $root . 'js/filters.js?' . $ver('js/filters.js') . '" defer></script>';
         $meta = '';
         if ($filtered && $this->params->get('filters_noindex', 1)) {
@@ -348,6 +353,22 @@ final class Page
         }
 
         return $body;
+    }
+
+    /** media/css/filters.css without comments and spare spaces (kept for the request). */
+    public static function filtersCss(): string
+    {
+        static $css = null;
+        if ($css === null) {
+            $raw = (string) @file_get_contents(JPATH_ROOT . '/media/plg_system_bettercategories/css/filters.css');
+            $raw = preg_replace('#/\*.*?\*/#s', '', $raw) ?? $raw;
+            $raw = preg_replace('/\s+/', ' ', $raw) ?? $raw;
+            $raw = preg_replace('/\s*([{};])\s*/', '$1', $raw) ?? $raw;
+            // "</style" in a value would end the element early
+            $css = str_ireplace('</style', '<\\/style', trim($raw));
+        }
+
+        return $css;
     }
 
     private function styleVars(): string
