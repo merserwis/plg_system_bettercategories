@@ -331,7 +331,7 @@ final class Page
 
     /**
      * Styles and script of the filters, and "noindex" for filtered lists (setting). The styles go into
-     * the page itself: with Gridbox's CSS minification a linked filters.css ends up in Gridbox's joined
+     * the page itself, right before the filters (1.6.13): with Gridbox's CSS minification a linked filters.css ends up in Gridbox's joined
      * file, whose address only changes with Gridbox's own version — Cloudflare and browsers then kept
      * the previous styles for a year after an update of this plugin (1.6.12).
      */
@@ -349,7 +349,18 @@ final class Page
         }
         $pos = stripos($body, '</head>');
         if ($pos !== false) {
-            $body = substr($body, 0, $pos) . $meta . $css . $js . substr($body, $pos);
+            $body = substr($body, 0, $pos) . $meta . $js . substr($body, $pos);
+        }
+        // the styles right before the first filters element: after every style sheet of the head (Gridbox
+        // joins those into one file placed there), so a theme rule as strong as ours (e.g. one for all text
+        // inputs) does not win by coming later
+        $bodyAt = stripos($body, '<body');
+        $at     = $bodyAt === false ? false : strpos($body, '<div class="bcf-', $bodyAt);
+        if ($at === false) {
+            $at = stripos($body, '</head>');
+        }
+        if ($at !== false) {
+            $body = substr($body, 0, $at) . $css . substr($body, $at);
         }
 
         return $body;

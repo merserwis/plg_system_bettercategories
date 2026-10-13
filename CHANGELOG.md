@@ -2,6 +2,13 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.13 — 2026-10-13
+
+### 🐛 Price fields of the filters
+
+- **The from / to fields of the price filter were too wide again** (250 px each, sticking out of the panel) since 1.6.12. A site theme can style every text input with a rule as strong as the plugin's; the one that comes later in the page wins. The styles of the filters now stand right before the filters themselves, after every style sheet of the page, so the plugin's rules win again (as when they were the last part of Gridbox's joined file).
+- **“Default” back on the right:** grid / list and *Show all* on the left of the sorting row, Gridbox's *Default* menu on the right, as Gridbox shows it.
+
 ## 1.6.12 — 2026-10-13
 
 ### 🎨 Styles that always arrive
