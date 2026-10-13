@@ -26,6 +26,9 @@ use Merserwis\Plugin\System\BetterCategories\Extension\BetterCategories;
 final class Filters
 {
     public const TYPES     = ['price', 'field', 'param', 'feature', 'sale', 'stock'];
+
+    /** Gridbox field types a filter can use (url: a link field — its label, e.g. a manufacturer with its own page) */
+    public const FIELD_TYPES = ['select', 'radio', 'checkbox', 'text', 'url'];
     public const POSITIONS = ['sidebar_left', 'sidebar_right', 'column_top', 'column_bottom', 'top', 'drawer', 'after_categories', 'before_item', 'after_item'];
 
     /** Unit symbol of each parameter kind. */
@@ -133,6 +136,17 @@ final class Filters
 
             if ($type === 'field') {
                 $field = $fields[$def['field']] ?? null;
+                if (!$field && $def['label'] !== '') {
+                    // no field chosen (or one of another site, e.g. from a settings file): the field of
+                    // the store with the same name as the title of the filter
+                    foreach ($fields as $candidate) {
+                        if (mb_strtolower(trim((string) $candidate->label)) === mb_strtolower($def['label'])) {
+                            $field        = $candidate;
+                            $def['field'] = (int) $candidate->id;
+                            break;
+                        }
+                    }
+                }
                 if (!$field) {
                     continue;
                 }
@@ -203,7 +217,7 @@ final class Filters
             ->select($db->quoteName(['id', 'label', 'field_type', 'options']))
             ->from($db->quoteName('#__gridbox_fields'))
             ->where($db->quoteName('app_id') . ' = ' . $appId)
-            ->where($db->quoteName('field_type') . ' IN (' . implode(',', array_map([$db, 'quote'], ['select', 'radio', 'checkbox', 'text'])) . ')');
+            ->where($db->quoteName('field_type') . ' IN (' . implode(',', array_map([$db, 'quote'], self::FIELD_TYPES)) . ')');
         try {
             $rows = $db->setQuery($query)->loadObjectList('id') ?: [];
         } catch (\Throwable $e) {
@@ -546,17 +560,22 @@ final class Filters
                 }
                 foreach ($byField[$fieldId] ?? [] as $i) {
                     $def  = &$defs[$i];
-                    $keys = $def['fieldType'] === 'checkbox' ? (array) (json_decode($value, true) ?: []) : [$value];
+                    $keys = match ($def['fieldType']) {
+                        'checkbox' => (array) (json_decode($value, true) ?: []),
+                        // a link field: {"label": "Sauermann", "link": "index.php?…"} — the label is the value
+                        'url'      => [(string) ((json_decode($value, true) ?: [])['label'] ?? '')],
+                        default    => [$value],
+                    };
                     foreach ($keys as $key) {
                         $key = trim((string) $key);
                         if ($key === '') {
                             continue;
                         }
                         if (!isset($def['options'][$key])) {
-                            if ($def['fieldType'] !== 'text') {
+                            if ($def['fieldType'] !== 'text' && $def['fieldType'] !== 'url') {
                                 continue;
                             }
-                            // a text field: every distinct text is an option
+                            // a text or link field: every distinct text is an option
                             $def['options'][$key] = [$this->slug($key, 't' . count($def['options']), $def['options']), $key];
                         }
                         $products[(int) $row->page_id]['fields'][$fieldId][] = $def['options'][$key][0];
@@ -899,7 +918,7 @@ final class Filters
 
         if ($def['sort'] === 'count') {
             uasort($out, fn ($a, $b) => $b['count'] <=> $a['count'] ?: strnatcasecmp($a['label'], $b['label']));
-        } elseif ($def['sort'] === 'alpha' || ($def['sort'] === 'auto' && $def['type'] === 'field' && ($def['fieldType'] ?? '') === 'text')) {
+        } elseif ($def['sort'] === 'alpha' || ($def['sort'] === 'auto' && $def['type'] === 'field' && in_array($def['fieldType'] ?? '', ['text', 'url'], true))) {
             uasort($out, fn ($a, $b) => strnatcasecmp($a['label'], $b['label']));
         }
 

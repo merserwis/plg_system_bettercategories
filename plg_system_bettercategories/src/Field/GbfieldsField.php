@@ -25,7 +25,7 @@ class GbfieldsField extends ListField
                 ->from($db->quoteName('#__gridbox_fields', 'f'))
                 ->innerJoin($db->quoteName('#__gridbox_app', 'a') . ' ON a.id = f.app_id')
                 ->where($db->quoteName('a.type') . ' = ' . $db->quote('products'))
-                ->where($db->quoteName('f.field_type') . ' IN (' . implode(',', array_map([$db, 'quote'], ['select', 'radio', 'checkbox', 'text'])) . ')')
+                ->where($db->quoteName('f.field_type') . ' IN (' . implode(',', array_map([$db, 'quote'], \Merserwis\Plugin\System\BetterCategories\Filter\Filters::FIELD_TYPES)) . ')')
                 ->order('f.app_id ASC, f.id ASC');
             $rows = $db->setQuery($query)->loadObjectList() ?: [];
         } catch (\Throwable $e) {

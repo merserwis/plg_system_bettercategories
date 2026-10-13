@@ -2,6 +2,15 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.6 — 2026-10-13
+
+### ✨ Filters
+
+- **Link fields of Gridbox.** A filter of a Gridbox field can use a link field (label + address) — e.g. a *Manufacturer* field that links to the manufacturer's own page: every label is an option (alphabetical), its products are counted and filtered as with a list field. Until now such a field was not offered at all, so on merserwis.pl the manufacturer filter never appeared.
+- **The field found by its name.** A filter of a Gridbox field with no field chosen — or with a field that does not exist on this site, e.g. from a settings file of another site — uses the store field whose name is the title of the filter (*Producent*).
+- **A compact list of filters in the settings.** Every filter folds to one line with its summary — type, title, number of options (features), parameters, name in the address, the categories it is limited to or left out of; a click opens it. Above the list: *Open all*, *Fold all* and a search over the summaries (“gazy”, “Analizatory spalin”, “f-producent”). Rows start folded, a row added with **+** starts open; Joomla's buttons (add, remove, move) sit on the line of each row. 14 filters take one screen instead of fourteen.
+- **Importing only filters: remove and first.** In a settings file imported with *Only add the filters of the file*, a row `{"key": "…", "remove": "1"}` removes the saved filter with that name in the address, and `"first": "1"` puts a new filter at the top of the list. The message after the import also counts the removed filters.
+
 ## 1.6.5 — 2026-10-13
 
 ### ✨ Filters

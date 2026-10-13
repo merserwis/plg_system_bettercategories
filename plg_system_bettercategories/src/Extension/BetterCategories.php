@@ -39,7 +39,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.6.5';
+    private const VERSION    = '1.6.6';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -1956,7 +1956,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     /**
      * The filters of a settings file added to the saved ones (the other settings and filters stay): a
      * filter with the same "Name in the address" as a saved one replaces it, the others are added at
-     * the end. Filters are switched on.
+     * the end — or at the start with "first": "1". A row {"key": "…", "remove": "1"} removes the saved
+     * filter of that name. Filters are switched on.
      */
     private function importFilters($rows): array
     {
@@ -1979,25 +1980,38 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
         $added    = 0;
         $replaced = 0;
+        $removed  = 0;
         foreach (array_values($rows) as $row) {
             $row = $this->cleanValue($row, 1);
-            if (!is_array($row) || !in_array((string) ($row['type'] ?? ''), ['price', 'field', 'param', 'feature', 'sale', 'stock'], true)) {
+            if (!is_array($row)) {
                 continue;
             }
             $key = trim((string) ($row['key'] ?? ''));
+            if (!empty($row['remove']) && (string) $row['remove'] !== '0') {
+                if ($key !== '' && isset($byKey[$key])) {
+                    unset($list[$byKey[$key]], $byKey[$key]);
+                    $removed++;
+                }
+                continue;
+            }
+            if (!in_array((string) ($row['type'] ?? ''), ['price', 'field', 'param', 'feature', 'sale', 'stock'], true)) {
+                continue;
+            }
+            $first = !empty($row['first']) && (string) $row['first'] !== '0';
+            unset($row['first'], $row['remove']);
             if ($key !== '' && isset($byKey[$key])) {
                 $list[$byKey[$key]] = $row;
                 $replaced++;
             } else {
-                $name        = 'filters_list' . $next++;
-                $list[$name] = $row;
+                $name = 'filters_list' . $next++;
+                $list = $first ? [$name => $row] + $list : $list + [$name => $row];
                 if ($key !== '') {
                     $byKey[$key] = $name;
                 }
                 $added++;
             }
         }
-        if ($added + $replaced === 0) {
+        if ($added + $replaced + $removed === 0) {
             return ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_IMPORT_NO_FILTERS')];
         }
         $params->set('filters_list', $list);
@@ -2013,7 +2027,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $db->setQuery($query)->execute();
         $this->cleanCaches();
 
-        return ['ok' => true, 'added' => $added, 'replaced' => $replaced];
+        return ['ok' => true, 'added' => $added, 'replaced' => $replaced, 'removed' => $removed];
     }
 
     /**

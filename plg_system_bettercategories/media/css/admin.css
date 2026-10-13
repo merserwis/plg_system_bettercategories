@@ -59,3 +59,28 @@
 /* parameter tick boxes of a filter: several columns */
 .bcf-dims { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 0 1rem; }
 .bcf-dims > .bcf-dims-tools, .bcf-dims > legend { grid-column: 1 / -1; }
+
+/* compact list of filters (tools.js: every row folds to one summary line) */
+.bcf-rows-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; margin: 0 0 .75rem; }
+.bcf-rows-bar .bcf-rows-search { max-width: 20rem; }
+.bcf-rows .subform-repeatable-group { position: relative; border: 1px solid var(--template-bg-dark-10, #dfe3e7); border-radius: .4rem; padding: 0 .75rem .5rem; margin-bottom: .5rem; background: var(--body-bg, #fff); }
+.bcf-rows .subform-repeatable-group > .btn-toolbar { position: absolute; top: .45rem; inset-inline-end: .5rem; z-index: 1; display: block; width: auto; margin: 0; }
+.bcf-rows .subform-repeatable-group > .btn-toolbar > .btn-group { position: static; display: inline-flex; flex-direction: row; flex-wrap: nowrap; align-items: center; width: auto; height: auto; }
+.bcf-rows .subform-repeatable-group > .btn-toolbar { width: max-content !important; }
+.bcf-rows .subform-repeatable-group > .btn-toolbar .btn { position: static !important; inset: auto !important; transform: none !important; margin: 0 0 0 .25rem !important; width: auto !important; height: auto !important; min-height: 0 !important; padding: .2rem .45rem !important; line-height: 1.2; border-radius: .25rem !important; }
+.bcf-row-head { all: unset; box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem .75rem; width: 100%; padding: .65rem 13rem .65rem 0; cursor: pointer; line-height: 1.35; }
+.bcf-row-head:focus-visible { outline: 2px solid var(--template-link-color, #2a69b8); outline-offset: 2px; border-radius: .25rem; }
+.bcf-row-arrow { flex: none; width: .55rem; height: .55rem; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; transform: rotate(45deg); margin: 0 .2rem .15rem; transition: transform .15s; opacity: .7; }
+.bcf-row-folded .bcf-row-arrow { transform: rotate(-45deg); }
+.bcf-row-type { font-size: .78rem; text-transform: uppercase; letter-spacing: .03em; color: var(--template-bg-dark-60, #6c757d); }
+.bcf-row-title { font-size: 1rem; }
+.bcf-row-detail, .bcf-row-where { font-size: .85rem; color: var(--template-bg-dark-60, #6c757d); }
+.bcf-row-key { font-size: .8rem; }
+.bcf-row-key:empty, .bcf-row-detail:empty { display: none; }
+.bcf-rows .bcf-row-folded > .control-group { display: none !important; }
+.bcf-rows .bcf-row-folded { padding-bottom: 0; }
+.bcf-rows .bcf-row-hidden { display: none !important; }
+@media (max-width: 767px) { .bcf-row-head { padding-inline-end: 0; padding-top: 2.6rem; } }
+.bcf-rows .subform-repeatable-group > .btn-toolbar .btn span { padding: 0 !important; }
+.bcf-rows .subform-repeatable-group > .btn-toolbar .btn.group-move-up,
+.bcf-rows .subform-repeatable-group > .btn-toolbar .btn.group-move-down { margin-block-start: 0 !important; }

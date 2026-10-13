@@ -249,13 +249,15 @@ Off by default. The panel appears on store category pages with at least *Minimum
 | Side bar width, font size, accent, background and text colour | 260 px, 15 px, theme | Empty colours follow the Gridbox theme (`--primary` for the accent). |
 | Texts on the site | *(empty)* | Panel title, button, *N products*, *Show N products*, *Clear all*, *Apply*, *No products…*, *Show more / less*, *From / To*, titles of the price, sale, stock and features filters. Empty = the text of the site language (English, German, Polish, French, Czech, Dutch). `%d` = the number of products. |
 
+**The list in the settings (1.6.6)** is compact: every filter is one line with its summary and opens with a click; *Open all*, *Fold all* and a search above the list.
+
 **Each filter:**
 
 | Field | Description |
 |---|---|
 | Filter by | *Price*, *Gridbox field*, *Technical parameter (from the description)*, *Features (words in the description)*, *On sale*, *In stock*. |
 | Title | Empty = automatic (the field label, or the name of the parameter in the site language). |
-| Gridbox field | A list, radio, checkbox or text field of the store. |
+| Gridbox field | A list, radio, checkbox, text or **link** field of the store (a link field: its label, e.g. a manufacturer with its own page — 1.6.6). No field chosen, or one that does not exist on this site: the field whose name is the title of the filter. |
 | Parameter | Tick one or more (*Select all / Clear all*): voltage (V), current (A), power (W), apparent power (VA), frequency (Hz), resistance (Ω), capacitance (F), temperature (°C, °F converted), **pressure** (Pa, hPa, kPa, mbar, bar, psi — one parameter), **relative humidity** (%RH), **air velocity** (m/s), **flow** (m³/h, l/min), **concentration** (ppm), **irradiance** (W/m²), sound level (dB), illuminance (lx), energy (Wh), battery capacity (Ah), length (m), measurement category (CAT), protection rating (IP). Each ticked parameter is a filter of its own on the site, shown only in categories whose products have it. |
 | Minimum products with the parameter | `2` — a parameter appears in a category when at least this many of its products have it. |
 | Only in categories | The filter appears only in these categories and their subcategories (any filter type). Empty = everywhere. |

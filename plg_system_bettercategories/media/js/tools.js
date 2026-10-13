@@ -118,7 +118,7 @@
         const text = await chosen.text();
         const r = await call(url, { bc_action: 'import', scope: filtersOnly ? 'filters' : (stylesOnly ? 'styles' : 'all'), data: text }, false);
         say(filtersOnly
-          ? fill(T('IMPORT_FILTERS_DONE', 'Added %added% and replaced %replaced% filters. Reloading…'), r)
+          ? fill(T('IMPORT_FILTERS_DONE', 'Filters added: %added%, replaced: %replaced%, removed: %removed%. Reloading…'), r)
           : fill(T('IMPORT_DONE', 'Imported %imported% settings. Reloading…'), r));
         setTimeout(() => window.location.reload(), 900);
       } catch (e) { fail(e); }
@@ -207,9 +207,117 @@
     });
   }
 
+  // ---------------------------------------------------------------- compact list of filters
+  // Every filter row of the list folds to one line with a summary (type, title, options, name in the
+  // address, categories); a click opens it. Above the list: fold / open all and a search. Rows start
+  // folded; a row added with "+" starts open.
+  const optText = (select) => select ? [...select.selectedOptions].filter((o) => o.value !== '').map((o) => o.textContent.replace(/^[\s\-–—]+|\s*\(\w+\)$/g, '').replace(/^.*?:\s*[\s\-–—]*/, '').trim()).filter(Boolean) : [];
+
+  function rowSummary(row) {
+    const q = (name) => row.querySelector('[name$="[' + name + ']"]') || row.querySelector('[name$="[' + name + '][]"]');
+    const type = q('type');
+    const typeText = type && type.selectedOptions[0] ? type.selectedOptions[0].textContent.trim() : '';
+    const t = type ? type.value : '';
+    let title = (q('label') || {}).value || '';
+    let detail = '';
+    if (t === 'field') {
+      const field = optText(q('field'))[0] || '';
+      title = title || field;
+      detail = field && field !== title ? field : '';
+    } else if (t === 'param') {
+      const dims = [...row.querySelectorAll('.bcf-dims input:checked')].map((c) => (c.closest('div,label') || c).textContent.trim()).filter(Boolean);
+      detail = dims.length > 3 ? dims.slice(0, 3).join(', ') + ' +' + (dims.length - 3) : dims.join(', ');
+    } else if (t === 'feature') {
+      const lines = ((q('features') || {}).value || '').split(/\r?\n/).filter((l) => l.trim() && !l.trim().startsWith('#'));
+      detail = fill(T('ROWS_OPTIONS', '%count% options'), { count: lines.length });
+    }
+    const key = ((q('key') || {}).value || '').trim();
+    const only = optText(row.querySelector('select[name$="[categories][]"]'));
+    const not = optText(row.querySelector('select[name$="[exclude][]"]'));
+    const where = only.length ? T('ROWS_ONLY', 'only') + ': ' + only.join(', ') : T('ROWS_EVERYWHERE', 'all categories');
+    return { type: typeText, title: title || T('ROWS_AUTO', '(automatic title)'), detail, key: key ? '?f-' + key : '', where: where + (not.length ? ' · ' + T('ROWS_NOT', 'not') + ': ' + not.join(', ') : '') };
+  }
+
+  function foldRow(row, open) {
+    row.classList.toggle('bcf-row-folded', !open);
+    const head = row.querySelector(':scope > .bcf-row-head');
+    if (head) head.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+
+  function setupRow(row, open) {
+    if (!row || row.bcfHead) return;
+    const head = document.createElement('button');
+    head.type = 'button';
+    head.className = 'bcf-row-head';
+    head.innerHTML = '<span class="bcf-row-arrow" aria-hidden="true"></span><span class="bcf-row-type"></span><strong class="bcf-row-title"></strong>'
+      + '<span class="bcf-row-detail"></span><code class="bcf-row-key"></code><span class="bcf-row-where"></span>';
+    row.insertBefore(head, row.firstChild);
+    row.bcfHead = head;
+    const paint = () => {
+      const s = rowSummary(row);
+      head.querySelector('.bcf-row-type').textContent = s.type;
+      head.querySelector('.bcf-row-title').textContent = s.title;
+      head.querySelector('.bcf-row-detail').textContent = s.detail;
+      head.querySelector('.bcf-row-key').textContent = s.key;
+      head.querySelector('.bcf-row-where').textContent = s.where;
+      row.dataset.bcfSearch = [s.type, s.title, s.detail, s.key, s.where].join(' ').toLowerCase();
+    };
+    head.addEventListener('click', () => foldRow(row, row.classList.contains('bcf-row-folded')));
+    row.addEventListener('change', paint);
+    row.addEventListener('input', paint);
+    paint();
+    // the fancy category lists fill their selection a moment later
+    setTimeout(paint, 400);
+    foldRow(row, open);
+  }
+
+  function initFilterRows() {
+    const list = [...document.querySelectorAll('joomla-field-subform')].find((x) => (x.getAttribute('name') || '').endsWith('[filters_list]'));
+    if (!list || list.dataset.bcfRows) return;
+    list.dataset.bcfRows = '1';
+    list.classList.add('bcf-rows');
+    const rows = () => [...list.querySelectorAll('.subform-repeatable-group')].filter((g) => g.closest('joomla-field-subform') === list);
+    rows().forEach((r) => setupRow(r, false));
+
+    const bar = document.createElement('div');
+    bar.className = 'bcf-rows-bar';
+    bar.innerHTML = '<input type="search" class="form-control form-control-sm bcf-rows-search">'
+      + '<button type="button" class="btn btn-sm btn-outline-secondary" data-bcf-fold="0"></button>'
+      + '<button type="button" class="btn btn-sm btn-outline-secondary" data-bcf-fold="1"></button><span class="bcf-rows-count small text-muted"></span>';
+    const search = bar.querySelector('input');
+    search.placeholder = T('ROWS_SEARCH', 'Find a filter…');
+    search.setAttribute('aria-label', search.placeholder);
+    bar.querySelector('[data-bcf-fold="0"]').textContent = T('ROWS_OPEN_ALL', 'Open all');
+    bar.querySelector('[data-bcf-fold="1"]').textContent = T('ROWS_FOLD_ALL', 'Fold all');
+    const count = bar.querySelector('.bcf-rows-count');
+    const filter = () => {
+      const words = search.value.toLowerCase().split(/\s+/).filter(Boolean);
+      let shown = 0;
+      rows().forEach((r) => {
+        const hit = words.every((w) => (r.dataset.bcfSearch || '').includes(w));
+        r.classList.toggle('bcf-row-hidden', !hit);
+        shown += hit ? 1 : 0;
+      });
+      count.textContent = fill(T('ROWS_COUNT', '%shown% of %all% filters'), { shown, all: rows().length });
+    };
+    search.addEventListener('input', filter);
+    bar.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-bcf-fold]');
+      if (b) rows().forEach((r) => { if (!r.classList.contains('bcf-row-hidden')) foldRow(r, b.dataset.bcfFold === '0'); });
+    });
+    list.parentNode.insertBefore(bar, list);
+    filter();
+    document.addEventListener('subform-row-add', (e) => {
+      const row = (e.detail && e.detail.row) || e.target;
+      if (row && row.closest && row.closest('joomla-field-subform') === list) { setupRow(row, true); filter(); }
+    });
+    document.addEventListener('subform-row-remove', () => setTimeout(filter, 0));
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     if (!form()) return;
     initDims(form());
+    initFilterRows();
     document.addEventListener('subform-row-add', (e) => initDims((e.detail && e.detail.row) || e.target));
     document.querySelectorAll('[data-bctools]').forEach(setup);
     const label = window.Joomla && Joomla.Text ? Joomla.Text._('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_HELP') : '';
