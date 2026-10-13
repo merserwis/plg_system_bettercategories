@@ -27,8 +27,14 @@ final class Filters
 {
     public const TYPES     = ['price', 'field', 'param', 'feature', 'sale', 'stock'];
 
-    /** Gridbox field types a filter can use (url: a link field — its label, e.g. a manufacturer with its own page) */
-    public const FIELD_TYPES = ['select', 'radio', 'checkbox', 'text', 'url'];
+    /** Gridbox field types a filter can use (url, field-button: a link — its label, e.g. a manufacturer with its own page) */
+    public const FIELD_TYPES = ['select', 'radio', 'checkbox', 'text', 'url', 'field-button'];
+
+    /** Gridbox field types whose texts are read with the title and description (parameters, features) */
+    public const TEXT_FIELD_TYPES = ['textarea', 'text'];
+
+    /** What the field filters found (shown in data-bcf-diag of the panel): title => "#id type products" or "no field" */
+    public array $diag = [];
     public const POSITIONS = ['sidebar_left', 'sidebar_right', 'column_top', 'column_bottom', 'top', 'drawer', 'after_categories', 'before_item', 'after_item'];
 
     /** Unit symbol of each parameter kind. */
@@ -138,9 +144,9 @@ final class Filters
                 $field = $fields[$def['field']] ?? null;
                 if (!$field && $def['label'] !== '') {
                     // no field chosen (or one of another site, e.g. from a settings file): the field of
-                    // the store with the same name as the title of the filter
+                    // the store with the same name as the title of the filter ("Producent", "Producent:")
                     foreach ($fields as $candidate) {
-                        if (mb_strtolower(trim((string) $candidate->label)) === mb_strtolower($def['label'])) {
+                        if (self::sameName((string) $candidate->label, $def['label'])) {
                             $field        = $candidate;
                             $def['field'] = (int) $candidate->id;
                             break;
@@ -148,8 +154,11 @@ final class Filters
                     }
                 }
                 if (!$field) {
+                    $this->diag[$def['label'] !== '' ? $def['label'] : 'field ' . $def['field']] = 'no field; store fields: '
+                        . implode(', ', array_map(fn ($f) => $f->label . ' (' . $f->field_type . ')', array_slice($fields, 0, 12)));
                     continue;
                 }
+                $this->diag[$def['label'] !== '' ? $def['label'] : (string) $field->label] = '#' . $field->id . ' ' . $field->field_type;
                 $def['label']     = $def['label'] !== '' ? $def['label'] : (string) $field->label;
                 $def['fieldType'] = (string) $field->field_type;
                 // option key => [slug, title], in Gridbox's order
@@ -245,6 +254,14 @@ final class Filters
         }
 
         return $out;
+    }
+
+    /** Two field names alike: letter case, spaces (also non-breaking), a trailing ":" or "*" do not count. */
+    public static function sameName(string $a, string $b): bool
+    {
+        $n = fn (string $s) => mb_strtolower(trim(preg_replace('/[\s\x{00A0}]+/u', ' ', $s) ?? $s, " \t\n\r:*"));
+
+        return $n($a) !== '' && $n($a) === $n($b);
     }
 
     /** Category IDs of a setting (a list, or text "1,2,3"). */
@@ -563,7 +580,7 @@ final class Filters
                     $keys = match ($def['fieldType']) {
                         'checkbox' => (array) (json_decode($value, true) ?: []),
                         // a link field: {"label": "Sauermann", "link": "index.php?…"} — the label is the value
-                        'url'      => [(string) ((json_decode($value, true) ?: [])['label'] ?? '')],
+                        'url', 'field-button' => [(string) ((json_decode($value, true) ?: [])['label'] ?? '')],
                         default    => [$value],
                     };
                     foreach ($keys as $key) {
@@ -572,7 +589,7 @@ final class Filters
                             continue;
                         }
                         if (!isset($def['options'][$key])) {
-                            if ($def['fieldType'] !== 'text' && $def['fieldType'] !== 'url') {
+                            if (!in_array($def['fieldType'], ['text', 'url', 'field-button'], true)) {
                                 continue;
                             }
                             // a text or link field: every distinct text is an option
@@ -581,6 +598,14 @@ final class Filters
                         $products[(int) $row->page_id]['fields'][$fieldId][] = $def['options'][$key][0];
                     }
                     unset($def);
+                }
+            }
+        }
+        foreach ($byField as $fieldId => $list) {
+            foreach ($list as $i) {
+                $name = $defs[$i]['label'] !== '' ? $defs[$i]['label'] : 'field ' . $fieldId;
+                if (isset($this->diag[$name])) {
+                    $this->diag[$name] .= ' ' . count(array_filter($products, fn ($p) => !empty($p['fields'][$fieldId]))) . '/' . count($products);
                 }
             }
         }
@@ -618,12 +643,27 @@ final class Filters
         if ($stale) {
             $db = $this->plugin->db();
             foreach (array_chunk($stale, 100) as $chunk) {
+                // the description is often kept in fields of the product (Gridbox apps: "Features",
+                // "Technical data" as text areas), not in the page itself
+                $more = [];
+                try {
+                    $fq = $db->createQuery()
+                        ->select($db->quoteName(['page_id', 'value']))
+                        ->from($db->quoteName('#__gridbox_page_fields'))
+                        ->where($db->quoteName('page_id') . ' IN (' . implode(',', $chunk) . ')')
+                        ->where($db->quoteName('field_type') . ' IN (' . implode(',', array_map([$db, 'quote'], self::TEXT_FIELD_TYPES)) . ')');
+                    foreach ($db->setQuery($fq)->loadObjectList() ?: [] as $f) {
+                        $more[(int) $f->page_id] = ($more[(int) $f->page_id] ?? '') . "\n" . (string) $f->value;
+                    }
+                } catch (\Throwable $e) {
+                    $more = [];
+                }
                 $query = $db->createQuery()
                     ->select($db->quoteName(['id', 'title', 'intro_text', 'params']))
                     ->from($db->quoteName('#__gridbox_pages'))
                     ->where($db->quoteName('id') . ' IN (' . implode(',', $chunk) . ')');
                 foreach ($db->setQuery($query)->loadObjectList() ?: [] as $row) {
-                    $text = self::plainText((string) $row->title . "\n" . (string) $row->intro_text . "\n" . (string) $row->params);
+                    $text = self::plainText((string) $row->title . "\n" . (string) $row->intro_text . "\n" . (string) $row->params . ($more[(int) $row->id] ?? ''));
                     $byDim = [];
                     foreach (Params::extract($text, false)['params'] as $p) {
                         if (count($byDim[$p['dim']] ?? []) < 60) {
@@ -918,7 +958,7 @@ final class Filters
 
         if ($def['sort'] === 'count') {
             uasort($out, fn ($a, $b) => $b['count'] <=> $a['count'] ?: strnatcasecmp($a['label'], $b['label']));
-        } elseif ($def['sort'] === 'alpha' || ($def['sort'] === 'auto' && $def['type'] === 'field' && in_array($def['fieldType'] ?? '', ['text', 'url'], true))) {
+        } elseif ($def['sort'] === 'alpha' || ($def['sort'] === 'auto' && $def['type'] === 'field' && in_array($def['fieldType'] ?? '', ['text', 'url', 'field-button'], true))) {
             uasort($out, fn ($a, $b) => strnatcasecmp($a['label'], $b['label']));
         }
 

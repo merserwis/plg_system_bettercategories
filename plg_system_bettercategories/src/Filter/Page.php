@@ -396,7 +396,9 @@ final class Page
 
         return '<div class="bcf-panel ' . $classes . '"' . $style . ' data-bcf-panel>'
             . '<div class="bcf-backdrop" data-bcf-close></div>'
-            . '<form class="bcf-form" id="bcf-form" method="get" action="' . $e(Uri::getInstance()->toString(['path'])) . '" data-bcf-form aria-label="' . $t('filters_title', 'Filters') . '">'
+            . '<form class="bcf-form" id="bcf-form" method="get" action="' . $e(Uri::getInstance()->toString(['path'])) . '" data-bcf-form aria-label="' . $t('filters_title', 'Filters') . '"'
+            // what the field filters found (field, type, products with a value): checking a site from outside
+            . ($this->filters->diag ? ' data-bcf-diag="' . $e(implode(' | ', array_map(fn ($k, $v) => $k . ': ' . $v, array_keys($this->filters->diag), $this->filters->diag))) . '"' : '') . '>'
             . '<div class="bcf-head"><span class="bcf-title">' . $t('filters_title', 'Filters') . '</span>'
             . '<button type="button" class="bcf-close" data-bcf-close aria-label="' . $t('filters_label_close', 'Close') . '">'
             . '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>'

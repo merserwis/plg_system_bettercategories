@@ -2,6 +2,14 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.6.7 — 2026-10-13
+
+### 🐞 Filters
+
+- **Descriptions kept in product fields are read.** Technical parameters and features were read from the title, the introduction and the page of a product only. Shops whose product pages show the description from fields of the product (Gridbox app fields — on merserwis.pl *Features*, *Technical data* and *Equipment* are text areas) had most of the description left out: the flue gas analysers showed 5 boilers instead of 11, two gases instead of seven. Text area and text fields of the products are now read too.
+- **The field found by its name, more tolerant.** A filter of a Gridbox field without a chosen field finds the store field by its name also when the name has a colon, an asterisk or other spaces (“Producent:”), and link fields of the *button* kind (label + address) count as link fields too.
+- **A check from outside.** The filter panel names in `data-bcf-diag` the Gridbox field each field filter found (number, type, products with a value) — or that none was found, with the names of the store fields.
+
 ## 1.6.6 — 2026-10-13
 
 ### ✨ Filters
