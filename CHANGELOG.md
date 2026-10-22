@@ -2,6 +2,29 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.7.0 — 2026-10-22
+
+### 📝 Category descriptions (moved from MerTools)
+
+- **The description of a category on its page, now in this plugin** (new tab *Category description*). Gridbox fills its description block only inside the category header; a block moved elsewhere in the category layout (on merserwis.pl: under the products) kept the text “Category Description” and needed MerTools to fill it. Better Categories does it now — and MerTools 1.4.0 no longer does.
+- **Where it goes:** where the category layout has it (as before: in the header, or in the moved block), or **under the category header, above or below the products, at the top of the page, or before / after any Gridbox element**. Always once on the page: the other description blocks are emptied, the description moved out of the header leaves no empty frame. At the same place as the subcategories, the description comes first. Also in categories without subcategories, and on the store home page (the description of the store).
+- **Only the beginning, with “Read more”** (as on the manufacturer pages): a height of your own (and one for phones), the last lines fading out (a mask: any background, also dark mode), a button filled, outlined or as a text link, on the left, centre or right, in the theme's accent colour or one of your own, its texts in the language of the site or your own, and “Show less” to fold it again (back up to the start of the description). A description only a little taller than the height is shown whole, without a button. An address with `#anchor` inside the text opens it; printed, the whole text.
+- **Without harm to search engines:** the whole text is in the HTML the server sends, once; folding only limits its height in the browser (no `display:none`, nothing loaded later), the button is a `<button>` (no new address), without JavaScript the whole text is shown. *On the first page only* (on): the next pages of a product list (`?page=2`) leave the long text out, so they do not repeat it.
+- **A lead of its own** (*Lead of its own*): the beginning of the description under the category header (or above the products, or at the top), the rest at the position chosen — e.g. under the products, folded. Split at a horizontal line or at a paragraph holding only a marker (`---` by default; Gridbox's description editor has no button for a line), or simply after the first paragraph — no description has to be edited. Each part is on the page once, the line or marker is not shown; a description without one is shown whole.
+- **Structured data:** a schema.org `CollectionPage` with the name of the category, its description as plain text (up to 500 characters, without the marker) and the canonical address of the page — only where the description is shown, and in *Automatic* only when the page has no `CollectionPage` of its own (e.g. from Gridbox's SEO settings).
+- The styles of the description go into the head of the page, once.
+- **Tidy spacing** (on for new sites): empty paragraphs (`<p>&nbsp;</p>`) and line breaks at the start or end of headings and paragraphs are taken off, and headings, paragraphs and lists get even spacing instead. The text itself is not changed.
+- Tag, author and search pages (they use the category layout too) no longer show the placeholder “Category Description”.
+
+### 🗂 Gridbox Categories element
+
+- **A click on the whole row opens the subcategories** of a category in Gridbox's *Categories* element instead of going to its page, highlighted on hover (*Navigation and SEO* → *Gridbox Categories element: open with a click on the row*), on every page with that element. Also moved from MerTools.
+
+### 🔁 Moving over
+
+- At the update, when MerTools had *Category pages* on, both are switched on here, with the description where the layout has it and the spacing as MerTools showed it — nothing to set by hand. The order of the two updates does not matter (MerTools 1.4.0 warns while Better Categories is older than 1.7.0).
+- Checked on a copy of the shop with Gridbox 2.20 and MerTools 1.3.1 / 1.4.0: the description block under the products, the store home page, a category without subcategories, the next page of a list, filtered lists, search, every position next to the subcategories, folding and unfolding in Chromium (desktop and phone).
+
 ## 1.6.13 — 2026-10-13
 
 ### 🐛 Price fields of the filters

@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.6.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.7.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below — which shoppers can **filter by price, product fields, technical parameters and features** read from the descriptions.
@@ -29,6 +29,7 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **Faster first view (new in 1.3.0):** thumbnails can be generated for the whole store with one click, and the first row of tiles loads with high priority (better LCP in PageSpeed).
 * **Settings file (new in 1.3.0):** export all settings or only the styles to a JSON file and import them on another site.
 * **6 administrator languages:** English (default), German, Polish, French, Czech and Dutch. The language follows the Joomla administrator language; for other languages the texts are in English. Right-to-left sites get a mirrored list: side panels, toggle buttons and the back arrow follow the writing direction.
+* **Category descriptions (new in 1.7.0):** the description of each category on its page — where the category layout has it, or under the header, above or below the products, before or after any element — once per page, optionally only its beginning with a *Read more* button, or split into a short lead (e.g. under the header) and the rest (e.g. under the products), with schema.org `CollectionPage` data. The whole text stays in the HTML, so search engines read it as before. Moved here from MerTools.
 * **Product filters (new in 1.5.0):** price, Gridbox list fields, **technical parameters read from the product descriptions** (1000 V = 1 kV, CAT IV, IP67, from–to ranges) and **features** found in them (*Bluetooth*, *True RMS*), on sale, in stock — in a side bar, one row above the products, a side panel behind a *Filters* button or next to any Gridbox element; a side panel on phones. Counts at every option, chips of the chosen filters, instant results without reloading, linkable addresses, `noindex` for filtered lists. Off by default. See [Filters](#filters).
 * **Reset to defaults (new in 1.5.0):** one button brings back the settings of a fresh installation, keeping this site's store IDs and filters if you wish.
 * **Help tooltips (new in 1.4.1):** a “?” beside every option shows its description on hover, keyboard focus or a click.
@@ -235,6 +236,28 @@ The live preview shows the level of the category chosen in it.
 | Link back to the parent category / text | Yes / `Back to %s` | `%s` = the parent category (or the store on top-level categories). |
 | Structured data: category list | Yes | The listed categories as a schema.org `ItemList` (JSON-LD). |
 | Structured data: breadcrumbs | Automatic | A schema.org `BreadcrumbList`: store → parent categories → current category. *Automatic* adds it only when the page has no breadcrumb data of its own (e.g. from a breadcrumbs module), so there are never two; *Yes* always, *No* never. |
+| Gridbox Categories element: open with a click on the row | No | In Gridbox's *Categories* element a category with subcategories opens and closes them with a click anywhere on its row instead of going to its page; the row is highlighted on hover. Any page with that element. (From MerTools 1.3, switched on at the update when it was on there.) |
+
+### Category description
+
+| Option | Default | Description |
+|---|---|---|
+| Category description | No | The description of the category on its page (of the store on the store home page). Gridbox fills its description block only in the category header; a block moved elsewhere in the category layout keeps the placeholder “Category Description” — with this on it gets the description too. Always once on the page. Also on categories without subcategories. Switched on at the update when MerTools had *Category pages* on. |
+| Position on the page | Where the category layout has it | Or under the category header, above / below the product list, at the start of the page content, before / after a Gridbox element (its ID). At the same place as the subcategories, the description comes first. A missing element: above the products. |
+| On the first page only | Yes | The next pages of the product list (`?page=2…`) leave the description out (no repeated long text). |
+| Structured data: category description | Automatic | A schema.org `CollectionPage`: the category name, its description as plain text (up to 500 characters) and the page address. *Automatic* adds it only when the page has none of its own. |
+| Tidy the spacing | Yes (No when moved over from MerTools) | Empty paragraphs and line breaks at the start or end of headings and paragraphs taken off; even spacing of headings, paragraphs and lists instead. |
+| Space above / below (px) | 25 / 0 | |
+| Lead of its own | No | Splits the description: the lead goes to its own place, the rest to *Position on the page*. *At a horizontal line or the marker* — a line (`<hr>`, via *Source* in Gridbox's editor) or a paragraph holding only the marker; *After the first paragraph* — the first paragraph with the heading above it, no editing needed. Without a split point the description is shown whole. |
+| Marker | `---` | The text of the paragraph that ends the lead (not shown), e.g. `[więcej]`. |
+| Position of the lead / space above / below (px) | Under the category header / 0 / 24 | Or above the products, or at the start of the page. The lead is always shown whole. |
+| Show only the beginning | No | The description up to the height below, fading out, with a button that opens the rest. A description only a little taller is shown whole. |
+| Height / on phones (px) | 180 / 0 | 0 = the same on phones (screens up to 767 px). |
+| Fade out | Yes | A mask over the last lines — any background, dark mode too. |
+| Text of the button / Fold back / its text | empty / Yes / empty | Empty = in the language of the site (*Read more* / *Show less*, *Rozwiń opis* / *Zwiń opis*…). Without fold back the button goes once the text is open. |
+| Button style / alignment / colours | Filled / centre / theme | Filled, outline or text link; empty colours = the accent colour of the Gridbox theme. |
+
+**Search engines:** the whole description is in the HTML the server sends, once (moved, not copied); folding only limits its height in the browser — no `display:none`, nothing loaded later; the button is a `<button>`, not a link, so it adds no address; without JavaScript the whole text is shown. Google indexes such text as any other (mobile-first indexing).
 
 ### Filters
 
@@ -361,6 +384,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.7.0** — Category descriptions moved here from MerTools: where the layout has them or at a place of your own, once per page, optionally only the beginning with *Read more* or a lead of its own above the products, `CollectionPage` structured data (SEO-safe: the whole text stays in the HTML). Gridbox Categories element: open with a click on the row.
 * **1.6.1** — Languages: English, German, Polish, French, Czech and Dutch (Ukrainian removed); German and Polish texts reviewed.
 * **1.6.0** — Many technical parameters in one filter (select all / clear all), shown only where the products have them; filters limited to categories; HVACR parameters: humidity, air velocity, flow, ppm, irradiance, pressure in any unit, °F.
 * **1.5.2** — Technical parameters: numbers of standards (PN-EN 62446…), model names (C-4A) and reversed table ranges are no longer read as values.

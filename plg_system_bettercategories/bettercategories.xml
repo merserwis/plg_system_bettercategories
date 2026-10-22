@@ -3,10 +3,10 @@
     <name>plg_system_bettercategories</name>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
-    <creationDate>2026-10-13</creationDate>
+    <creationDate>2026-10-22</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.6.13</version>
+    <version>1.7.0</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -322,6 +322,86 @@
                     <option value="yes">JYES</option>
                     <option value="no">JNO</option>
                 </field>
+                <field name="gb_categories_rows" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_GB_ROWS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_GB_ROWS_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+            </fieldset>
+            <fieldset name="catdesc" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_DESC" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_DESC_DESC">
+                <field name="desc_enabled" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_ENABLED_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_ENABLED_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="desc_seo_note" type="note" class="alert alert-info" showon="desc_enabled:1"
+                    label="PLG_SYSTEM_BETTERCATEGORIES_DESC_SEO_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_SEO_NOTE" />
+                <field name="desc_position" type="list" default="layout" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_POSITION_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_POSITION_DESC">
+                    <option value="layout">PLG_SYSTEM_BETTERCATEGORIES_DESC_POSITION_LAYOUT</option>
+                    <option value="after_intro">PLG_SYSTEM_BETTERCATEGORIES_POSITION_AFTER_INTRO</option>
+                    <option value="before_products">PLG_SYSTEM_BETTERCATEGORIES_POSITION_BEFORE_PRODUCTS</option>
+                    <option value="after_products">PLG_SYSTEM_BETTERCATEGORIES_POSITION_AFTER_PRODUCTS</option>
+                    <option value="page_top">PLG_SYSTEM_BETTERCATEGORIES_POSITION_PAGE_TOP</option>
+                    <option value="before_item">PLG_SYSTEM_BETTERCATEGORIES_POSITION_BEFORE_ITEM</option>
+                    <option value="after_item">PLG_SYSTEM_BETTERCATEGORIES_POSITION_AFTER_ITEM</option>
+                </field>
+                <field name="desc_item_id" type="text" default="" hint="item-1500368728" label="PLG_SYSTEM_BETTERCATEGORIES_ITEM_ID_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ITEM_ID_DESC" showon="desc_enabled:1[AND]desc_position:before_item,after_item" />
+                <field name="desc_first_page" type="radio" layout="joomla.form.field.radio.switcher" default="1" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_FIRST_PAGE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_FIRST_PAGE_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="desc_schema" type="list" default="auto" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_SCHEMA_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_SCHEMA_DESC">
+                    <option value="auto">PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_AUTO</option>
+                    <option value="yes">JYES</option>
+                    <option value="no">JNO</option>
+                </field>
+                <field name="desc_tidy" type="radio" layout="joomla.form.field.radio.switcher" default="1" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_TIDY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_TIDY_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="desc_margin_top" type="number" default="25" min="-200" max="400" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_MARGIN_TOP_LABEL" />
+                <field name="desc_margin_bottom" type="number" default="0" min="-200" max="400" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_MARGIN_BOTTOM_LABEL" />
+                <field name="desc_split_spacer" type="spacer" hr="true" showon="desc_enabled:1" />
+                <field name="desc_split" type="list" default="off" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_SPLIT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_SPLIT_DESC">
+                    <option value="off">PLG_SYSTEM_BETTERCATEGORIES_DESC_SPLIT_OFF</option>
+                    <option value="marker">PLG_SYSTEM_BETTERCATEGORIES_DESC_SPLIT_MARKER</option>
+                    <option value="paragraph">PLG_SYSTEM_BETTERCATEGORIES_DESC_SPLIT_PARAGRAPH</option>
+                </field>
+                <field name="desc_split_marker" type="text" default="---" showon="desc_enabled:1[AND]desc_split:marker" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_SPLIT_MARKER_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_SPLIT_MARKER_DESC" />
+                <field name="desc_lead_position" type="list" default="after_intro" showon="desc_enabled:1[AND]desc_split:marker,paragraph" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_LEAD_POSITION_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_LEAD_POSITION_DESC">
+                    <option value="after_intro">PLG_SYSTEM_BETTERCATEGORIES_POSITION_AFTER_INTRO</option>
+                    <option value="before_products">PLG_SYSTEM_BETTERCATEGORIES_POSITION_BEFORE_PRODUCTS</option>
+                    <option value="page_top">PLG_SYSTEM_BETTERCATEGORIES_POSITION_PAGE_TOP</option>
+                </field>
+                <field name="desc_lead_margin_top" type="number" default="0" min="-200" max="400" showon="desc_enabled:1[AND]desc_split:marker,paragraph" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_LEAD_MARGIN_TOP_LABEL" />
+                <field name="desc_lead_margin_bottom" type="number" default="24" min="-200" max="400" showon="desc_enabled:1[AND]desc_split:marker,paragraph" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_LEAD_MARGIN_BOTTOM_LABEL" />
+                <field name="desc_fold_spacer" type="spacer" hr="true" showon="desc_enabled:1" />
+                <field name="desc_fold" type="radio" layout="joomla.form.field.radio.switcher" default="0" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_FOLD_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_FOLD_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="desc_height" type="number" default="180" min="40" max="2000" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_HEIGHT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_HEIGHT_DESC" />
+                <field name="desc_height_mobile" type="number" default="0" min="0" max="2000" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_HEIGHT_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_HEIGHT_MOBILE_DESC" />
+                <field name="desc_fade" type="radio" layout="joomla.form.field.radio.switcher" default="1" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_FADE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_FADE_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="desc_more_text" type="text" default="" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_MORE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_MORE_DESC" />
+                <field name="desc_less" type="radio" layout="joomla.form.field.radio.switcher" default="1" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_LESS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_LESS_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="desc_less_text" type="text" default="" showon="desc_enabled:1[AND]desc_fold:1[AND]desc_less:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_LESS_TEXT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_MORE_DESC" />
+                <field name="desc_button_style" type="list" default="filled" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_STYLE_LABEL">
+                    <option value="filled">PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_FILLED</option>
+                    <option value="outline">PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_OUTLINE</option>
+                    <option value="link">PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_LINK</option>
+                </field>
+                <field name="desc_button_align" type="list" default="center" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_ALIGN_LABEL">
+                    <option value="left">PLG_SYSTEM_BETTERCATEGORIES_ALIGN_LEFT</option>
+                    <option value="center">PLG_SYSTEM_BETTERCATEGORIES_ALIGN_CENTER</option>
+                    <option value="right">PLG_SYSTEM_BETTERCATEGORIES_ALIGN_RIGHT</option>
+                </field>
+                <field name="desc_button_bg" type="color" default="" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_BG_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_BG_DESC" />
+                <field name="desc_button_color" type="color" default="" showon="desc_enabled:1[AND]desc_fold:1[AND]desc_button_style!:link" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_COLOR_DESC" />
             </fieldset>
             <fieldset name="filters" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_DESC">
                 <field name="filters_enabled" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ENABLED_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ENABLED_DESC">

@@ -29,6 +29,7 @@ use Joomla\CMS\Uri\Uri;
 use Joomla\Database\DatabaseInterface;
 use Joomla\Event\Priority;
 use Joomla\Event\SubscriberInterface;
+use Merserwis\Plugin\System\BetterCategories\Description\Description;
 use Merserwis\Plugin\System\BetterCategories\Filter\Page;
 use Merserwis\Plugin\System\BetterCategories\Icon\Icons;
 
@@ -40,7 +41,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.6.13';
+    private const VERSION    = '1.7.0';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -75,7 +76,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const THUMB_DIR    = 'media/plg_system_bettercategories/thumbs';
 
     /** Settings that belong to one site (store IDs, category IDs, element IDs, filters of its fields): kept by a "styles only" import and, on request, by a reset. */
-    private const SITE_KEYS = ['app_ids', 'item_id', 'category_images', 'filters_list', 'filters_item_id'];
+    private const SITE_KEYS = ['app_ids', 'item_id', 'category_images', 'filters_list', 'filters_item_id', 'desc_item_id'];
 
     /** Seconds one request may spend creating thumbnails (the administrator "generate" action allows more). */
     private float $thumbBudget = 1.5;
@@ -133,14 +134,20 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
 
         $input = $app->getInput();
-        if ($input->getCmd('option') !== 'com_gridbox' || $input->getCmd('view') !== 'blog'
-            || $input->getCmd('tmpl') === 'component') {
+        if ($input->getCmd('tmpl') === 'component') {
             return;
         }
-
         // Use the settings saved in the database, not the ones handed to the plugin at start-up: some
         // sites (device-specific extensions/caches) pass phones an older copy of plugin parameters.
         $this->params = $this->savedParams() ?? $this->params;
+        // Gridbox's Categories element can be on any page
+        if ((int) $this->params->get('gb_categories_rows', 0)) {
+            $this->categoryRows($app);
+        }
+        if ($input->getCmd('option') !== 'com_gridbox' || $input->getCmd('view') !== 'blog') {
+            return;
+        }
+
         $this->alignProductCards($app, $input);
         // a filtered list is never hidden under the subcategories
         if ($this->params->get('filters_enabled', 0) && $this->params->get('hide_products', 0) && Page::hasFilters($input)) {
@@ -148,14 +155,20 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $this->params->set('hide_products', 0);
         }
 
-        // Search, filters, tag and author listings stay as Gridbox renders them.
+        // Search, filters, tag and author listings stay as Gridbox renders them (but for the placeholder
+        // of a description block moved out of the header).
         foreach (['search', 'query', 'tag', 'author'] as $key) {
             if (trim((string) $input->get($key, '', 'raw')) !== '') {
+                if (Description::enabled($this->params)) {
+                    $body = $app->getBody();
+                    $new  = Description::clearPlaceholders($body);
+                    if ($new !== $body) {
+                        $app->setBody($new);
+                    }
+                }
+
                 return;
             }
-        }
-        if ($this->params->get('first_page_only', 1) && $input->getInt('page', 1) > 1) {
-            return;
         }
 
         $appId      = $input->getInt('app', 0);
@@ -168,10 +181,68 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return;
         }
 
-        $body = $app->getBody();
-        $pos  = $this->findInsertPosition($body);
+        $body  = $app->getBody();
+        $after = $body;
+        $desc  = $lead = $head = '';
+        if (Description::enabled($this->params)) {
+            try {
+                $description = new Description($this, $this->params);
+                $firstOnly   = (bool) (int) $this->params->get('desc_first_page', 1);
+                [$after, $desc, $lead, $head] = $description->prepare($body, $appId, $categoryId, !$firstOnly || $input->getInt('page', 1) <= 1);
+            } catch (\Throwable $e) {
+                $this->logError($e);
+                $after = $body;
+                $desc  = $lead = $head = '';
+            }
+        }
+
+        $sub = $this->insertSubcategories($after, $input, $appId, $categoryId);
+        if ($sub !== null) {
+            [$after, $subStart, $subEnd] = $sub;
+        }
+        // the places are found in the same page, then filled from the last one: at the same place as the
+        // subcategories a description comes first, and the lead before the rest of the description
+        $inserts = [];
+        if ($desc !== '') {
+            // a place missing from the page: above the products, else under the category header or at the top
+            $inserts[] = [$this->findInsertPosition($after, $description->position(), $description->itemId())
+                ?? $this->findInsertPosition($after, 'after_intro', '') ?? $this->findInsertPosition($after, 'page_top', ''), 1, $desc];
+        }
+        if ($lead !== '') {
+            $inserts[] = [$this->findInsertPosition($after, $description->leadPosition(), '') ?? $this->findInsertPosition($after, 'page_top', ''), 0, $lead];
+        }
+        foreach ($inserts as $k => [$pos]) {
+            if ($pos !== null && $sub !== null && ($pos === $subStart || $pos === $subEnd)) {
+                $inserts[$k][0] = $subStart;
+            }
+        }
+        usort($inserts, fn (array $a, array $b): int => [$b[0], $b[1]] <=> [$a[0], $a[1]]);
+        foreach ($inserts as [$pos, , $html]) {
+            if ($pos !== null) {
+                $after = substr($after, 0, $pos) . $html . substr($after, $pos);
+            }
+        }
+        if ($head !== '' && ($end = stripos($after, '</head>')) !== false) {
+            $after = substr($after, 0, $end) . $head . substr($after, $end);
+        }
+        if ($after !== $body) {
+            $app->setBody($after);
+        }
+    }
+
+    /**
+     * The list of subcategories put into the page.
+     *
+     * @return array{0: string, 1: int, 2: int}|null the page, where the list starts and ends; null when it is not added
+     */
+    private function insertSubcategories(string $body, $input, int $appId, int $categoryId): ?array
+    {
+        if ($this->params->get('first_page_only', 1) && $input->getInt('page', 1) > 1) {
+            return null;
+        }
+        $pos = $this->findInsertPosition($body, (string) $this->params->get('position', 'before_products'), (string) $this->params->get('item_id', ''));
         if ($pos === null) {
-            return;
+            return null;
         }
 
         $this->pageCrumbs = stripos($body, 'BreadcrumbList') !== false;
@@ -190,10 +261,33 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         } catch (\Throwable $e) {
             $this->logError($e);
 
-            return;
+            return null;
+        }
+        if ($html === '') {
+            return null;
         }
 
-        $app->setBody(substr($body, 0, $pos) . $html . substr($body, $pos));
+        return [substr($body, 0, $pos) . $html . substr($body, $pos), $pos, $pos + strlen($html)];
+    }
+
+    /**
+     * Gridbox's Categories element (setting, off by default): a category with subcategories opens and
+     * closes them with a click on its whole row instead of opening its page; the row is highlighted
+     * on hover. Its link is taken off and the row gets the class Gridbox's own script opens and closes
+     * on (collapse-categories-list). Taken over from MerTools 1.3 (which had it from the Omnibus plugin).
+     */
+    private function categoryRows($app): void
+    {
+        $body = $app->getBody();
+        $end  = strripos($body, '</body>');
+        if ($end === false || !str_contains($body, 'ba-app-sub-category') || str_contains($body, 'id="bettercategories-rows"')) {
+            return;
+        }
+        $html = '<style id="bettercategories-rows">.ba-app-sub-category.collapse-categories-list:hover i,.ba-app-sub-category.collapse-categories-list:hover a{color:var(--accent,var(--primary))!important}.ba-app-sub-category.collapse-categories-list{cursor:pointer}</style>'
+            . '<script>(function(){function go(){var l=document.querySelectorAll(".ba-app-sub-category a");for(var i=0;i<l.length;i++){var a=l[i],c=a.nextElementSibling;'
+            . 'if(c&&c.tagName==="I"){a.removeAttribute("href");c.classList.remove("collapse-categories-list");a.parentNode.classList.add("collapse-categories-list");}}}'
+            . 'document.readyState==="loading"?document.addEventListener("DOMContentLoaded",go):go();})();</script>';
+        $app->setBody(substr($body, 0, $end) . $html . substr($body, $end));
     }
 
     /**
@@ -476,14 +570,13 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
      * Anchors are Gridbox elements: the product list (.ba-item-blog-posts), the category header
      * (.ba-item-category-intro), the page content wrapper, or any element by its id (item-…).
      */
-    private function findInsertPosition(string $body): ?int
+    private function findInsertPosition(string $body, string $position, string $itemId): ?int
     {
         $bodyStart = stripos($body, '<body');
         if ($bodyStart === false) {
             return null;
         }
 
-        $position = (string) $this->params->get('position', 'before_products');
         $position = in_array($position, self::POSITIONS, true) ? $position : 'before_products';
 
         switch ($position) {
@@ -503,7 +596,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
             case 'before_item':
             case 'after_item':
-                $itemId = preg_replace('/[^A-Za-z0-9_-]/', '', (string) $this->params->get('item_id', ''));
+                $itemId = preg_replace('/[^A-Za-z0-9_-]/', '', $itemId);
                 if ($itemId !== '') {
                     $start = $this->findElementStart($body, '#<div\b[^>]*\sid="' . preg_quote($itemId, '#') . '"#i', $bodyStart);
                     $end   = $start === null ? null : ($position === 'before_item' ? $start : $this->findElementEnd($body, $start));

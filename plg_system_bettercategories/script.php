@@ -49,6 +49,48 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
         }
     }
 
+    /**
+     * 1.7.0: the category descriptions and the rows of Gridbox's Categories element came over from
+     * MerTools (its setting "Category pages", gone since MerTools 1.4.0). Once, while this plugin has
+     * no description settings yet: when that setting was on, both are switched on here, with the
+     * description where the category layout has it, as MerTools showed it. MerTools keeps its saved
+     * settings over its update, so the order of the two updates does not matter.
+     */
+    private function takeOverFromMerTools(DatabaseInterface $db): void
+    {
+        $read = function (string $element) use ($db): ?array {
+            $json = $db->setQuery(
+                $db->createQuery()
+                    ->select($db->quoteName('params'))
+                    ->from($db->quoteName('#__extensions'))
+                    ->where($db->quoteName('type') . ' = ' . $db->quote('plugin'))
+                    ->where($db->quoteName('folder') . ' = ' . $db->quote('system'))
+                    ->where($db->quoteName('element') . ' = ' . $db->quote($element))
+            )->loadResult();
+
+            return is_string($json) ? (json_decode($json !== '' ? $json : '{}', true) ?: []) : null;
+        };
+        $own = $read('bettercategories');
+        if ($own === null || array_key_exists('desc_enabled', $own)) {
+            return;
+        }
+        $mertools = $read('mertools');
+        $on       = $mertools !== null && (int) ($mertools['layout_categories'] ?? 0) === 1;
+        // the spacing of the descriptions left as MerTools showed it (tidying is on for new sites)
+        $own += ['desc_enabled' => $on ? '1' : '0', 'desc_position' => 'layout', 'desc_tidy' => $on ? '0' : '1', 'gb_categories_rows' => $on ? '1' : '0'];
+        $db->setQuery(
+            $db->createQuery()
+                ->update($db->quoteName('#__extensions'))
+                ->set($db->quoteName('params') . ' = ' . $db->quote(json_encode($own, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)))
+                ->where($db->quoteName('type') . ' = ' . $db->quote('plugin'))
+                ->where($db->quoteName('folder') . ' = ' . $db->quote('system'))
+                ->where($db->quoteName('element') . ' = ' . $db->quote('bettercategories'))
+        )->execute();
+        if ($on) {
+            Factory::getApplication()->enqueueMessage(Text::_('PLG_SYSTEM_BETTERCATEGORIES_INSTALL_MERTOOLS_TAKEN'), 'message');
+        }
+    }
+
     public function postflight(string $type, InstallerAdapter $parent): void
     {
         if ($type === 'uninstall') {
@@ -90,6 +132,8 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
                         ->where($db->quoteName('element') . ' = ' . $db->quote('bettercategories'))
                 )->execute();
             }
+
+            $this->takeOverFromMerTools($db);
 
             // The plugin only does something on Gridbox store pages: say so when Gridbox is missing.
             // the predecessor (Gridbox Subcategories, plg_system_gbsubcats) would add a second list
