@@ -42,7 +42,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.8.0';
+    private const VERSION    = '1.8.1';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -1371,7 +1371,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             . '<nav id="' . $id . '" class="' . implode(' ', $classes) . '" aria-label="' . $headAttr . '">'
             . ($heading !== '' ? '<' . $p['headingTag'] . ' class="bettercategories-title">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</' . $p['headingTag'] . '>' : '')
             . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
-            . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id) : '')
+            . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id, $p['subTrigger'] === 'hover') : '')
             . ($p['schemaList'] && !$this->moduleMode ? $this->itemListSchema($heading !== '' ? $heading : 'Categories', $schema) : '')
             . $crumbs;
     }
@@ -2659,19 +2659,31 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         return ['left' => 'start', 'center' => 'center', 'right' => 'end'][$p['align']] ?? 'start';
     }
 
-    private function subScript(string $id): string
+    private function subScript(string $id, bool $hover): string
     {
         return '<script>(function(n){if(!n)return;'
             // fit(): a tooltip stays inside the window; a drawer under a narrow tile (< 200 px) opens
             // across the whole row of the list, so its text is not squeezed into the tile width.
+            // In the "columns" layout a drawer that grew the tile made the columns rebalance (tiles jumped
+            // under the finger or the pointer), and one positioned in the tile is cut to the next column
+            // by the browser: there it floats (bettercategories--float, fixed) and fit() places it under
+            // the tile, measured, so a transformed ancestor does not move it; again on scroll. room():
+            // the block grows below the list (::after) by what a shown drawer reaches past it, so the
+            // next section of the page does not cover it.
             . 'var tip=n.classList.contains("bettercategories--sub-tooltip"),dr=n.classList.contains("bettercategories--sub-drawer"),ul=n.querySelector(".bettercategories-list");'
+            . 'var fl=dr&&ul&&n.classList.contains("bettercategories--columns"),hv=' . ($hover ? 'matchMedia("(hover:hover)").matches' : 'false') . ';if(fl)n.classList.add("bettercategories--float");'
+            . 'function shown(li){return li.classList.contains("is-open")||(hv&&li.matches(":hover"))||!!li.querySelector(".bettercategories-link:focus-visible,.bettercategories-sub:focus-within");}'
+            . 'function room(){var m=0,a=ul.getBoundingClientRect().bottom;n.querySelectorAll(".bettercategories-has-sub").forEach(function(li){var i=li.querySelector(".bettercategories-sub-inner");if(i&&shown(li))m=Math.max(m,li.getBoundingClientRect().bottom+i.scrollHeight+16-a);});n.style.setProperty("--bc-room",Math.ceil(m)+"px");}'
             . 'function fit(li){var s=li.querySelector(".bettercategories-sub");if(!s)return;'
             . 'if(tip){s.classList.remove("bettercategories-sub--down");s.style.setProperty("--bc-dx","0px");var r=s.getBoundingClientRect();if(r.top<8){s.classList.add("bettercategories-sub--down");r=s.getBoundingClientRect();}var w=document.documentElement.clientWidth,d=0;if(r.left<8)d=8-r.left;else if(r.right>w-8)d=w-8-r.right;s.style.setProperty("--bc-dx",Math.round(d)+"px");}'
+            . 'else if(fl){var a=ul.getBoundingClientRect(),b=li.getBoundingClientRect(),wd=b.width<200&&a.width>b.width+1;s.style.left="0px";s.style.top="0px";var o=s.getBoundingClientRect();s.style.width=(wd?a.width:b.width)+"px";s.style.left=Math.round((wd?a.left:b.left)-o.left)+"px";s.style.top=Math.round(b.bottom-o.top)+"px";room();}'
             . 'else if(dr&&ul){var a=ul.getBoundingClientRect(),b=li.getBoundingClientRect();var rtl=getComputedStyle(li).direction==="rtl";s.style.marginLeft="";s.style.marginRight="";if(b.width<200&&a.width>b.width+1){s.style.width=a.width+"px";if(rtl)s.style.marginRight=Math.round(b.right-a.right)+"px";else s.style.marginLeft=Math.round(a.left-b.left)+"px";}else{s.style.width="";}}}'
             . 'if(tip||dr){var last=null;n.addEventListener("pointerover",function(e){var li=e.target.closest(".bettercategories-has-sub");if(li&&li!==last){last=li;fit(li);}});'
             . 'n.addEventListener("focusin",function(e){var li=e.target.closest(".bettercategories-has-sub");if(li)fit(li);});'
             . 'window.addEventListener("resize",function(){last=null;n.querySelectorAll(".bettercategories-has-sub.is-open").forEach(fit);});}'
-            . 'function set(li,o){if(o)fit(li);li.classList.toggle("is-open",o);var b=li.querySelector(".bettercategories-toggle");if(b)b.setAttribute("aria-expanded",o?"true":"false");}'
+            . 'if(fl){window.addEventListener("scroll",function(){n.querySelectorAll(".bettercategories-has-sub.is-open,.bettercategories-has-sub:hover,.bettercategories-has-sub:focus-within").forEach(fit);},{passive:true});'
+            . 'n.addEventListener("pointerleave",function(){last=null;room();});n.addEventListener("focusout",function(){setTimeout(room,0);});}'
+            . 'function set(li,o){if(o)fit(li);li.classList.toggle("is-open",o);var b=li.querySelector(".bettercategories-toggle");if(b)b.setAttribute("aria-expanded",o?"true":"false");if(fl)room();}'
             . 'function closeAll(k){n.querySelectorAll(".bettercategories-item.is-open").forEach(function(li){if(li!==k)set(li,false);});}'
             . 'n.addEventListener("click",function(e){var b=e.target.closest(".bettercategories-toggle");if(!b||!n.contains(b))return;e.preventDefault();var li=b.closest(".bettercategories-item");var o=!li.classList.contains("is-open");closeAll(li);set(li,o);});'
             . 'document.addEventListener("click",function(e){if(!n.contains(e.target))closeAll(null);});'
@@ -3131,6 +3143,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 // a drawer widened across the row (narrow tiles) lies over the neighbouring tiles' free space
                 $r[] = "$open,$focus" . "{z-index:7;}" . ($hover ? "@media (hover:hover){ $s .bettercategories-has-sub:hover{z-index:7;} }" : '');
                 $r[] = $both('.bettercategories-sub-inner', 'padding-bottom:.6em;box-shadow:0 4px 14px rgba(0,0,0,.08);');
+                // "columns" layout: the drawer lies over the tiles below (placed by subScript), the tile keeps its height
+                $r[] = "$s.bettercategories--float .bettercategories-sub{position:fixed;top:0;left:0;}";
+                $r[] = "$s.bettercategories--float::after{content:'';display:block;height:var(--bc-room,0px);}";
                 break;
 
             case 'side':

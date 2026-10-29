@@ -2,6 +2,16 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.8.1 — 2026-10-29
+
+### 🧰 The subcategory drawer in the *columns* layout
+
+Found on merserwis.pl after the update, as a guest on a phone; in the plugin since 1.1.0.
+
+- **On phones the list no longer grows past the screen.** A drawer under a narrow tile (under 200 px) opens across the whole row of the list; in the *columns* layout this widened every column, so the list became about twice as wide as the screen, cut on both sides. It already happened when the finger touched “+”, before the tap ended — the tap then landed on the neighbouring tile and opened **another category**.
+- **The tiles no longer jump between columns.** In the *columns* layout the browser balances the columns again when a tile grows, so an opened drawer moved other tiles (and on a computer, with *open on hover*, the tile under the pointer changed and the drawers flickered — e.g. 4 columns in two rows at 1024 px).
+- In this layout the drawer now **lies over the tiles below** instead of pushing them: right under its tile, across the whole list when the tile is narrow, also while the page scrolls; the block grows under the list by as much as the drawer reaches past it, so the next section of the page does not cover it. The *rows* and *scroll* layouts, and pages without JavaScript, work as before.
+
 ## 1.8.0 — 2026-10-28
 
 ### 🧭 An administrator of its own, like Admin Tools
