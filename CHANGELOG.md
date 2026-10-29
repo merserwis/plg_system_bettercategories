@@ -2,6 +2,13 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.8.2 — 2026-10-29
+
+### 🔤 Tile names on narrow tiles
+
+- **A long word of a tile name is no longer cut in the middle.** With three tiles in a row on a phone a tile is about 110 px wide, and words like “elektrycznych” or “bezpieczeństwa” did not fit: the browser broke them anywhere, without a hyphen. When the longest word of a name does not fit, all names of the list now get one smaller font (down to 75 % of their size), so they keep looking alike; checked again when the width of the list changes and when the web fonts have loaded. When even 75 % is not enough (very narrow tiles) and on pages without JavaScript the word is broken as before.
+- **Cards leave more room for the name on narrow tiles:** the side padding of the *card* style is 6 % of the tile width under 200 px (12 px as before on wider tiles).
+
 ## 1.8.1 — 2026-10-29
 
 ### 🧰 The subcategory drawer in the *columns* layout

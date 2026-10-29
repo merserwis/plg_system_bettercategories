@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.8.1-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.8.2-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below — which shoppers can **filter by price, product fields, technical parameters and features** read from the descriptions.
@@ -75,7 +75,7 @@ Nothing is written to the database and Gridbox files are not modified; the only 
 
 ## 🚀 Installation & Package Structure
 
-1. Download `pkg_bettercategories-1.8.1.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
+1. Download `pkg_bettercategories-1.8.2.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
 2. In the Joomla administrator go to **System → Install → Extensions** and upload the package.
 3. On a fresh install the plugin is **enabled automatically**; an update keeps whatever you chose before. If Balbooa Gridbox is not installed, the installer says so in a notice.
 4. Open **Components → Better Categories for Gridbox**. A fresh install starts with the **quick setup**; everything else is on the pages of the control panel. (Opening the plugin in *System → Plugins* leads there too; its own form opens only when the component is off.)
@@ -385,6 +385,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.8.2** — Long words of tile names no longer break in the middle on narrow tiles (phones): the names of the list get one smaller font when needed, and cards leave more room for them.
 * **1.8.1** — The subcategory drawer in the *columns* layout lies over the tiles below: on phones it no longer widens the list past the screen (nor sends a tap on “+” to the neighbouring category), and the tiles no longer jump between columns when a drawer opens.
 * **1.8.0** — An administrator of its own like Admin Tools: control panel, a page for each part with the live preview, configuration and a quick setup; a reminder to check the site after every change. Code audit (Codex): the module and the structured data respect what Gridbox shows a visitor, filters on sites without SEF and without JavaScript, filter values below 1 and “100 000”, multilingual menus and subfolder images, and more.
 * **1.7.0** — Category descriptions moved here from MerTools: where the layout has them or at a place of your own, once per page, optionally only the beginning with *Read more* or a lead of its own above the products, `CollectionPage` structured data (SEO-safe: the whole text stays in the HTML). Gridbox Categories element: open with a click on the row.

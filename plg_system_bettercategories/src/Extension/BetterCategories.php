@@ -42,7 +42,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.8.1';
+    private const VERSION    = '1.8.2';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -1372,6 +1372,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             . ($heading !== '' ? '<' . $p['headingTag'] . ' class="bettercategories-title">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</' . $p['headingTag'] . '>' : '')
             . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
             . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id, $p['subTrigger'] === 'hover') : '')
+            . ($p['display'] === 'tiles' ? $this->captionScript($id) : '')
             . ($p['schemaList'] && !$this->moduleMode ? $this->itemListSchema($heading !== '' ? $heading : 'Categories', $schema) : '')
             . $crumbs;
     }
@@ -2691,6 +2692,27 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             . '})(document.getElementById("' . $id . '"));</script>';
     }
 
+    /**
+     * Tile names: a word wider than the caption (narrow tiles, e.g. 3 columns on a phone) was cut in the
+     * middle without a hyphen. Then all names of the list get one smaller font, down to 75 % of their
+     * own, so the longest word fits (one smaller name among the others looked like a mistake); again when
+     * the list width changes and when the web fonts have loaded. Without JS (or when 75 % is not enough)
+     * the CSS still breaks the word.
+     */
+    private function captionScript(string $id): string
+    {
+        return '<script>(function(n){if(!n||!window.ResizeObserver)return;var w=-1;'
+            . 'function go(){var cw=n.clientWidth;if(!cw||cw===w)return;w=cw;var k=1,cs=[];'
+            . 'n.querySelectorAll(".bettercategories-tile>.bettercategories-link .bettercategories-caption,.bettercategories-card>.bettercategories-link .bettercategories-caption").forEach(function(c){'
+            . 'var m=c.querySelector(".bettercategories-name");if(!m)return;c.style.fontSize="";cs.push(c);'
+            . 'var s=getComputedStyle(c),a=c.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight),ws=m.textContent.match(/\S+/g);if(a<=0||!ws)return;'
+            . 'var t=document.createElement("span"),x=0;t.style.cssText="position:absolute;left:0;top:0;visibility:hidden;white-space:nowrap;";m.appendChild(t);'
+            . 'ws.forEach(function(v){t.textContent=v;x=Math.max(x,t.offsetWidth);});t.remove();if(x>a)k=Math.min(k,(a-1)/x);});'
+            . 'if(k<1){k=Math.max(k,.75);cs.forEach(function(c){c.style.fontSize=Math.floor(parseFloat(getComputedStyle(c).fontSize)*k*2)/2+"px";});}}'
+            . 'new ResizeObserver(go).observe(n);if(document.fonts)document.fonts.ready.then(function(){w=-1;go();});'
+            . '})(document.getElementById("' . $id . '"));</script>';
+    }
+
     /** Validated settings (every value is safe to print into CSS/HTML). */
     private function settings(): array
     {
@@ -3010,7 +3032,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                     break;
 
                 case 'card':
-                    $rows[] = "$s .bettercategories-tile .bettercategories-link{padding:12px;border:1px solid rgba(0,0,0,.08);border-radius:" . ($p['shape'] === 'rect' ? '0' : $p['radius'] . 'px') . ';background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .3s,transform .35s;}';
+                    // less side padding on a narrow tile (6 % of its width under 200 px): room for the name
+                    $rows[] = "$s .bettercategories-tile .bettercategories-link{padding:12px min(12px,6%);border:1px solid rgba(0,0,0,.08);border-radius:" . ($p['shape'] === 'rect' ? '0' : $p['radius'] . 'px') . ';background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:box-shadow .3s,transform .35s;}';
                     $rows[] = "$s .bettercategories-tile .bettercategories-link:hover{box-shadow:0 6px 18px rgba(0,0,0,.12);}";
                     break;
             }
