@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.7.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.8.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below — which shoppers can **filter by price, product fields, technical parameters and features** read from the descriptions.
@@ -38,7 +38,7 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **Modern hover effects:** Zoom in, zoom out, lift with shadow, light shine, grayscale-to-colour, tint fade-in / fade-out, tilt, outline ring — or none.
 * **Full visual control:** Position on the page, alignment, direction, responsive columns (desktop / tablet / phone), font sizes and colours (empty = Gridbox theme), image shape (rectangle, rounded corners, circle), aspect ratio, fit, background, colour tint, drop shadow (angle, distance, blur, size, opacity) and spacing.
 * **Zero impact on search and Gridbox's own filters:** Search results, Gridbox *Items filter* queries (`?query=`), tag and author listings are never modified; by default the list of subcategories appears only on the first page of a category.
-* **Administrator menu entry:** *Better Categories for Gridbox* appears in the Joomla 6 administrator menu and opens the plugin settings directly.
+* **An administrator of its own (new in 1.8.0):** *Components → Better Categories for Gridbox* opens a control panel like Akeeba Admin Tools — the parts of the plugin as tiles with their state, a page for each (*Category List*, *Tiles*, *Subcategories*, *Category Descriptions*, *Navigation*, *Filters*) with the live preview beside the settings, a *Configuration* page for what is set once, and a **quick setup** of 15 switches marked recommended or optional. After every save it reminds you to check the site.
 * **Joomla 6 & PHP 8.5 native:** Service-provider plugin with lazy loading, `createQuery()`, dependency-injected database, no deprecated Joomla APIs in the extension code, no warnings on PHP 8.5.
 
 ---
@@ -75,15 +75,16 @@ Nothing is written to the database and Gridbox files are not modified; the only 
 
 ## 🚀 Installation & Package Structure
 
-1. Download `pkg_bettercategories-1.6.0.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
+1. Download `pkg_bettercategories-1.8.0.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
 2. In the Joomla administrator go to **System → Install → Extensions** and upload the package.
 3. On a fresh install the plugin is **enabled automatically**; an update keeps whatever you chose before. If Balbooa Gridbox is not installed, the installer says so in a notice.
-4. Open **Better Categories for Gridbox** in the administrator menu (or *System → Plugins → System - Better Categories for Gridbox*) and adjust the settings.
+4. Open **Components → Better Categories for Gridbox**. A fresh install starts with the **quick setup**; everything else is on the pages of the control panel. (Opening the plugin in *System → Plugins* leads there too; its own form opens only when the component is off.)
+5. Check the store pages on the site, as a guest, on a computer and a phone, after every change.
 
 | Extension | Type | Purpose |
 |---|---|---|
 | `plg_system_bettercategories` | System plugin | Renders the subcategory list on Gridbox store category pages. |
-| `com_bettercategories` | Administrator component | Menu entry *Better Categories for Gridbox* that opens the plugin settings. |
+| `com_bettercategories` | Administrator component | The control panel, the quick setup and the pages of the settings (the settings stay the plugin's). |
 | `mod_bettercategories` | Site module | The list of any store category in a module position or a Gridbox *Joomla Module* element. |
 | `pkg_bettercategories` | Package | Installs and updates all three in one step. |
 
@@ -95,7 +96,7 @@ Uninstalling the package removes all three extensions and the thumbnails; the pl
 
 ## 👀 Live Preview
 
-The *Layout*, *Text and colours* and *Tiles* tabs have a **live preview column**. It shows the list exactly as the plugin renders it — real categories, counts and images from your store — using the values currently in the form, before you save. Switch between **Desktop (1280 px), Tablet (820 px) and Phone (390 px)**: the preview renders at the real device width, scaled to fit, so column settings and all responsive rules apply as on the site. Pick any parent category to preview its subcategories. Sliders show their current value, and colour pickers are enlarged for easier use.
+The pages *Category List*, *Tiles*, *Subcategories* and *Navigation* have a **live preview column** beside the settings. It shows the list exactly as the plugin renders it — real categories, counts and images from your store — using the values currently in the form, before you save. Switch between **Desktop (1280 px), Tablet (820 px) and Phone (390 px)**: the preview renders at the real device width, scaled to fit, so column settings and all responsive rules apply as on the site. Pick any parent category to preview its subcategories. Sliders show their current value, and colour pickers are enlarged for easier use.
 
 ---
 
@@ -227,7 +228,7 @@ Rows of settings for one level of the category tree each: *Store home page*, *Le
 
 The live preview shows the level of the category chosen in it.
 
-### Navigation and SEO
+### Navigation · Structured data (Configuration)
 
 | Option | Default | Description |
 |---|---|---|
@@ -384,6 +385,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.8.0** — An administrator of its own like Admin Tools: control panel, a page for each part with the live preview, configuration and a quick setup; a reminder to check the site after every change. Code audit (Codex): the module and the structured data respect what Gridbox shows a visitor, filters on sites without SEF and without JavaScript, filter values below 1 and “100 000”, multilingual menus and subfolder images, and more.
 * **1.7.0** — Category descriptions moved here from MerTools: where the layout has them or at a place of your own, once per page, optionally only the beginning with *Read more* or a lead of its own above the products, `CollectionPage` structured data (SEO-safe: the whole text stays in the HTML). Gridbox Categories element: open with a click on the row.
 * **1.6.1** — Languages: English, German, Polish, French, Czech and Dutch (Ukrainian removed); German and Polish texts reviewed.
 * **1.6.0** — Many technical parameters in one filter (select all / clear all), shown only where the products have them; filters limited to categories; HVACR parameters: humidity, air velocity, flow, ppm, irradiance, pressure in any unit, °F.

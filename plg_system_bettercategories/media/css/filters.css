@@ -56,7 +56,7 @@
 .bcf-foot { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding-top: 12px; }
 .bcf-apply, .bcf-show { border: 0; border-radius: 6px; background: var(--bcf-accent-c); color: #fff; padding: 9px 16px; font: inherit; font-weight: 600; cursor: pointer; }
 /* with the script every change applies at once; without it the form is submitted with the button */
-.bcf-js .bcf-auto .bcf-apply { display: none; }
+.bcf-ready .bcf-auto .bcf-apply { display: none; }
 .bcf-show { display: none; }
 .bcf-reset { color: var(--bcf-accent-c); font-size: .92em; }
 
@@ -149,3 +149,9 @@ html.bcf-lock, html.bcf-lock body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .bcf-is-drawer .bcf-form, .bcf-is-drawer .bcf-backdrop, .bcf-m-drawer .bcf-form, .bcf-group-title::after { transition: none; }
 }
+
+/* ---- without a script (blocked or off): the panel in the page with all its options; the form is sent as a plain GET */
+html:not(.bcf-js) .bcf-panel.bcf-is-drawer, html:not(.bcf-js) .bcf-panel.bcf-m-drawer { position: static; inset: auto; z-index: auto; visibility: visible; pointer-events: auto; }
+html:not(.bcf-js) .bcf-panel.bcf-is-drawer .bcf-form, html:not(.bcf-js) .bcf-panel.bcf-m-drawer .bcf-form { position: static; width: auto; transform: none; box-shadow: none; }
+html:not(.bcf-js) .bcf-backdrop, html:not(.bcf-js) .bcf-close, html:not(.bcf-js) .bcf-toggle, html:not(.bcf-js) .bcf-more { display: none !important; }
+html:not(.bcf-js) .bcf-group .bcf-extra { display: revert; }

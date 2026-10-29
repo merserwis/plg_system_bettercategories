@@ -19,9 +19,6 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
     protected $minimumJoomla = '6.0.0';
 
     /**
-     * A fresh install enables the plugin; an update keeps whatever the administrator chose.
-     */
-    /**
      * Since 1.6.1 the extension ships English, German, Polish, French, Czech and Dutch: the files of
      * the other languages installed by earlier versions are removed (Joomla keeps them on an update).
      */
@@ -120,8 +117,13 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
         }
 
         try {
-            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $db   = Factory::getContainer()->get(DatabaseInterface::class);
+            $lang = Factory::getApplication()->getLanguage();
+            // the texts of this very version, from the package being installed (on an update the copy already installed has none of the new ones)
+            $lang->load('plg_system_bettercategories', JPATH_ADMINISTRATOR) || $lang->load('plg_system_bettercategories', JPATH_PLUGINS . '/system/bettercategories');
+            $lang->load('plg_system_bettercategories', $parent->getParent()->getPath('source'), null, true);
 
+            // a fresh install enables the plugin; an update keeps whatever the administrator chose
             if ($type === 'install' || $type === 'discover_install') {
                 $db->setQuery(
                     $db->createQuery()
@@ -131,6 +133,7 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
                         ->where($db->quoteName('folder') . ' = ' . $db->quote('system'))
                         ->where($db->quoteName('element') . ' = ' . $db->quote('bettercategories'))
                 )->execute();
+                $this->markFresh($db);
             }
 
             $this->takeOverFromMerTools($db);
@@ -157,6 +160,36 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
             )->loadResult();
             if (!$gridbox) {
                 Factory::getApplication()->enqueueMessage(Text::_('PLG_SYSTEM_BETTERCATEGORIES_INSTALL_NO_GRIDBOX'), 'warning');
+            }
+
+            // 1.8.0: the plugin changes the pages Gridbox sends and every store is built differently: after an install or an
+            // update it is to be checked on the site itself; a fresh install is shown the way to the quick setup
+            if ($type === 'install' || $type === 'update' || $type === 'discover_install') {
+                // a text that did not load stays its key: then the English one is shown
+                $check = Text::_('PLG_SYSTEM_BETTERCATEGORIES_INSTALL_CHECK');
+                Factory::getApplication()->enqueueMessage($check !== 'PLG_SYSTEM_BETTERCATEGORIES_INSTALL_CHECK' ? $check
+                    : 'Better Categories for Gridbox: check on your site, as a guest in a private window, on a computer and a phone, that the store pages look and work as they should: the store home page, a category with subcategories, a last-level category and the filters.', 'warning');
+                if ($type !== 'update') {
+                    $start = Text::sprintf('PLG_SYSTEM_BETTERCATEGORIES_INSTALL_START', 'index.php?option=com_bettercategories&amp;view=setup');
+                    Factory::getApplication()->enqueueMessage(strpos($start, 'PLG_SYSTEM_BETTERCATEGORIES_INSTALL_START') === false ? $start
+                        : 'Better Categories for Gridbox: <a href="index.php?option=com_bettercategories&amp;view=setup">start with the quick setup</a>.', 'info');
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+    }
+
+    /** A fresh install: the control panel of the administrator offers the quick setup first (Joomla saves the defaults, so the settings alone do not tell). */
+    private function markFresh(DatabaseInterface $db): void
+    {
+        try {
+            $where  = ' WHERE ' . $db->quoteName('type') . ' = ' . $db->quote('plugin') . ' AND ' . $db->quoteName('folder') . ' = ' . $db->quote('system')
+                . ' AND ' . $db->quoteName('element') . ' = ' . $db->quote('bettercategories');
+            $params = json_decode((string) $db->setQuery('SELECT ' . $db->quoteName('params') . ' FROM ' . $db->quoteName('#__extensions') . $where)->loadResult(), true);
+            $params = \is_array($params) ? $params : [];
+            if (!isset($params['setup_done'])) {
+                $params['setup_pending'] = 1;
+                $db->setQuery('UPDATE ' . $db->quoteName('#__extensions') . ' SET ' . $db->quoteName('params') . ' = ' . $db->quote(json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) . $where)->execute();
             }
         } catch (\Throwable $e) {
         }

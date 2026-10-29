@@ -145,6 +145,11 @@ final class GridboxList
             return ['posts' => $helper::getEmptyList(), 'pagination' => '', 'count' => 0];
         }
         $idList = implode(',', array_map('intval', $ids));
+        // a page past the last one is empty, as with Gridbox's own pages (a page cache or MerTools answers it 404): with "load
+        // more" every page holds the ones before it, so ?page=100000 would otherwise render every product in one request
+        if ($all <= 0 && $page > max(1, (int) ceil(\count($ids) / $limit))) {
+            return ['posts' => $helper::getEmptyList(), 'pagination' => '', 'count' => \count($ids)];
+        }
 
         // as GridboxHelper::getBlogPosts; "show all": every product (up to $all) on one page
         $start = ($page - 1) * $limit;

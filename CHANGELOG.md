@@ -2,6 +2,54 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.8.0 — 2026-10-28
+
+### 🧭 An administrator of its own, like Admin Tools
+
+The settings were one plugin form with 9 tabs and about 200 options, all at once. They are now an administrator of their own under **Components → Better Categories for Gridbox**, laid out like Akeeba Admin Tools (as in MerTools 1.7 and Better Search 1.8):
+
+- **Control Panel**: the parts of the plugin as tiles in sections (*Category list*, *Category pages*, *Products*, *Configuration*), each with a dot that says whether it is on; on the side the state of the plugin (version, Gridbox, the stores and their categories), shortcuts (quick setup, configuration, the lighter copies of the images, clear the cache, open Gridbox) and a reminder to check the site.
+- **The sidebar menu** lists *Category List*, *Tiles*, *Subcategories*, *Descriptions*, *Navigation*, *Filters* and *Configuration*.
+- **Pages**: *Category List* (content · layout · text and colours · per level), *Tiles* (tiles · images and icons), *Subcategories*, *Category Descriptions* (description · read more), *Navigation* and *Filters* (filters · display · texts). The live preview stands beside the settings as in the plugin's form, the help (“?”), the icon picker and the tools of the filter rows work as before.
+- **Configuration**: what is set once and forgotten — *General* (the stores, the cache), *Structured data* (the list of categories and the breadcrumbs) and the *Settings file*.
+- **Quick Setup**: 15 switches, each marked *recommended* or *optional*, with a sentence on what it does. *Turn on the recommended* switches on the recommended ones and leaves the optional ones as they are; only the switches you change are saved. A fresh install offers it first.
+- The settings are still the plugin's, so nothing changes on the site. Saving a page keeps the settings of all the other pages; the preview and the settings file of a page take the other settings from the saved ones. Opening the plugin in Joomla's plugin manager leads to the control panel (the plugin's own form opens only when the component is off, or for an administrator who may edit plugins but not open the component).
+
+### ⚠️ Check your site after every change
+
+After installing, after updating and after every save, a message asks to check on the site itself that what was turned on or changed works as it should — as a guest, on a computer and a phone: the store home page, a category with subcategories, a category of the last level and the filters. The control panel and the quick setup say the same.
+
+### 🔍 Code audit (Codex) — security, bugs and speed
+
+The whole plugin, the module and the new administrator were reviewed by Codex, part by part; every finding was checked against the code (and the pages of a copy of the shop) before it was fixed.
+
+**Security and privacy**
+- **The module shows a store only to whom Gridbox shows it**: an unpublished store, one of another language or of a restricted access no longer lists its categories, images and prices in the module.
+- **The description of a category a visitor may not see is not in the page's structured data** (Gridbox answers such a page with an error, but the description reached the `CollectionPage` data of its head).
+- A filtered list asked for at a page past its last one (`?page=100000`) is empty, as Gridbox's own pages are (a page cache or MerTools answers it 404); with *load more* it rendered every product of the category in one request.
+- A settings file can no longer put a list where a setting is one value (the store pages that read it would fail).
+- Clearing the cache needs the right to change the plugin's settings.
+
+**Bugs**
+- **Filters on sites without SEF addresses**: the form, the chips, *Clear all* and *Show all* led to `index.php` without the category; they keep the address of the page now.
+- After filtering without reloading, *Show all* and the robots tag follow the new address (a list could stay in “show all”, a cleared one stay `noindex`).
+- A bookmarked filtered address of a category left without products no longer fails (the filters were missing from the page).
+- Values below 1 in the parameters (100 nF and 200 nF) are two options, no longer one “0 F”; a range typed as 12.345 stays 12.345 when another filter changes.
+- “100 000 Pa” in a description is read as 100000 Pa, no longer as 0 Pa.
+- **Without JavaScript** the filters stay usable: the panel is in the page with all its options and is sent as a plain form.
+- The counts of the subcategory panels read (0) when the product counts of the list were off.
+- Two modules on one page (or the same one twice) no longer share ids: the drawers of each work.
+- Multilingual sites: the category links use the menu item of the page's language; the preview and the thumbnails take the categories of every language, not only of the administrator's.
+- Sites in a subfolder: an image address that already starts with the folder gets it once.
+- A description is split into its lead and the rest only between elements of the top level (a box holding both paragraphs is left whole); a `</div>` written in a comment or a script of the page no longer cuts the description block short.
+- The structured data of a page without a canonical link keeps the address of the category on sites without SEF.
+- *Gridbox Categories element: open with a click on the row* works only in Categories elements set to fold; in the others the rows keep their links (Gridbox keeps the arrow there, hidden).
+- Clearing the cache also empties a cache folder set in Joomla's configuration.
+
+**Speed**
+- The lighter copies of the images count the memory of the copy and of a turned photo too: a very large photo is left as it is instead of stopping a visitor's request.
+- The category list of the preview is built in one pass (stores with thousands of categories).
+
 ## 1.7.0 — 2026-10-22
 
 ### 📝 Category descriptions (moved from MerTools)

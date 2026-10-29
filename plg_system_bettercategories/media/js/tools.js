@@ -18,6 +18,8 @@
       for (const [key, value] of new FormData(form()).entries()) {
         if (key.startsWith('jform[params]')) body.append(key, value);
       }
+      // a page of the administrator holds the settings of that page only: the plugin takes the others from the saved ones
+      if (form().dataset.bcPartial) { body.append('bc_partial', '1'); body.append('bc_fields', form().dataset.bcFields || ''); }
     }
     Object.entries(fields).forEach(([k, v]) => body.append(k, v));
     body.append(Joomla.getOptions('csrf.token'), '1');

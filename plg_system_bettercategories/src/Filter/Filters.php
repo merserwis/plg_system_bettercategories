@@ -427,7 +427,8 @@ final class Filters
 
     private function numberText(float $v): string
     {
-        $s = rtrim(rtrim(sprintf('%.6F', $v), '0'), '.');
+        // below 1 with up to 15 decimals: 100 nF is 0.0000001 F, not 0
+        $s = rtrim(rtrim(sprintf(abs($v) < 1 ? '%.15F' : '%.6F', $v), '0'), '.');
 
         return $s === '-0' ? '0' : $s;
     }
@@ -722,6 +723,8 @@ final class Filters
     {
         $values = [];
         foreach ($defs as $def) {
+            // also for a category left without products (a bookmarked filtered address): an empty list, not null
+            $values[$def['key']] = [];
             foreach ($products as $id => $product) {
                 $values[$def['key']][$id] = $this->valuesOf($def, $product);
             }
@@ -844,7 +847,8 @@ final class Filters
 
     private function valueSlug(float $n): string
     {
-        $s = $this->numberText(round($n, 6));
+        // six significant digits below 1 (100 nF and 200 nF are two options, not one "0"), six decimals above, as before
+        $s = $this->numberText(abs($n) < 1 ? (float) sprintf('%.6G', $n) : round($n, 6));
 
         return str_replace('-', 'm', $s);
     }

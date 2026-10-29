@@ -3,17 +3,35 @@
     <name>com_bettercategories</name>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
-    <creationDate>2026-10-13</creationDate>
+    <creationDate>2026-10-28</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.6.13</version>
-    <description>Better Categories for Gridbox — administrator menu entry that opens the plugin settings.</description>
+    <version>1.8.0</version>
+    <description>COM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Component\BetterCategories</namespace>
+    <media destination="com_bettercategories" folder="media">
+        <filename>joomla.asset.json</filename>
+        <folder>css</folder>
+        <folder>js</folder>
+    </media>
     <administration>
-        <menu img="class:folder-tree">Better Categories for Gridbox</menu>
+        <menu img="class:folder-open">COM_BETTERCATEGORIES</menu>
+        <submenu>
+            <menu link="option=com_bettercategories&amp;view=cpanel" alias="bettercategories-cpanel">COM_BETTERCATEGORIES_MENU_CPANEL</menu>
+            <menu link="option=com_bettercategories&amp;view=setup" alias="bettercategories-setup">COM_BETTERCATEGORIES_MENU_SETUP</menu>
+            <menu link="option=com_bettercategories&amp;view=page&amp;page=list" alias="bettercategories-list">COM_BETTERCATEGORIES_MENU_LIST</menu>
+            <menu link="option=com_bettercategories&amp;view=page&amp;page=tiles" alias="bettercategories-tiles">COM_BETTERCATEGORIES_MENU_TILES</menu>
+            <menu link="option=com_bettercategories&amp;view=page&amp;page=subcategories" alias="bettercategories-subcategories">COM_BETTERCATEGORIES_MENU_SUBCATEGORIES</menu>
+            <menu link="option=com_bettercategories&amp;view=page&amp;page=descriptions" alias="bettercategories-descriptions">COM_BETTERCATEGORIES_MENU_DESCRIPTIONS</menu>
+            <menu link="option=com_bettercategories&amp;view=page&amp;page=navigation" alias="bettercategories-navigation">COM_BETTERCATEGORIES_MENU_NAVIGATION</menu>
+            <menu link="option=com_bettercategories&amp;view=page&amp;page=filters" alias="bettercategories-filters">COM_BETTERCATEGORIES_MENU_FILTERS</menu>
+            <menu link="option=com_bettercategories&amp;view=page&amp;page=config" alias="bettercategories-config">COM_BETTERCATEGORIES_MENU_CONFIG</menu>
+        </submenu>
         <files folder="admin">
+            <folder>language</folder>
             <folder>services</folder>
             <folder>src</folder>
+            <folder>tmpl</folder>
         </files>
     </administration>
 </extension>

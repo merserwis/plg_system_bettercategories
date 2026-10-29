@@ -22,6 +22,7 @@ use Joomla\CMS\Language\Associations;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\CMSPlugin;
+use Joomla\CMS\Plugin\PluginHelper;
 use Joomla\CMS\Router\Route;
 use Joomla\CMS\Session\Session;
 use Joomla\Registry\Registry;
@@ -41,7 +42,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.7.0';
+    private const VERSION    = '1.8.0';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -117,6 +118,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             // after Gridbox's own onAfterRender (lazy loading, minifying): the block is inserted as built
             'onAfterRender'            => ['onAfterRender', Priority::MIN],
             'onAfterRespond'           => 'onAfterRespond',
+            'onAfterRoute'             => 'onAfterRoute',
             'onAjaxBettercategories'   => 'onAjax',
             'onExtensionAfterSave'     => 'onExtensionAfterSave',
             'onBetterCategoriesModule' => 'onModule',
@@ -124,6 +126,34 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             // in place before Gridbox adds lazy loading and adaptive images to it
             'onBeforeRenderGridbox'    => 'onBeforeRenderGridbox',
         ];
+    }
+
+    /**
+     * The settings are on the pages of Better Categories (Components → Better Categories for Gridbox): opening the
+     * plugin in Joomla's plugin manager goes to its control panel. Not inside a modal window, and not when the
+     * component is missing or off, or the administrator may edit plugins but not open the component: then the
+     * plugin's own form, which holds every setting, opens as before.
+     */
+    public function onAfterRoute(): void
+    {
+        $app = $this->getApplication();
+        if (!$app->isClient('administrator')) {
+            return;
+        }
+        $input = $app->getInput();
+        if ($input->getCmd('option') !== 'com_plugins' || $input->getMethod() !== 'GET' || $input->getCmd('tmpl') === 'component'
+            || !($input->getCmd('task') === 'plugin.edit' || ($input->getCmd('view') === 'plugin' && $input->getCmd('layout') === 'edit'))) {
+            return;
+        }
+        $own = PluginHelper::getPlugin('system', 'bettercategories');
+        if (!\is_object($own) || (int) ($own->id ?? 0) !== $input->getInt('extension_id') || !ComponentHelper::isEnabled('com_bettercategories')) {
+            return;
+        }
+        $user = $app->getIdentity();
+        if (!$user || !$user->authorise('core.manage', 'com_bettercategories') || !$user->authorise('core.manage', 'com_plugins')) {
+            return;
+        }
+        $app->redirect(Route::_('index.php?option=com_bettercategories', false));
     }
 
     public function onAfterRender(): void
@@ -284,7 +314,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return;
         }
         $html = '<style id="bettercategories-rows">.ba-app-sub-category.collapse-categories-list:hover i,.ba-app-sub-category.collapse-categories-list:hover a{color:var(--accent,var(--primary))!important}.ba-app-sub-category.collapse-categories-list{cursor:pointer}</style>'
-            . '<script>(function(){function go(){var l=document.querySelectorAll(".ba-app-sub-category a");for(var i=0;i<l.length;i++){var a=l[i],c=a.nextElementSibling;'
+            // only in a Categories element set to fold (Gridbox keeps the arrow in the others, hidden): elsewhere the rows keep their links
+            . '<script>(function(){function go(){var l=document.querySelectorAll(".ba-collapsible-categories .ba-app-sub-category a");for(var i=0;i<l.length;i++){var a=l[i],c=a.nextElementSibling;'
             . 'if(c&&c.tagName==="I"){a.removeAttribute("href");c.classList.remove("collapse-categories-list");a.parentNode.classList.add("collapse-categories-list");}}}'
             . 'document.readyState==="loading"?document.addEventListener("DOMContentLoaded",go):go();})();</script>';
         $app->setBody(substr($body, 0, $end) . $html . substr($body, $end));
@@ -509,7 +540,16 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     {
         self::refreshGridboxStyles();
         $factory = Factory::getContainer()->get(CacheControllerFactoryInterface::class);
-        foreach (array_unique([JPATH_SITE . '/cache', JPATH_ADMINISTRATOR . '/cache', JPATH_CACHE]) as $base) {
+        $bases = [JPATH_SITE . '/cache', JPATH_ADMINISTRATOR . '/cache', JPATH_CACHE];
+        try {
+            // a cache folder set in Joomla's configuration (the pages of the site are kept there)
+            $path = (string) Factory::getApplication()->get('cache_path', '');
+            if ($path !== '') {
+                $bases[] = $path;
+            }
+        } catch (\Throwable $e) {
+        }
+        foreach (array_unique($bases) as $base) {
             foreach ([self::CACHE_GROUP, 'com_plugins', 'page', 'gridbox'] as $group) {
                 try {
                     $factory->createCacheController('callback', ['defaultgroup' => $group, 'cachebase' => $base])->clean($group);
@@ -561,6 +601,21 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             ->where($db->quoteName('id') . ' = ' . $appId);
 
         return $db->setQuery($query)->loadResult() === 'products';
+    }
+
+    /** The store app is shown to this visitor by Gridbox: published, of the page's language or all, an access level of the visitor. */
+    public function appVisible(int $appId): bool
+    {
+        $db    = $this->db();
+        $query = $db->createQuery()
+            ->select('1')
+            ->from($db->quoteName('#__gridbox_app'))
+            ->where($db->quoteName('id') . ' = ' . $appId)
+            ->where($db->quoteName('published') . ' = 1')
+            ->whereIn($db->quoteName('access'), $this->viewLevels())
+            ->whereIn($db->quoteName('language'), [$this->getApplication()->getLanguage()->getTag(), '*'], \Joomla\Database\ParameterType::STRING);
+
+        return (bool) $db->setQuery($query, 0, 1)->loadResult();
     }
 
     // ---------------------------------------------------------------- position in the page
@@ -681,8 +736,12 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             ->where($db->quoteName('app_id') . ' = ' . $appId)
             ->where($db->quoteName('published') . ' = 1')
             ->where($db->quoteName('access') . ' IN (' . implode(',', $this->viewLevels()) . ')')
-            ->where($db->quoteName('language') . ' IN (' . $db->quote($lang) . ', ' . $db->quote('*') . ')')
             ->order($db->quoteName('order_list') . ' ASC, ' . $db->quoteName('id') . ' ASC');
+        // on the site the categories of the page's language; in the administrator (preview, thumbnails) those of every language,
+        // not only of the administrator's own
+        if ($this->getApplication()->isClient('site')) {
+            $query->where($db->quoteName('language') . ' IN (' . $db->quote($lang) . ', ' . $db->quote('*') . ')');
+        }
 
         $categories = [];
         foreach ($db->setQuery($query)->loadObjectList() ?: [] as $row) {
@@ -851,7 +910,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $itemId = $find(0);
         }
         if ($itemId === 0) {
-            $home   = $this->getApplication()->getMenu('site')->getDefault();
+            $home   = $this->getApplication()->getMenu('site')->getDefault($this->getApplication()->getLanguage()->getTag());
             $itemId = $home && $home->component === 'com_gridbox' ? (int) $home->id : 0;
         }
 
@@ -865,10 +924,15 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             // AbstractMenu::getItems() reads a deprecated user getter in Joomla 6: filter the items here.
             $componentId       = (int) ComponentHelper::getComponent('com_gridbox')->id;
             $levels            = $this->viewLevels();
+            $tag               = $this->getApplication()->getLanguage()->getTag();
+            // the items of the page's language and of all languages, those of the page's language first (a multilingual
+            // site keeps its links in the visitor's language)
             $this->gridboxMenu = array_values(array_filter(
                 $this->getApplication()->getMenu('site')->getMenu(),
                 fn ($item) => (int) $item->component_id === $componentId && in_array((int) $item->access, $levels, true)
+                    && in_array((string) ($item->language ?? '*'), [$tag, '*', ''], true)
             ));
+            usort($this->gridboxMenu, fn ($a, $b) => ((string) ($b->language ?? '') === $tag) <=> ((string) ($a->language ?? '') === $tag));
         }
 
         return $this->gridboxMenu;
@@ -908,7 +972,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $action = $app->getInput()->post->getCmd('bc_action', 'preview');
         // actions that write files or settings need the right to edit plugins, not only to see them
-        if (in_array($action, ['import', 'reset', 'thumbs', 'thumbs_clear'], true) && !$app->getIdentity()->authorise('core.edit', 'com_plugins')) {
+        if (in_array($action, ['import', 'reset', 'thumbs', 'thumbs_clear', 'clearcache'], true) && !$app->getIdentity()->authorise('core.edit', 'com_plugins')) {
             $app->setHeader('status', '403', true);
             $this->ajaxResult($event, ['error' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_ERROR_NOT_ALLOWED_EDIT')]);
 
@@ -929,10 +993,28 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
             return;
         }
+        if ($action === 'clearcache') {
+            // the control panel's button: as after a save of the settings
+            $this->cleanCaches();
+            $this->ajaxResult($event, ['cleared' => true]);
+
+            return;
+        }
 
         $form   = (array) $app->getInput()->post->get('jform', [], 'array');
+        $posted = \is_array($form['params'] ?? null) ? $form['params'] : [];
+        // a page of the administrator (com_bettercategories) sends the settings of that page only: the others are the saved ones.
+        // The page names its settings (bc_fields): one of them not sent (a list of rows emptied) is empty, not the saved one
+        if ($app->getInput()->post->getInt('bc_partial', 0) === 1) {
+            // the defaults first: a setting never saved is in an exported file with its value, as the plugin's full form gave it
+            $others = array_replace($this->defaultParams(), $this->savedParams()?->toArray() ?? []);
+            foreach (explode(',', (string) $app->getInput()->post->getString('bc_fields', '')) as $name) {
+                unset($others[trim($name)]);
+            }
+            $posted = array_replace($others, $posted);
+        }
         $saved  = $this->params;
-        $this->params  = new Registry((array) ($form['params'] ?? []));
+        $this->params  = new Registry($posted);
         $this->preview = true;
 
         try {
@@ -956,13 +1038,15 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
             $categories = $this->loadCategories($appId);
             // every category as an indented tree (last-level pages show the sibling bar)
-            $tree = [['id' => 0, 'title' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_STORE_HOME')]];
-            $walk = function (int $parent, int $depth) use (&$walk, &$tree, $categories): void {
-                foreach ($categories as $cat) {
-                    if ($cat->parent === $parent && $depth < 50) {
-                        $tree[] = ['id' => $cat->id, 'title' => str_repeat('— ', $depth) . $cat->title];
-                        $walk($cat->id, $depth + 1);
-                    }
+            $tree     = [['id' => 0, 'title' => Text::_('PLG_SYSTEM_BETTERCATEGORIES_PREVIEW_STORE_HOME')]];
+            $children = [];
+            foreach ($categories as $cat) {
+                $children[$cat->parent][] = $cat;
+            }
+            $walk = function (int $parent, int $depth) use (&$walk, &$tree, $children): void {
+                foreach ($depth < 50 ? ($children[$parent] ?? []) : [] as $cat) {
+                    $tree[] = ['id' => $cat->id, 'title' => str_repeat('— ', $depth) . $cat->title];
+                    $walk($cat->id, $depth + 1);
                 }
             };
             $walk(0, 1);
@@ -1124,6 +1208,11 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return $image;
         }
 
+        // a site in a subfolder: an address that already starts with the folder (/shop/images/…) gets it once, as in localImage()
+        $root = Uri::root(true);
+        if ($root !== '' && str_starts_with($image, $root . '/')) {
+            $image = substr($image, \strlen($root));
+        }
         $path = implode('/', array_map('rawurlencode', array_map('rawurldecode', explode('/', ltrim($image, '/')))));
 
         return ($this->preview ? rtrim(Uri::root(), '/') : Uri::root(true)) . '/' . $path;
@@ -1164,7 +1253,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return $crumbs;
         }
 
-        if ($p['counter'] || $p['hideEmpty']) {
+        // the counts of the subcategory panels too (sub_counts), else they would all read 0
+        if ($p['counter'] || $p['hideEmpty'] || ($p['subCounts'] && $p['subMode'] !== 'none')) {
             $this->addCounts($categories);
         }
         $children = array_filter($children, fn ($cat) => !$p['hideEmpty'] || $cat->count > 0);
@@ -1492,13 +1582,18 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
             return false;
         }
-        // decoded image + thumbnail must fit in the memory left to PHP
-        $limit = $this->memoryLimit();
-        if ($limit > 0 && memory_get_usage() + $info[0] * $info[1] * 5 + 16 * 1048576 > $limit) {
+        // photos taken sideways: browsers honour the EXIF orientation, GD does not (read before decoding: the turned copy needs memory too)
+        $angle  = $info[2] === IMAGETYPE_JPEG ? ([3 => 180, 6 => -90, 8 => 90][$this->jpegOrientation($file)] ?? 0) : 0;
+        $across = \in_array($angle, [90, -90], true);
+        $srcPx  = $info[0] * $info[1];
+        $dstPx  = $width * max(1, (int) round(($across ? $info[0] / max(1, $info[1]) : $info[1] / max(1, $info[0])) * $width));
+        // a hard cap also without a memory limit: a huge upload (or a very tall thumbnail) is not made inside a visitor's request
+        if ($srcPx > 40000000 || $dstPx > 16000000) {
             return false;
         }
-        // a hard cap also without a memory limit: a huge upload is not decoded inside a visitor's request
-        if ($info[0] * $info[1] > 40000000) {
+        // decoded image, its turned copy and the thumbnail (GD: about 5 bytes a pixel) must fit in the memory left to PHP
+        $limit = $this->memoryLimit();
+        if ($limit > 0 && memory_get_usage() + ($srcPx * ($angle !== 0 ? 2 : 1) + $dstPx) * 5 + 16 * 1048576 > $limit) {
             return false;
         }
 
@@ -1515,12 +1610,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 return false;
             }
 
-            // photos taken sideways: browsers honour the EXIF orientation, GD does not
-            if ($info[2] === IMAGETYPE_JPEG) {
-                $angle = [3 => 180, 6 => -90, 8 => 90][$this->jpegOrientation($file)] ?? 0;
-                if ($angle !== 0 && ($rotated = imagerotate($src, $angle, 0))) {
-                    $src = $rotated;
-                }
+            if ($angle !== 0 && ($rotated = imagerotate($src, $angle, 0))) {
+                imagedestroy($src);
+                $src = $rotated;
             }
 
             $w      = imagesx($src);
@@ -1658,7 +1750,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             if ($appId <= 0) {
                 $appId = $this->previewApp();
             }
-            if ($appId <= 0 || !ComponentHelper::isEnabled('com_gridbox') || !$this->isEnabledApp($appId)) {
+            // the module shows a store only to whom Gridbox shows it (published, of the page's language, the visitor's access)
+            if ($appId <= 0 || !ComponentHelper::isEnabled('com_gridbox') || !$this->isEnabledApp($appId) || !$this->appVisible($appId)) {
                 return;
             }
 
@@ -1677,6 +1770,16 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         } finally {
             $this->moduleMode      = false;
             $this->moduleOverrides = [];
+        }
+
+        // a kept block carries the ids it was made with: two modules on one page (or the same one twice) would share them, and
+        // the script of the second would work the first; every insertion gets ids of its own (its styles, panels and script follow)
+        if ($html !== '' && preg_match_all('/\bbettercategories-[0-9a-f]{8}(?![0-9a-z_])/', $html, $found)) {
+            $fresh = [];
+            foreach (array_unique($found[0]) as $old) {
+                $fresh[$old] = 'bettercategories-' . bin2hex(random_bytes(4));
+            }
+            $html = strtr($html, $fresh);
         }
 
         $event->setArgument('html', $html);
@@ -2015,6 +2118,34 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     // ---------------------------------------------------------------- administrator tools
 
     /** Names of the plugin settings (top-level form fields, without display-only fields). */
+    /** The default value of every setting of the manifest (the ones the plugin uses while a setting was never saved). */
+    private function defaultParams(): array
+    {
+        $xml = @simplexml_load_file(JPATH_PLUGINS . '/system/bettercategories/bettercategories.xml');
+        $out = [];
+        foreach ($xml ? ($xml->xpath('/extension/config/fields/fieldset/field[@default]') ?: []) : [] as $field) {
+            if ((string) $field['name'] !== '') {
+                $out[(string) $field['name']] = (string) $field['default'];
+            }
+        }
+
+        return $out;
+    }
+
+    /** Settings whose value is a list (rows, checkboxes, multiple choices); every other one is a single value. */
+    private function listKeys(): array
+    {
+        $xml  = @simplexml_load_file(JPATH_PLUGINS . '/system/bettercategories/bettercategories.xml');
+        $keys = [];
+        foreach ($xml ? ($xml->xpath('/extension/config/fields/fieldset/field') ?: []) : [] as $field) {
+            if (in_array(strtolower((string) $field['type']), ['subform', 'checkboxes'], true) || (string) $field['multiple'] === 'true') {
+                $keys[] = (string) $field['name'];
+            }
+        }
+
+        return $keys;
+    }
+
     private function settingKeys(): array
     {
         $xml = @simplexml_load_file(JPATH_PLUGINS . '/system/bettercategories/bettercategories.xml');
@@ -2085,6 +2216,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
         $stylesOnly = $scope === 'styles';
         $known      = $this->settingKeys();
+        $lists      = $this->listKeys();
         $params     = $this->readSavedParams() ?? new Registry();
         $imported   = 0;
         $ignored    = [];
@@ -2095,7 +2227,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 continue;
             }
             $clean = $this->cleanValue($value, 0);
-            if ($clean === null) {
+            // a list where the setting is one value (or the reverse) would break the pages that read it
+            if ($clean === null || is_array($clean) !== in_array($key, $lists, true)) {
                 $ignored[] = $key;
                 continue;
             }

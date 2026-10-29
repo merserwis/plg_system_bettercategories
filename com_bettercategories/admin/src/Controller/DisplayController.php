@@ -9,17 +9,19 @@ namespace Merserwis\Component\BetterCategories\Administrator\Controller;
 
 \defined('_JEXEC') or die;
 
-use Joomla\CMS\Factory;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Controller\BaseController;
 use Joomla\CMS\Router\Route;
-use Joomla\Database\DatabaseInterface;
+use Merserwis\Component\BetterCategories\Administrator\Helper\Catalog;
 
 /**
- * The administrator menu entry "Better Categories for Gridbox" opens the settings of the system plugin.
+ * The pages of Better Categories: the control panel (default), a part of the plugin or the configuration
+ * (view=page&page=…) and the quick setup. Who may manage the plugins may see them (the settings are the plugin's).
  */
 class DisplayController extends BaseController
 {
+    protected $default_view = 'cpanel';
+
     public function display($cachable = false, $urlparams = [])
     {
         if (!$this->app->getIdentity()?->authorise('core.manage', 'com_plugins')) {
@@ -28,20 +30,17 @@ class DisplayController extends BaseController
 
             return $this;
         }
+        $view = $this->input->getCmd('view', $this->default_view);
+        if (!\in_array($view, ['cpanel', 'page', 'setup'], true)) {
+            $view = $this->default_view;
+            $this->input->set('view', $view);
+        }
+        if ($view === 'page' && !Catalog::page($this->input->getCmd('page', ''))) {
+            $this->setRedirect(Route::_('index.php?option=com_bettercategories', false), Text::_('COM_BETTERCATEGORIES_ERROR_PAGE'), 'error');
 
-        $db    = Factory::getContainer()->get(DatabaseInterface::class);
-        $query = $db->createQuery()
-            ->select($db->quoteName('extension_id'))
-            ->from($db->quoteName('#__extensions'))
-            ->where($db->quoteName('type') . ' = ' . $db->quote('plugin'))
-            ->where($db->quoteName('folder') . ' = ' . $db->quote('system'))
-            ->where($db->quoteName('element') . ' = ' . $db->quote('bettercategories'));
-        $pluginId = (int) $db->setQuery($query)->loadResult();
+            return $this;
+        }
 
-        $this->setRedirect(Route::_($pluginId > 0
-            ? 'index.php?option=com_plugins&task=plugin.edit&extension_id=' . $pluginId
-            : 'index.php?option=com_plugins&view=plugins&filter[folder]=system', false));
-
-        return $this;
+        return parent::display(false, []);
     }
 }

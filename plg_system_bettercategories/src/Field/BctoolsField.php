@@ -22,7 +22,12 @@ class BctoolsField extends FormField
 {
     protected $type = 'Bctools';
 
-    protected function getInput()
+    /**
+     * The script of the tools, which also gives every page of the settings its help ("?") and the rows of the filters their
+     * summaries, search and folding: loaded by this field and by every page of the administrator (com_bettercategories),
+     * also those without the field (the Filters page).
+     */
+    public static function assets(): void
     {
         $wa = Factory::getApplication()->getDocument()->getWebAssetManager();
         // the file time in the version: browsers take a changed file even when only the file was replaced
@@ -32,6 +37,11 @@ class BctoolsField extends FormField
         foreach (['EXPORT_DONE', 'IMPORT_CONFIRM', 'IMPORT_DONE', 'IMPORT_FILTERS_CONFIRM', 'IMPORT_FILTERS_DONE', 'IMPORT_READING', 'THUMBS_RUNNING', 'THUMBS_DONE', 'THUMBS_CLEAR_CONFIRM', 'THUMBS_CLEARED', 'WORKING', 'FAILED', 'HELP', 'RESET_CONFIRM', 'RESET_DONE', 'SELECT_ALL', 'SELECT_NONE', 'ROWS_OPTIONS', 'ROWS_ONLY', 'ROWS_EVERYWHERE', 'ROWS_AUTO', 'ROWS_NOT', 'ROWS_SEARCH', 'ROWS_OPEN_ALL', 'ROWS_FOLD_ALL', 'ROWS_COUNT'] as $key) {
             Text::script('PLG_SYSTEM_BETTERCATEGORIES_TOOLS_' . $key);
         }
+    }
+
+    protected function getInput()
+    {
+        self::assets();
 
         $url  = 'index.php?option=com_ajax&amp;plugin=bettercategories&amp;group=system&amp;format=json';
         $mode = (string) ($this->element['mode'] ?? 'settings');

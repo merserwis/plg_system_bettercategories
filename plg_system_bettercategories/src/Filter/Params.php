@@ -41,8 +41,11 @@ final class Params
 
     private const ROMAN = ['i' => 1, 'ii' => 2, 'iii' => 3, 'iv' => 4];
 
-    /** A number: "1000", "1,5", "-20", "1 000" (a space between thousands only after one or two digits). */
-    private const NUM = '[-−–]?(?:\d{1,2}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?';
+    /**
+     * A number: "1000", "1,5", "-20", "1 000", "100 000" (a space between groups of three digits). A group of three
+     * after a space is never read alone: "100 000 Pa" is 100000 Pa, not 0 Pa.
+     */
+    private const NUM = '[-−–]?(?:\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?';
 
     /** Words and signs between the two ends of a range. */
     private const SEP = '(?:\.{2,3}|…|–|—|-|−|÷|~|\bto\b|\bdo\b|\bbis\b)';

@@ -145,6 +145,11 @@ final class Description
                 return ['', $html];
             }
             $cut = $m[0][1] + strlen($m[0][0]);
+            // only between elements of the top level: a paragraph inside a box (<div><p>…</p><p>…</p></div>) is not cut, the two
+            // halves would each be left with an open or a lone closing tag
+            if (!self::topLevel($html, $cut)) {
+                return ['', $html];
+            }
 
             return [trim(substr($html, 0, $cut)), trim(substr($html, $cut))];
         }
@@ -152,11 +157,35 @@ final class Description
         preg_match_all('#<hr\b[^>]*>|<p\b[^>]*>(.*?)</p\s*>#is', $html, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
         foreach ($all as $m) {
             if (!isset($m[1]) || ($marker !== '' && self::plain($m[1][0]) === $marker)) {
+                if (!self::topLevel($html, $m[0][1])) {
+                    return ['', $html];
+                }
+
                 return [trim(substr($html, 0, $m[0][1])), trim(substr($html, $m[0][1] + strlen($m[0][0])))];
             }
         }
 
         return ['', $html];
+    }
+
+    /**
+     * The HTML before $at closes every element it opens (no element left open across the cut). Void elements (img, br…)
+     * and comments do not count.
+     */
+    private static function topLevel(string $html, int $at): bool
+    {
+        $void  = ['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr'];
+        $depth = 0;
+        $head  = preg_replace('#<!--.*?-->#s', '', substr($html, 0, $at)) ?? '';
+        preg_match_all('#<(/?)([a-z][a-z0-9-]*)\b[^>]*?(/?)>#i', $head, $tags, PREG_SET_ORDER);
+        foreach ($tags as [$all, $close, $name, $self]) {
+            if ($self === '/' || \in_array(strtolower($name), $void, true)) {
+                continue;
+            }
+            $depth += $close === '/' ? -1 : 1;
+        }
+
+        return $depth === 0;
     }
 
     /** Text of HTML: tags off, entities decoded, spaces (also no-break ones) joined. */
@@ -186,13 +215,26 @@ final class Description
             $plain = rtrim(mb_substr($cut, 0, $space > 300 ? $space : 500), " ,.;:–-") . '…';
         }
         $url = preg_match('#<link\b[^>]*\brel="canonical"[^>]*\bhref="([^"]+)"#i', $body, $m) || preg_match('#<link\b[^>]*\bhref="([^"]+)"[^>]*\brel="canonical"#i', $body, $m)
-            ? html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8') : Uri::getInstance()->toString(['scheme', 'host', 'port', 'path']);
+            ? html_entity_decode($m[1], ENT_QUOTES | ENT_HTML5, 'UTF-8') : $this->pageUrl();
         $data = array_filter(['@context' => 'https://schema.org', '@type' => 'CollectionPage', 'name' => $title, 'description' => $plain, 'url' => $url], fn ($v) => $v !== '');
 
         // JSON_HEX_TAG: a text can never close the script element
         return '<script type="application/ld+json">'
             . json_encode($data, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP | JSON_INVALID_UTF8_SUBSTITUTE)
             . '</script>';
+    }
+
+    /**
+     * The address of this page without a canonical link: its path and, without SEF, the parameters that name the page
+     * (index.php?option=com_gridbox&view=blog&app=…&id=…), nothing else of the request.
+     */
+    private function pageUrl(): string
+    {
+        $uri   = Uri::getInstance();
+        $route = array_filter(array_intersect_key($uri->getQuery(true), array_flip(['option', 'view', 'app', 'id', 'Itemid', 'lang'])),
+            fn ($v) => \is_string($v) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $v));
+
+        return $uri->toString(['scheme', 'host', 'port', 'path']) . ($route ? '?' . http_build_query($route, '', '&', PHP_QUERY_RFC3986) : '');
     }
 
     /**
@@ -218,6 +260,11 @@ final class Description
      */
     private function source(int $appId, int $categoryId): array
     {
+        // only what Gridbox shows this visitor: a category (and its branch) or a store that is published, of the page's
+        // language and of the visitor's access; else Gridbox answers 403 or 404, and the text must not reach the page's data
+        if ($categoryId > 0 ? !isset($this->plugin->loadCategories($appId)[$categoryId]) : !$this->plugin->appVisible($appId)) {
+            return ['', ''];
+        }
         $db    = $this->plugin->db();
         $query = $db->createQuery()->select($db->quoteName(['title', 'description']));
         if ($categoryId > 0) {
@@ -365,14 +412,20 @@ final class Description
             . '})(document.getElementById("' . $id . '"));</script>';
     }
 
-    /** Offset right after the </div> closing the <div> that starts at $start (div nesting counted). */
+    /**
+     * Offset right after the </div> closing the <div> that starts at $start (div nesting counted). A comment, a script or a
+     * style is stepped over whole: a "</div>" written inside one is not a tag.
+     */
     private function elementEnd(string $body, int $start): ?int
     {
         $depth  = 0;
         $offset = $start;
-        while (preg_match('#<(/?)div\b[^>]*>#i', $body, $tag, PREG_OFFSET_CAPTURE, $offset)) {
-            $depth += $tag[1][0] === '/' ? -1 : 1;
+        while (preg_match('#<!--.*?-->|<(script|style)\b[^>]*>.*?</\1\s*>|<(/?)div\b[^>]*>#is', $body, $tag, PREG_OFFSET_CAPTURE, $offset)) {
             $offset = $tag[0][1] + strlen($tag[0][0]);
+            if (!isset($tag[2]) || $tag[2][1] < 0) {
+                continue;
+            }
+            $depth += $tag[2][0] === '/' ? -1 : 1;
             if ($depth === 0) {
                 return $offset;
             }

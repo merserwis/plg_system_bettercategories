@@ -3,10 +3,10 @@
     <name>plg_system_bettercategories</name>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
-    <creationDate>2026-10-22</creationDate>
+    <creationDate>2026-10-28</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.7.0</version>
+    <version>1.8.0</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -37,12 +37,10 @@
     </languages>
     <config>
         <fields name="params" addfieldprefix="Merserwis\Plugin\System\BetterCategories\Field">
-            <fieldset name="basic">
+            <!-- page="…": the page of the administrator (com_bettercategories) that shows the fieldset as a tab, 1.8.0 -->
+            <fieldset name="list_content" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_CONTENT" page="list">
                 <field name="gb_return" type="gbreturn" hiddenLabel="true" />
-                <field name="extension_info" type="note" class="alert alert-info"
-                    label="PLG_SYSTEM_BETTERCATEGORIES_INFO_LABEL"
-                    description="PLG_SYSTEM_BETTERCATEGORIES_INFO_DESC" />
-                <field name="app_ids" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_APP_IDS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_APP_IDS_DESC" />
+                <field name="preview_content" type="bcpreview" hiddenLabel="true" />
                 <field name="heading" type="text" default="Categories" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_HEADING_DESC" />
                 <field name="heading_tag" type="list" default="h2" label="PLG_SYSTEM_BETTERCATEGORIES_HEADING_TAG_LABEL">
                     <option value="h2">H2</option>
@@ -70,15 +68,13 @@
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>
-                <field name="cache_time" type="number" default="15" min="0" max="1440" label="PLG_SYSTEM_BETTERCATEGORIES_CACHE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CACHE_DESC" />
                 <field name="first_page_only" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FIRST_PAGE_LABEL">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>
-                <field name="tools_settings" type="bctools" mode="settings" hiddenLabel="true" />
             </fieldset>
 
-            <fieldset name="layout" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LAYOUT">
+            <fieldset name="layout" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LAYOUT" page="list">
                 <field name="preview_layout" type="bcpreview" hiddenLabel="true" />
                 <field name="position" type="list" default="before_products" label="PLG_SYSTEM_BETTERCATEGORIES_POSITION_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_POSITION_DESC">
                     <option value="before_products">PLG_SYSTEM_BETTERCATEGORIES_POSITION_BEFORE_PRODUCTS</option>
@@ -127,7 +123,7 @@
                 </field>
             </fieldset>
 
-            <fieldset name="typography" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TYPOGRAPHY" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TYPOGRAPHY_DESC">
+            <fieldset name="typography" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TYPOGRAPHY" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TYPOGRAPHY_DESC" page="list">
                 <field name="preview_typography" type="bcpreview" hiddenLabel="true" />
                 <field name="font_size" type="text" default="" hint="16px / 1rem" label="PLG_SYSTEM_BETTERCATEGORIES_FONT_SIZE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SIZE_DESC" />
                 <field name="font_size_mobile" type="text" default="" hint="14px / .9rem" label="PLG_SYSTEM_BETTERCATEGORIES_FONT_SIZE_MOBILE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SIZE_MOBILE_DESC" />
@@ -144,7 +140,7 @@
                 <field name="price_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_PRICE_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="price_from:1" />
             </fieldset>
 
-            <fieldset name="tiles" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES_DESC">
+            <fieldset name="tiles" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES_DESC" page="tiles">
                 <field name="preview_tiles" type="bcpreview" hiddenLabel="true" />
                 <field name="tile_style" type="list" default="below" label="PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_LABEL">
                     <option value="below">PLG_SYSTEM_BETTERCATEGORIES_TILE_STYLE_BELOW</option>
@@ -198,7 +194,9 @@
                 <field name="shadow_blur" type="number" default="20" min="0" max="150" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_BLUR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_BLUR_DESC" showon="shadow:1" />
                 <field name="shadow_spread" type="number" default="0" min="-50" max="50" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_SPREAD_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_SPREAD_DESC" showon="shadow:1" />
                 <field name="shadow_opacity" type="range" default="20" min="0" max="100" step="5" label="PLG_SYSTEM_BETTERCATEGORIES_SHADOW_OPACITY_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_PERCENT_DESC" showon="shadow:1" />
-                <field name="spacer_images" type="spacer" label="PLG_SYSTEM_BETTERCATEGORIES_SPACER_IMAGES" />
+            </fieldset>
+            <fieldset name="tile_images" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_IMAGES" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_TILES_DESC" page="tiles">
+                <field name="preview_images" type="bcpreview" hiddenLabel="true" />
                 <field name="use_gridbox_image" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_USE_GRIDBOX_IMAGE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_USE_GRIDBOX_IMAGE_DESC">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
@@ -241,7 +239,7 @@
                 <field name="icon_size" type="number" default="0" min="0" max="400" filter="integer" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_SIZE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ICON_SIZE_DESC" />
                 <field name="icon_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_ICON_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_ICON_COLOR_DESC" />
             </fieldset>
-            <fieldset name="subcategories" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SUB" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SUB_DESC">
+            <fieldset name="subcategories" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SUB" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SUB_DESC" page="subcategories">
                 <field name="preview_subcategories" type="bcpreview" hiddenLabel="true" />
                 <field name="sub_mode" type="list" default="none" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_DESC">
                     <option value="none">PLG_SYSTEM_BETTERCATEGORIES_SUB_MODE_NONE</option>
@@ -280,7 +278,7 @@
                 <field name="sub_all_label" type="text" default="View all" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_ALL_LABEL" showon="sub_mode:flip" />
                 <field name="sub_toggle_label" type="text" default="Subcategories of %s" label="PLG_SYSTEM_BETTERCATEGORIES_SUB_TOGGLE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SUB_TOGGLE_DESC" showon="sub_mode:drawer[OR]sub_mode:side[OR]sub_mode:flip[OR]sub_mode:tooltip" />
             </fieldset>
-            <fieldset name="levels" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LEVELS" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LEVELS_DESC">
+            <fieldset name="levels" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LEVELS" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_LEVELS_DESC" page="list">
                 <field name="preview_levels" type="bcpreview" hiddenLabel="true" />
                 <field name="level_overrides" type="subform" multiple="true" layout="joomla.form.field.subform.repeatable" buttons="add,remove,move" label="PLG_SYSTEM_BETTERCATEGORIES_LEVELS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_LEVELS_DESC">
                     <form>
@@ -301,7 +299,7 @@
                     </form>
                 </field>
             </fieldset>
-            <fieldset name="navigation" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_NAV" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_NAV_DESC">
+            <fieldset name="navigation" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_NAV" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_NAV_DESC" page="navigation">
                 <field name="preview_navigation" type="bcpreview" hiddenLabel="true" />
                 <field name="leaf_siblings" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_LEAF_SIBLINGS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_LEAF_SIBLINGS_DESC">
                     <option value="0">JNO</option>
@@ -313,21 +311,12 @@
                     <option value="1">JYES</option>
                 </field>
                 <field name="leaf_back_label" type="text" default="Back to %s" label="PLG_SYSTEM_BETTERCATEGORIES_LEAF_BACK_TEXT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_LEAF_BACK_TEXT_DESC" showon="leaf_siblings:1[AND]leaf_back:1" />
-                <field name="schema_itemlist" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_LIST_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_LIST_DESC">
-                    <option value="0">JNO</option>
-                    <option value="1">JYES</option>
-                </field>
-                <field name="schema_breadcrumb" type="list" default="auto" label="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_DESC">
-                    <option value="auto">PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_AUTO</option>
-                    <option value="yes">JYES</option>
-                    <option value="no">JNO</option>
-                </field>
                 <field name="gb_categories_rows" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_GB_ROWS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_GB_ROWS_DESC">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
                 </field>
             </fieldset>
-            <fieldset name="catdesc" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_DESC" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_DESC_DESC">
+            <fieldset name="catdesc" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_DESC" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_DESC_DESC" page="descriptions">
                 <field name="desc_enabled" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_ENABLED_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_ENABLED_DESC">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
@@ -373,7 +362,8 @@
                 </field>
                 <field name="desc_lead_margin_top" type="number" default="0" min="-200" max="400" showon="desc_enabled:1[AND]desc_split:marker,paragraph" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_LEAD_MARGIN_TOP_LABEL" />
                 <field name="desc_lead_margin_bottom" type="number" default="24" min="-200" max="400" showon="desc_enabled:1[AND]desc_split:marker,paragraph" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_LEAD_MARGIN_BOTTOM_LABEL" />
-                <field name="desc_fold_spacer" type="spacer" hr="true" showon="desc_enabled:1" />
+            </fieldset>
+            <fieldset name="catdesc_fold" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_DESC_FOLD" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_DESC_FOLD_DESC" page="descriptions">
                 <field name="desc_fold" type="radio" layout="joomla.form.field.radio.switcher" default="0" showon="desc_enabled:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_FOLD_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_FOLD_DESC">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
@@ -403,7 +393,7 @@
                 <field name="desc_button_bg" type="color" default="" showon="desc_enabled:1[AND]desc_fold:1" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_BG_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_BG_DESC" />
                 <field name="desc_button_color" type="color" default="" showon="desc_enabled:1[AND]desc_fold:1[AND]desc_button_style!:link" label="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_DESC_BUTTON_COLOR_DESC" />
             </fieldset>
-            <fieldset name="filters" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_DESC">
+            <fieldset name="filters" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_DESC" page="filters">
                 <field name="filters_enabled" type="radio" layout="joomla.form.field.radio.switcher" default="0" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ENABLED_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ENABLED_DESC">
                     <option value="0">JNO</option>
                     <option value="1">JYES</option>
@@ -439,6 +429,8 @@
                         </field>
                     </form>
                 </field>
+            </fieldset>
+            <fieldset name="filters_display" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_DISPLAY" page="filters">
                 <field name="filters_position" type="list" default="sidebar_left" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_DESC" showon="filters_enabled:1">
                     <option value="sidebar_left">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_SIDEBAR_LEFT</option>
                     <option value="sidebar_right">PLG_SYSTEM_BETTERCATEGORIES_FILTERS_POSITION_SIDEBAR_RIGHT</option>
@@ -495,6 +487,8 @@
                 <field name="filters_accent" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ACCENT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
                 <field name="filters_bg" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_BG_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
                 <field name="filters_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
+            </fieldset>
+            <fieldset name="filters_texts" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_TEXTS" page="filters">
                 <field name="filters_texts_note" type="note" class="alert alert-light" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXTS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXTS_DESC" showon="filters_enabled:1" />
                 <field name="filters_title" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_TITLE_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
                 <field name="filters_label_button" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_BUTTON_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
@@ -515,6 +509,29 @@
                 <field name="filters_label_stock" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_STOCK_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
                 <field name="filters_label_stock_option" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_STOCK_OPTION_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
                 <field name="filters_label_features" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_LABEL_FEATURES_LABEL" hint="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXT_HINT" showon="filters_enabled:1" />
+            </fieldset>
+
+            <!-- the configuration: set once and forgotten -->
+            <fieldset name="basic" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_GENERAL" page="config">
+                <field name="extension_info" type="note" class="alert alert-info"
+                    label="PLG_SYSTEM_BETTERCATEGORIES_INFO_LABEL"
+                    description="PLG_SYSTEM_BETTERCATEGORIES_INFO_DESC" />
+                <field name="app_ids" type="text" default="" label="PLG_SYSTEM_BETTERCATEGORIES_APP_IDS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_APP_IDS_DESC" />
+                <field name="cache_time" type="number" default="15" min="0" max="1440" label="PLG_SYSTEM_BETTERCATEGORIES_CACHE_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_CACHE_DESC" />
+            </fieldset>
+            <fieldset name="seo" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SEO" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_SEO_DESC" page="config">
+                <field name="schema_itemlist" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_LIST_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_LIST_DESC">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="schema_breadcrumb" type="list" default="auto" label="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_DESC">
+                    <option value="auto">PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_CRUMBS_AUTO</option>
+                    <option value="yes">JYES</option>
+                    <option value="no">JNO</option>
+                </field>
+            </fieldset>
+            <fieldset name="backup" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_BACKUP" page="config">
+                <field name="tools_settings" type="bctools" mode="settings" hiddenLabel="true" />
             </fieldset>
         </fields>
     </config>

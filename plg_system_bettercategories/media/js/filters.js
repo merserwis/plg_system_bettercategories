@@ -7,6 +7,8 @@
   'use strict';
 
   document.documentElement.classList.add('bcf-js');
+  // this script runs: the filters apply themselves, so the Apply button of automatic filtering can go (without it, it stays)
+  document.documentElement.classList.add('bcf-ready');
 
   const panel = () => document.querySelector('[data-bcf-panel]');
   const form = () => document.querySelector('[data-bcf-form]');
@@ -44,7 +46,9 @@
     if (sort) parts.push('sort-by=' + encodeURIComponent(sort));
     // "show all" stays while filtering
     if (root() && root().classList.contains('bcf-all')) parts.push('bc-all=1');
-    return f.getAttribute('action') + (parts.length ? '?' + parts.join('&') : '');
+    // without SEF the action keeps the parameters that route the page (index.php?option=…&id=…)
+    const action = f.getAttribute('action');
+    return action + (parts.length ? (action.indexOf('?') < 0 ? '?' : '&') + parts.join('&') : '');
   }
 
   function swap(doc) {
@@ -71,6 +75,14 @@
     const own = document.querySelector('style[data-id="adaptive-images"]');
     if (style && own) own.innerHTML = style.innerHTML;
     else if (style) document.head.appendChild(document.importNode(style, true));
+    // what the server decides for the new address: "show all" on or off, and whether search engines may index it
+    const nextRoot = doc.querySelector('.bcf-root');
+    if (root() && nextRoot) root().classList.toggle('bcf-all', nextRoot.classList.contains('bcf-all'));
+    const robots = document.querySelector('meta[name="robots"]');
+    const nextRobots = doc.querySelector('meta[name="robots"]');
+    if (nextRobots && robots) robots.setAttribute('content', nextRobots.getAttribute('content') || '');
+    else if (nextRobots) document.head.appendChild(document.importNode(nextRobots, true));
+    else if (robots) robots.remove();
     if (wasOpen) open(false);
     if (openMenu) {
       const g = document.querySelector('.bcf-group[data-bcf-key="' + CSS.escape(openMenu) + '"]');

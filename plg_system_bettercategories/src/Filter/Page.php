@@ -339,7 +339,9 @@ final class Page
     {
         $root = Uri::root(true) . '/media/plg_system_bettercategories/';
         $ver  = fn (string $file) => BetterCategories::ASSET_VERSION . '.' . (int) @filemtime(JPATH_ROOT . '/media/plg_system_bettercategories/' . $file);
-        $css  = '<style id="bettercategories-filters">' . self::filtersCss() . '</style>';
+        // with the styles, before the filters are parsed: the script is on, so the drawer and "show more" work as drawn (without
+        // a script the panel stays in the page with every option, and its form is sent the usual way)
+        $css  = '<style id="bettercategories-filters">' . self::filtersCss() . '</style><script>document.documentElement.classList.add("bcf-js")</script>';
         $js   = '<script src="' . $root . 'js/filters.js?' . $ver('js/filters.js') . '" defer></script>';
         $meta = '';
         if ($filtered && $this->params->get('filters_noindex', 1)) {
@@ -403,17 +405,41 @@ final class Page
         return $vars ? ' style="' . implode(';', $vars) . '"' : '';
     }
 
+    /** The parameters that name the page in an address without SEF (index.php?option=com_gridbox&view=blog&app=…&id=…). */
+    private const ROUTE_KEYS = ['option', 'view', 'app', 'id', 'Itemid', 'lang'];
+
+    /** @return array<string, string> the parameters of the current address that route it (none with SEF) */
+    private function route(): array
+    {
+        $out = [];
+        foreach (Uri::getInstance()->getQuery(true) as $key => $value) {
+            if (\in_array($key, self::ROUTE_KEYS, true) && \is_string($value) && preg_match('/^[A-Za-z0-9_-]{1,64}$/', $value)) {
+                $out[$key] = $value;
+            }
+        }
+
+        return $out;
+    }
+
+    /** The address of the page without the filters: its path and, without SEF, the parameters that route it. */
+    private function base(): string
+    {
+        $route = $this->route();
+
+        return Uri::getInstance()->toString(['path']) . ($route ? '?' . http_build_query($route, '', '&', PHP_QUERY_RFC3986) : '');
+    }
+
     /** The address of the category with the given filters (and the visitor's sorting). */
     private function url(array $defs, array $state): string
     {
-        $base  = Uri::getInstance()->toString(['path']);
+        $base  = $this->base();
         $query = $this->filters->queryString($defs, $state);
         $sort  = (string) Factory::getApplication()->getInput()->getString('sort-by', '');
         if ($sort !== '' && preg_match('/^[a-z-]+$/', $sort)) {
             $query .= ($query !== '' ? '&' : '') . 'sort-by=' . $sort;
         }
 
-        return $base . ($query !== '' ? '?' . $query : '');
+        return $base . ($query !== '' ? (str_contains($base, '?') ? '&' : '?') . $query : '');
     }
 
     private function form(array $defs, array $facets, array $state, int $total, string $classes, string $style, bool $menus = false): string
@@ -450,7 +476,7 @@ final class Page
                 if ($words) {
                     $unit = '';
                 }
-                $num = fn (float $v) => $words ? str_replace("\u{00A0}", ' ', $this->filters->formatValue('pa', $v)) : $this->shortNumber($v);
+                $num = fn (float $v) => $words ? str_replace("\u{00A0}", ' ', $this->filters->formatValue('pa', $v)) : $this->shortNumber($v, true);
                 $ph  = fn (?float $v, bool $up) => $v === null ? '' : ($round ? (string) ($up ? ceil($v) : floor($v)) : $num($v));
                 $body = '<div class="bcf-range">'
                     . '<label class="bcf-range-field"><span class="bcf-range-label">' . $t('filters_label_from', 'From') . '</span>'
@@ -500,9 +526,11 @@ final class Page
 
         return '<div class="bcf-panel ' . $classes . '"' . $style . ' data-bcf-panel>'
             . '<div class="bcf-backdrop" data-bcf-close></div>'
-            . '<form class="bcf-form" id="bcf-form" method="get" action="' . $e(Uri::getInstance()->toString(['path'])) . '" data-bcf-form aria-label="' . $t('filters_title', 'Filters') . '"'
+            . '<form class="bcf-form" id="bcf-form" method="get" action="' . $e($this->base()) . '" data-bcf-form aria-label="' . $t('filters_title', 'Filters') . '"'
             // what the field filters found (field, type, products with a value): checking a site from outside
             . ($this->filters->diag ? ' data-bcf-diag="' . $e(implode(' | ', array_map(fn ($k, $v) => $k . ': ' . $v, array_keys($this->filters->diag), $this->filters->diag))) . '"' : '') . '>'
+            // without SEF a GET form drops the query of its action: the parameters that route the page go as fields
+            . implode('', array_map(fn ($k, $v) => '<input type="hidden" name="' . $e($k) . '" value="' . $e($v) . '">', array_keys($this->route()), $this->route()))
             . '<div class="bcf-head"><span class="bcf-title">' . $t('filters_title', 'Filters') . '</span>'
             . '<button type="button" class="bcf-close" data-bcf-close aria-label="' . $t('filters_label_close', 'Close') . '">'
             . '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>'
@@ -584,18 +612,25 @@ final class Page
     }
 
     /** "1000", "2.5k", "200G" (typed back in the same form). */
-    private function shortNumber(float $v): string
+    /**
+     * A number as short as it reads well (12.5k). $exact: the value of a field the visitor typed, sent again with the next change
+     * of the filters, so it loses nothing (12.345 stays 12.345, 12345.6 is not written 12.346k).
+     */
+    private function shortNumber(float $v, bool $exact = false): string
     {
         $abs = abs($v);
         foreach ([[1e9, 'G'], [1e6, 'M'], [1e4, 'k']] as [$f, $p]) {
             if ($abs >= $f) {
                 $d = $p === 'k' ? 1e3 : $f;
+                if ($exact && abs(round($v / $d, 3) * $d - $v) > 1e-9 * $abs) {
+                    break;
+                }
 
                 return rtrim(rtrim(number_format($v / $d, 3, '.', ''), '0'), '.') . $p;
             }
         }
 
-        return rtrim(rtrim(number_format($v, $abs < 1 ? 6 : 2, '.', ''), '0'), '.');
+        return rtrim(rtrim(number_format($v, $abs < 1 || $exact ? 6 : 2, '.', ''), '0'), '.');
     }
 
     // ---------------------------------------------------------------- the Gridbox element
