@@ -2601,8 +2601,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return $body;
         }
         $bodyStart = stripos($body, '<body');
-        if ($bodyStart === false
-            || preg_match('#<meta\b[^>]*\bname=["\']robots["\'][^>]*\bcontent=["\'][^"\']*noindex#i', substr($body, 0, $bodyStart))
+        if ($bodyStart === false || $this->noindex(substr($body, 0, $bodyStart))
             || !preg_match('#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-item-blog-posts[\s"][^>]*>#i', $body, $m, PREG_OFFSET_CAPTURE, $bodyStart)) {
             return $body;
         }
@@ -2616,17 +2615,31 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return $body;
         }
 
+        // The numbering of a next page goes on from the earlier ones, so it needs the real number of
+        // products per page: only from the settings of this very element (its app layout or global
+        // item). The fallbacks of elementConfig() (the last rendered element, the default layout with
+        // the count of the cards shown) may belong to another list or be short on the last page: then
+        // a next page gets no list rather than wrong positions.
         $offset = 0;
         $page   = max(1, $input->getInt('page', 1));
-        if ($page > 1 && GridboxList::available() && preg_match('/\sid="([A-Za-z0-9_-]+)"/', $m[0][0], $idm)) {
-            [$item] = GridboxList::elementConfig($appId, $idm[1], $element);
-            $limit  = is_object($item) ? (int) ($item->limit ?? 0) : 0;
-            $offset = $limit > 0 ? ($page - 1) * $limit : 0;
+        if ($page > 1) {
+            $limit = 0;
+            if (GridboxList::available() && preg_match('/\sid="([A-Za-z0-9_-]+)"/', $m[0][0], $idm)) {
+                [$item, $source] = GridboxList::elementConfig($appId, $idm[1], $element);
+                $limit = \in_array($source, ['app', 'global item'], true) && \is_object($item) ? (int) ($item->limit ?? 0) : 0;
+            }
+            if ($limit <= 0) {
+                return $body;
+            }
+            $offset = ($page - 1) * $limit;
         }
 
         $list = $seen = [];
         foreach ($links as [, $href, $name]) {
-            $url  = preg_replace('/[?#].*$/s', '', html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            $url = html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+            // the variant part of a product address goes (the product page gives the address without
+            // it as canonical); an address without SEF (index.php?…&id=…) keeps its query, which names the product
+            $url = preg_match('#(^|/)index\.php(\?|$)#i', $url) ? preg_replace('/#.*$/s', '', $url) : preg_replace('/[?#].*$/s', '', $url);
             $name = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($name), ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
             if ($url === '' || $name === '' || isset($seen[$url])) {
                 continue;
@@ -2652,6 +2665,34 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $json = str_replace('<script type="application/ld+json">', '<script type="application/ld+json" id="bettercategories-products-schema">', $json);
 
         return substr($body, 0, $close) . $json . substr($body, $close);
+    }
+
+    /**
+     * The page is marked noindex: a robots meta element of the head (attributes in any order and
+     * quoting), or an X-Robots-Tag header set by Joomla or an extension before this point.
+     */
+    private function noindex(string $head): bool
+    {
+        if (preg_match_all('#<meta\b[^>]*>#i', $head, $metas)) {
+            foreach ($metas[0] as $meta) {
+                if (preg_match('#\bname\s*=\s*["\']?(?:robots|googlebot)["\'\s/>]#i', $meta)
+                    && preg_match('#\bcontent\s*=\s*["\']?[^"\'>]*\b(?:noindex|none)\b#i', $meta)) {
+                    return true;
+                }
+            }
+        }
+        foreach ($this->getApplication()->getHeaders() as $header) {
+            if (strcasecmp((string) ($header['name'] ?? ''), 'X-Robots-Tag') === 0 && preg_match('/\b(?:noindex|none)\b/i', (string) ($header['value'] ?? ''))) {
+                return true;
+            }
+        }
+        foreach (headers_list() as $line) {
+            if (stripos($line, 'X-Robots-Tag:') === 0 && preg_match('/\b(?:noindex|none)\b/i', $line)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

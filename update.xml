@@ -11,7 +11,7 @@
         <downloads>
             <downloadurl type="full" format="zip">https://github.com/merserwis/plg_system_bettercategories/releases/download/v1.9.0/pkg_bettercategories-1.9.0.zip</downloadurl>
         </downloads>
-        <sha256>66aa287ce08aa2007fc2fb9a394d96a9013b5195707a8b314a183c396b44dee4</sha256>
+        <sha256>5e825e0e4ef1f6eacee99c5da9bf93bc77f8c5d46e67db30cf7aef9298bf54f3</sha256>
         <tags>
             <tag>stable</tag>
         </tags>
