@@ -3,10 +3,10 @@
     <name>com_bettercategories</name>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
-    <creationDate>2026-10-28</creationDate>
+    <creationDate>2026-11-06</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.8.2</version>
+    <version>1.9.0</version>
     <description>COM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Component\BetterCategories</namespace>
     <media destination="com_bettercategories" folder="media">

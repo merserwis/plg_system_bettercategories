@@ -46,7 +46,7 @@ final class Catalog
     /** the tabs of the configuration page (fieldsets with page="config"), as tiles of the control panel */
     public const CONFIG = [
         'basic'  => ['icon' => 'info-circle', 'on' => []],
-        'seo'    => ['icon' => 'code',        'on' => ['schema_itemlist', 'schema_breadcrumb']],
+        'seo'    => ['icon' => 'code',        'on' => ['schema_itemlist', 'schema_products', 'schema_breadcrumb']],
         'backup' => ['icon' => 'download',    'on' => []],
     ];
 
@@ -72,7 +72,7 @@ final class Catalog
             'desc_fold'          => ['set' => ['desc_fold'], 'recommended' => 0],
             'leaf_siblings'      => ['set' => ['leaf_siblings'], 'recommended' => 0],
             'gb_categories_rows' => ['set' => ['gb_categories_rows'], 'recommended' => 0],
-            'qs_schema'          => ['set' => ['schema_itemlist', 'schema_breadcrumb'], 'recommended' => 1, 'values' => ['schema_breadcrumb' => ['no', 'auto']]],
+            'qs_schema'          => ['set' => ['schema_itemlist', 'schema_products', 'schema_breadcrumb'], 'recommended' => 1, 'values' => ['schema_breadcrumb' => ['no', 'auto']]],
         ],
         'products' => [
             'filters_enabled'  => ['set' => ['filters_enabled'], 'recommended' => 0],

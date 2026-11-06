@@ -31,6 +31,7 @@ use Joomla\Database\DatabaseInterface;
 use Joomla\Event\Priority;
 use Joomla\Event\SubscriberInterface;
 use Merserwis\Plugin\System\BetterCategories\Description\Description;
+use Merserwis\Plugin\System\BetterCategories\Filter\GridboxList;
 use Merserwis\Plugin\System\BetterCategories\Filter\Page;
 use Merserwis\Plugin\System\BetterCategories\Icon\Icons;
 
@@ -42,7 +43,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.8.2';
+    private const VERSION    = '1.9.0';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -254,6 +255,13 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
         if ($head !== '' && ($end = stripos($after, '</head>')) !== false) {
             $after = substr($after, 0, $end) . $head . substr($after, $end);
+        }
+        if ((int) $this->params->get('schema_products', 1)) {
+            try {
+                $after = $this->productListSchema($after, $input, $appId, $categoryId);
+            } catch (\Throwable $e) {
+                $this->logError($e);
+            }
         }
         if ($after !== $body) {
             $app->setBody($after);
@@ -1373,7 +1381,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
             . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id, $p['subTrigger'] === 'hover') : '')
             . ($p['display'] === 'tiles' ? $this->captionScript($id) : '')
-            . ($p['schemaList'] && !$this->moduleMode ? $this->itemListSchema($heading !== '' ? $heading : 'Categories', $schema) : '')
+            . ($p['schemaList'] && !$this->moduleMode ? $this->itemListSchema($this->listName('SUBCATS', $appId, $categoryId, $categories[$categoryId]->title ?? ''), $schema) : '')
             . $crumbs;
     }
 
@@ -2557,6 +2565,93 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
 
         return $this->jsonLd(['@context' => 'https://schema.org', '@type' => 'ItemList', 'name' => $name, 'numberOfItems' => count($list), 'itemListElement' => $list]);
+    }
+
+    /**
+     * Name of a structured-data list: "<category>: subcategories" / "<category>: products" in the
+     * site language (the store title on the store home), not the heading of the block.
+     */
+    private function listName(string $kind, int $appId, int $categoryId, string $title): string
+    {
+        $title = trim($title);
+        if ($title === '') {
+            $title = $this->appTitle($appId);
+        }
+        $this->loadLanguage();
+        $key  = 'PLG_SYSTEM_BETTERCATEGORIES_SCHEMA_' . $kind . '_NAME';
+        $name = Text::sprintf($key, $title);
+
+        // language file missing (e.g. a site language without a translation): the title alone
+        return str_contains($name, $key) ? $title : $name;
+    }
+
+    /**
+     * schema.org ItemList of the products shown in the page's product list (setting, on by default):
+     * their names and addresses (without the variant part, as their canonical address), in the order
+     * a visitor sees them, numbered on from the earlier pages of the list. Taken from the finished
+     * page, so it always matches the list (sorting, hidden products, store rules). Not on a filtered
+     * list, the "show all" list or a page marked noindex (variants of the category page), not when
+     * the list is hidden under the subcategories, and never twice.
+     */
+    private function productListSchema(string $body, $input, int $appId, int $categoryId): string
+    {
+        if ($this->preview || Page::hasFilters($input) || $input->getInt('bc-all', 0) === 1
+            || str_contains($body, 'id="bettercategories-products-schema"')
+            || str_contains($body, '.ba-item-blog-posts{display:none!important}')) {
+            return $body;
+        }
+        $bodyStart = stripos($body, '<body');
+        if ($bodyStart === false
+            || preg_match('#<meta\b[^>]*\bname=["\']robots["\'][^>]*\bcontent=["\'][^"\']*noindex#i', substr($body, 0, $bodyStart))
+            || !preg_match('#<div\b[^>]*\sclass="(?:[^"]*\s)?ba-item-blog-posts[\s"][^>]*>#i', $body, $m, PREG_OFFSET_CAPTURE, $bodyStart)) {
+            return $body;
+        }
+        $start = $m[0][1];
+        $end   = $this->findElementEnd($body, $start);
+        if ($end === null) {
+            return $body;
+        }
+        $element = substr($body, $start, $end - $start);
+        if (!preg_match_all('#\sclass="(?:[^"]*\s)?ba-blog-post-title(?:\s[^"]*)?"[^>]*>\s*<a\b[^>]*?\shref="([^"]*)"[^>]*>(.*?)</a>#is', $element, $links, PREG_SET_ORDER)) {
+            return $body;
+        }
+
+        $offset = 0;
+        $page   = max(1, $input->getInt('page', 1));
+        if ($page > 1 && GridboxList::available() && preg_match('/\sid="([A-Za-z0-9_-]+)"/', $m[0][0], $idm)) {
+            [$item] = GridboxList::elementConfig($appId, $idm[1], $element);
+            $limit  = is_object($item) ? (int) ($item->limit ?? 0) : 0;
+            $offset = $limit > 0 ? ($page - 1) * $limit : 0;
+        }
+
+        $list = $seen = [];
+        foreach ($links as [, $href, $name]) {
+            $url  = preg_replace('/[?#].*$/s', '', html_entity_decode($href, ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            $name = trim(preg_replace('/\s+/u', ' ', html_entity_decode(strip_tags($name), ENT_QUOTES | ENT_HTML5, 'UTF-8')) ?? '');
+            if ($url === '' || $name === '' || isset($seen[$url])) {
+                continue;
+            }
+            $seen[$url] = true;
+            $list[]     = ['@type' => 'ListItem', 'position' => $offset + count($list) + 1, 'name' => $name, 'url' => $this->absoluteUrl($url)];
+        }
+        $close = strripos($body, '</body>');
+        if (!$list || $close === false) {
+            return $body;
+        }
+
+        $title = '';
+        if ($categoryId > 0) {
+            $db    = $this->db();
+            $query = $db->createQuery()
+                ->select($db->quoteName('title'))
+                ->from($db->quoteName('#__gridbox_categories'))
+                ->where($db->quoteName('id') . ' = ' . $categoryId);
+            $title = (string) $db->setQuery($query)->loadResult();
+        }
+        $json = $this->jsonLd(['@context' => 'https://schema.org', '@type' => 'ItemList', 'name' => $this->listName('PRODUCTS', $appId, $categoryId, $title), 'itemListElement' => $list]);
+        $json = str_replace('<script type="application/ld+json">', '<script type="application/ld+json" id="bettercategories-products-schema">', $json);
+
+        return substr($body, 0, $close) . $json . substr($body, $close);
     }
 
     /**

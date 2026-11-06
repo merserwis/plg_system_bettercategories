@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.8.2-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.9.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below — which shoppers can **filter by price, product fields, technical parameters and features** read from the descriptions.
@@ -23,7 +23,7 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **Fast WebP thumbnails (new in 1.2.0):** Tiles load small WebP copies of the images (tile width and twice that for sharp screens) instead of full-size photos — made once, kept on the server, EXIF rotation and transparency preserved.
 * **Per-level settings (new in 1.2.0):** Large image tiles on the store home page, compact text links deeper down — heading, display, tile style, direction, columns and the *what is inside* mode can differ per level of the tree.
 * **Sibling bar on the last level (new in 1.2.0):** A category without subcategories shows the categories next to it (current one highlighted) and a link back to the parent, so shoppers switch without going back. It scrolls sideways on phones.
-* **Structured data (new in 1.2.0):** The listed categories as a schema.org `ItemList`, and a `BreadcrumbList` (store → parents → current category) that is added only when the page has none of its own.
+* **Structured data (new in 1.2.0, products in 1.9.0):** The listed categories and the products of the product list as schema.org `ItemList`s, and a `BreadcrumbList` (store → parents → current category) that is added only when the page has none of its own.
 * **Lowest price on every category (new in 1.3.0):** “from 1 290 zł” under each category — the lowest price in its subtree, taking sale prices, store sales and product variations into account, in the store currency (also the one picked in Gridbox's currency switcher).
 * **A module for any page (new in 1.3.0):** `mod_bettercategories` shows the list of any store category — or the store home — in a module position or a Gridbox *Joomla Module* element, e.g. on the home page, with the plugin's styles and its own overrides.
 * **Faster first view (new in 1.3.0):** thumbnails can be generated for the whole store with one click, and the first row of tiles loads with high priority (better LCP in PageSpeed).
@@ -75,7 +75,7 @@ Nothing is written to the database and Gridbox files are not modified; the only 
 
 ## 🚀 Installation & Package Structure
 
-1. Download `pkg_bettercategories-1.8.2.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
+1. Download `pkg_bettercategories-1.9.0.zip` from [Releases](https://github.com/merserwis/plg_system_bettercategories/releases).
 2. In the Joomla administrator go to **System → Install → Extensions** and upload the package.
 3. On a fresh install the plugin is **enabled automatically**; an update keeps whatever you chose before. If Balbooa Gridbox is not installed, the installer says so in a notice.
 4. Open **Components → Better Categories for Gridbox**. A fresh install starts with the **quick setup**; everything else is on the pages of the control panel. (Opening the plugin in *System → Plugins* leads there too; its own form opens only when the component is off.)
@@ -235,7 +235,8 @@ The live preview shows the level of the category chosen in it.
 | Sibling categories on the last level | No | A category without subcategories shows a bar of chips with the categories next to it — the current one highlighted (`aria-current="page"`) — and a link back to the parent. Products stay as Gridbox shows them. On phones the bar scrolls sideways with the current category in view. |
 | Bar heading | `Related categories` | Empty = no heading. |
 | Link back to the parent category / text | Yes / `Back to %s` | `%s` = the parent category (or the store on top-level categories). |
-| Structured data: category list | Yes | The listed categories as a schema.org `ItemList` (JSON-LD). |
+| Structured data: category list | Yes | The listed categories as a schema.org `ItemList` (JSON-LD), named “*category*: subcategories”. |
+| Structured data: product list | Yes | The products shown in the store’s product list as a schema.org `ItemList`, named “*category*: products”: their names and addresses (without the variant part, as their canonical address) in the order a visitor sees them, numbered on across the pages of the list (page 2 starts at 13 with 12 per page). Taken from the finished page, so it always matches the list. Not on filtered lists, the *Show all* list, pages marked `noindex`, or when the products are hidden under the subcategories. |
 | Structured data: breadcrumbs | Automatic | A schema.org `BreadcrumbList`: store → parent categories → current category. *Automatic* adds it only when the page has no breadcrumb data of its own (e.g. from a breadcrumbs module), so there are never two; *Yes* always, *No* never. |
 | Gridbox Categories element: open with a click on the row | No | In Gridbox's *Categories* element a category with subcategories opens and closes them with a click anywhere on its row instead of going to its page; the row is highlighted on hover. Any page with that element. (From MerTools 1.3, switched on at the update when it was on there.) |
 
@@ -385,6 +386,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.9.0** — The products of a category page as a schema.org `ItemList` (names and addresses, numbered on across the pages of the list; not on filtered lists, *Show all* or `noindex` pages); the list of subcategories is named after its category.
 * **1.8.2** — Long words of tile names no longer break in the middle on narrow tiles (phones): the names of the list get one smaller font when needed, and cards leave more room for them.
 * **1.8.1** — The subcategory drawer in the *columns* layout lies over the tiles below: on phones it no longer widens the list past the screen (nor sends a tap on “+” to the neighbouring category), and the tiles no longer jump between columns when a drawer opens.
 * **1.8.0** — An administrator of its own like Admin Tools: control panel, a page for each part with the live preview, configuration and a quick setup; a reminder to check the site after every change. Code audit (Codex): the module and the structured data respect what Gridbox shows a visitor, filters on sites without SEF and without JavaScript, filter values below 1 and “100 000”, multilingual menus and subfolder images, and more.

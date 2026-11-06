@@ -2,6 +2,15 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.9.0 — 2026-11-06
+
+### 🔎 Structured data: the products of the list
+
+- **The products of a category page as a schema.org `ItemList`** (new setting *Structured data: product list*, on by default; Configuration → Structured data, also in the quick setup switch *Structured data*). Each product of the product list is a `ListItem` with its name and address, in the order a visitor sees them. The address is the product page without the variant part (`?Model=…`), as the product page gives it as its canonical address. On the next pages of the list the numbering goes on (page 2 starts at 13 with 12 products per page, read from the settings of the Gridbox product list element). The product pages keep their own `Product` data: the list only points to them.
+- **Taken from the finished page**, like the `CollectionPage` of the description: the list always matches what Gridbox shows (sorting, hidden products, store rules).
+- **Not added** on a filtered list, the *Show all* list or a page marked `noindex` (variants of the category page), when the product list is hidden under the subcategories (*Hide products until the last category*), on search, tag and author listings, and never twice.
+- **The list of subcategories is named after its category** (“Recorders: subcategories”) instead of the heading of the block (e.g. “Choose a category”), so the two lists of a page have clear names. Translated in all six languages.
+
 ## 1.8.2 — 2026-10-29
 
 ### 🔤 Tile names on narrow tiles
