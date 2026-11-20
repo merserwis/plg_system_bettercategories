@@ -47,7 +47,8 @@ class PageController extends DisplayController
         Settings::loadLanguage();
         // the pages are made of the plugin's fields: with the plugin off a save would write defaults over the settings
         if (!Settings::pluginReady()) {
-            $this->setRedirect(Route::_($back, false), Text::_('COM_BETTERCATEGORIES_PLUGIN_OFF'), 'error');
+            $this->setRedirect(Route::_($back, false), Text::_(\Merserwis\Component\BetterCategories\Administrator\Helper\Diagnostics::safeMode()
+                ? 'COM_BETTERCATEGORIES_DIAG_SAFE_IS_ON' : 'COM_BETTERCATEGORIES_PLUGIN_OFF'), 'error');
 
             return;
         }

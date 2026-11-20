@@ -43,7 +43,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.9.0';
+    private const VERSION    = '1.9.1';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -778,9 +778,15 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     }
 
     /**
-     * Product count of every category including its subcategories — the same numbers Gridbox shows
-     * in its own categories element: visible products by primary category plus the additional
-     * category map, without the subscription add-ons Gridbox hides from listings.
+     * Product count of every category including its subcategories: the visible products by primary
+     * category plus the additional category map, without the subscription add-ons Gridbox hides from
+     * listings — each product once, as the product list of the category page shows it. (Gridbox's
+     * own Categories element adds the two up, so a product in two subcategories of one parent, or
+     * mapped to a category under its own, counts twice there; 1.9.1.)
+     *
+     * The primary categories are counted by the database, as before; only the products with additional
+     * categories (few) are read one by one, and each adds 1 to the categories its additional ones reach
+     * and its primary one does not.
      */
     private function addCounts(array $categories): void
     {
@@ -788,35 +794,50 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             return;
         }
 
-        $db    = $this->db();
-        $ids   = implode(',', array_map('intval', array_keys($categories)));
-        $rows  = [];
+        $db  = $this->db();
+        $ids = implode(',', array_map('intval', array_keys($categories)));
 
-        foreach (['primary', 'mapped'] as $kind) {
-            $query = $this->visibleProductsQuery();
-            if ($kind === 'primary') {
-                $query->select(['p.page_category AS category_id', 'COUNT(p.id) AS total'])
-                    ->where('p.page_category IN (' . $ids . ')')
-                    ->group('p.page_category');
-            } else {
-                $query->select(['pm.category_id', 'COUNT(p.id) AS total'])
-                    ->innerJoin($db->quoteName('#__gridbox_category_page_map', 'pm') . ' ON pm.page_id = p.id')
-                    ->where('pm.category_id IN (' . $ids . ')')
-                    ->group('pm.category_id');
+        $primary = $this->visibleProductsQuery()
+            ->select(['p.page_category AS category_id', 'COUNT(p.id) AS total'])
+            ->where('p.page_category IN (' . $ids . ')')
+            ->group('p.page_category');
+        try {
+            foreach ($db->setQuery($primary)->loadObjectList() ?: [] as $row) {
+                $total = (int) $row->total;
+                $this->walkUp($categories, (int) $row->category_id, function ($cat) use ($total) {
+                    $cat->count += $total;
+                });
             }
-
-            try {
-                $rows = array_merge($rows, $db->setQuery($query)->loadObjectList() ?: []);
-            } catch (\Throwable $e) {
-                continue;
-            }
+        } catch (\Throwable $e) {
+            $this->logError($e);
         }
 
-        foreach ($rows as $row) {
-            $total = (int) $row->total;
-            $this->walkUp($categories, (int) $row->category_id, function ($cat) use ($total) {
-                $cat->count += $total;
+        $mapped = $this->visibleProductsQuery()
+            ->select(['p.id', 'p.page_category', 'pm.category_id'])
+            ->innerJoin($db->quoteName('#__gridbox_category_page_map', 'pm') . ' ON pm.page_id = p.id')
+            ->where('pm.category_id IN (' . $ids . ')');
+        $products = [];
+        try {
+            foreach ($db->setQuery($mapped)->loadRowList() ?: [] as [$id, $primaryId, $categoryId]) {
+                $products[(int) $id]['primary'] = (int) $primaryId;
+                $products[(int) $id]['mapped'][] = (int) $categoryId;
+            }
+        } catch (\Throwable $e) {
+            $this->logError($e);
+        }
+        foreach ($products as $product) {
+            $counted = [];
+            $this->walkUp($categories, $product['primary'], function ($cat) use (&$counted) {
+                $counted[$cat->id] = true;
             });
+            foreach ($product['mapped'] as $categoryId) {
+                $this->walkUp($categories, $categoryId, function ($cat) use (&$counted) {
+                    if (!isset($counted[$cat->id])) {
+                        $counted[$cat->id] = true;
+                        $cat->count++;
+                    }
+                });
+            }
         }
     }
 
@@ -850,40 +871,127 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
     /**
      * Image of the most viewed visible product in each category subtree (primary category and the
-     * additional category map), used for tiles without an own image.
+     * additional category map), used for tiles without an own image. A product without an intro
+     * image gives the first image of its gallery, as Gridbox shows it (1.9.1).
      */
     private function addTopProductImages(int $appId, array $categories): void
     {
-        $db = $this->db();
+        $db    = $this->db();
+        $empty = '(' . $db->quoteName('p.intro_image') . ' = ' . $db->quote('') . ' OR ' . $db->quoteName('p.intro_image') . ' IS NULL)';
 
-        $primary = $this->visibleProductsQuery()
-            ->select(['p.page_category AS category_id', 'p.hits', 'p.intro_image'])
-            ->where('p.app_id = ' . $appId)
-            ->where($db->quoteName('p.intro_image') . ' <> ' . $db->quote(''));
-        $mapped = $this->visibleProductsQuery()
-            ->select(['pm.category_id', 'p.hits', 'p.intro_image'])
-            ->innerJoin($db->quoteName('#__gridbox_category_page_map', 'pm') . ' ON pm.page_id = p.id')
-            ->where('p.app_id = ' . $appId)
-            ->where($db->quoteName('p.intro_image') . ' <> ' . $db->quote(''));
-
-        foreach ([$primary, $mapped] as $query) {
-            try {
-                $rows = $db->setQuery($query)->loadObjectList() ?: [];
-            } catch (\Throwable $e) {
-                continue;
+        // with an intro image, then (read apart, few) without one
+        foreach ([false, true] as $withoutImage) {
+            $sets = [];
+            foreach (['primary', 'mapped'] as $kind) {
+                $query = $this->visibleProductsQuery()
+                    ->select(['p.id', $kind === 'primary' ? 'p.page_category AS category_id' : 'pm.category_id', 'p.hits', 'p.intro_image'])
+                    ->where('p.app_id = ' . $appId)
+                    ->where($withoutImage ? $empty : $db->quoteName('p.intro_image') . ' <> ' . $db->quote(''));
+                if ($kind === 'mapped') {
+                    $query->innerJoin($db->quoteName('#__gridbox_category_page_map', 'pm') . ' ON pm.page_id = p.id');
+                }
+                try {
+                    $sets[] = $db->setQuery($query)->loadObjectList() ?: [];
+                } catch (\Throwable $e) {
+                    $this->logError($e);
+                }
+            }
+            $gallery = [];
+            if ($withoutImage) {
+                $missing = [];
+                foreach ($sets as $rows) {
+                    foreach ($rows as $row) {
+                        $missing[(int) $row->id] = true;
+                    }
+                }
+                $gallery = $missing ? $this->galleryImages($appId, array_keys($missing)) : [];
             }
 
-            foreach ($rows as $row) {
-                $hits  = (int) $row->hits;
-                $image = (string) $row->intro_image;
-                $this->walkUp($categories, (int) $row->category_id, function ($cat) use ($hits, $image) {
-                    if ($hits > $cat->topHits) {
-                        $cat->topHits  = $hits;
-                        $cat->topImage = $image;
+            foreach ($sets as $rows) {
+                foreach ($rows as $row) {
+                    $hits  = (int) $row->hits;
+                    $image = $withoutImage ? ($gallery[(int) $row->id] ?? '') : trim((string) $row->intro_image);
+                    if ($image === '') {
+                        continue;
                     }
-                });
+                    $this->walkUp($categories, (int) $row->category_id, function ($cat) use ($hits, $image) {
+                        if ($hits > $cat->topHits) {
+                            $cat->topHits  = $hits;
+                            $cat->topImage = $image;
+                        }
+                    });
+                }
             }
         }
+    }
+
+    /**
+     * The images Gridbox shows for a product without an intro image (GridboxHelper::getProductImages): the
+     * first Product slideshow or Product gallery field of the app (in the order of the app's fields) that
+     * has a published image, its first one — a path, or the id of a file uploaded to the product
+     * (components/com_gridbox/assets/uploads/app-<app>/<file>). Rows of fields no longer in the app are
+     * left out, as Gridbox leaves them.
+     *
+     * @param int[] $ids
+     *
+     * @return array<int, string> product id => image
+     */
+    private function galleryImages(int $appId, array $ids): array
+    {
+        $db     = $this->db();
+        $images = [];
+        $files  = [];
+        try {
+            foreach (array_chunk(array_map('intval', $ids), 500) as $chunk) {
+                $query = $db->createQuery()
+                    ->select(['pf.page_id', 'pf.value'])
+                    ->from($db->quoteName('#__gridbox_page_fields', 'pf'))
+                    ->innerJoin($db->quoteName('#__gridbox_fields', 'f') . ' ON pf.field_id = f.id')
+                    ->where('pf.page_id IN (' . implode(',', $chunk) . ')')
+                    ->where('pf.field_type IN (' . $db->quote('product-slideshow') . ', ' . $db->quote('product-gallery') . ')')
+                    ->where('f.app_id = ' . $appId)
+                    ->order('pf.page_id ASC, f.id ASC');
+                foreach ($db->setQuery($query)->loadObjectList() ?: [] as $row) {
+                    $id = (int) $row->page_id;
+                    if (isset($images[$id])) {
+                        continue;
+                    }
+                    foreach ((array) json_decode((string) $row->value) as $item) {
+                        $img = \is_object($item) ? trim((string) ($item->img ?? '')) : '';
+                        if ($img === '' || !empty($item->unpublish)) {
+                            continue;
+                        }
+                        $images[$id] = $img;
+                        if (ctype_digit($img)) {
+                            $files[(int) $img] = $id;
+                        }
+                        break;
+                    }
+                }
+            }
+            if ($files) {
+                // a file of the product itself, as Gridbox reads them (GridboxHelper::getDesktopFieldFiles)
+                $query = $db->createQuery()
+                    ->select($db->quoteName(['id', 'page_id', 'app_id', 'filename']))
+                    ->from($db->quoteName('#__gridbox_fields_desktop_files'))
+                    ->where($db->quoteName('id') . ' IN (' . implode(',', array_keys($files)) . ')');
+                $paths = [];
+                foreach ($db->setQuery($query)->loadObjectList() ?: [] as $file) {
+                    if ((int) $file->page_id === ($files[(int) $file->id] ?? 0)) {
+                        $paths[(string) (int) $file->id] = 'components/com_gridbox/assets/uploads/app-' . (int) $file->app_id . '/' . $file->filename;
+                    }
+                }
+                foreach ($images as $id => $img) {
+                    if (ctype_digit($img)) {
+                        $images[$id] = $paths[$img] ?? '';
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->logError($e);
+        }
+
+        return array_filter($images, fn ($img) => $img !== '' && !ctype_digit($img));
     }
 
     /**

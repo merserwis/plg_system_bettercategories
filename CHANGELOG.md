@@ -2,6 +2,22 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.9.1 — 2026-11-20
+
+### 🩺 Diagnostics and safe mode <!-- addition -->
+
+- **A Diagnostics page** (*Components → Better Categories for Gridbox → Diagnostics*, also a button on the control panel): what the plugin needs on the site, checked in one place — the versions of its parts, Joomla, PHP, Gridbox and the database; the plugin on or off, safe mode, missing files (an interrupted upload), the stores it works on; the memory and time limits, GD with WebP, write access to the folders of the lighter copies, the caches and the logs, the size of the log folder; debugging, error reporting and the other Joomla settings that matter. Each row says what to do when something is wrong. A **report for support** (plain text, without the addresses of visitors) is copied with one button.
+- **The “500” errors of the site are kept.** Joomla answers an uncaught error with a short “500 Whoops” page and, unless *Log Almost Everything* is on, writes it nowhere — on a hosting without access to the server's logs the cause was lost. The plugin now writes these errors (of any extension, on the site and in the administrator) to `administrator/logs/plg_system_bettercategories_errors.php`: the message, the file and line, and the stack trace **without the values of the arguments**, with the page where it happened. Values quoted in the messages (a duplicate e-mail address, a name) and the query of a database error are masked; names of code and files stay. Errors of the visitor's request (404, 403) are left out; the file stays under 512 KB (trimmed under the same lock as the writing, so parallel errors are not lost). The Diagnostics page shows the latest ones, and the control panel warns when there were any in the last 7 days.
+- **Safe mode.** An empty file named `safe-mode` in `plugins/system/bettercategories` — made with the file manager of the hosting or FTP when the administrator cannot be opened, or with the button of the Diagnostics page — stops the plugin on the site and in the administrator **without loading its code**; its settings stay, the control panel and the Diagnostics page keep working, and the pages of settings wait (they are made of the plugin's own fields). Deleting the file (or the button) turns it back on; the button turns it off only when the plugin's code loads again (the Diagnostics page shows whether it does), so a site whose plugin is still broken does not fall back to “500”. Tested on a copy with the plugin's code deliberately broken: the site and the administrator answered “500” until the file was made, then worked, and the error was on the Diagnostics page.
+
+### 🔢 Product counts as the visitor sees them
+
+- **Each product is counted once.** A product in two subcategories of the same parent (its primary category and an *additional category*), or added to a category under its own, was counted twice in the parent — as Gridbox's own *Categories* element still does — while the product list of the category page shows it once. On a copy of a real store 12 of 260 categories showed more products than their page lists (e.g. 682 instead of 646). The counts now match the product list. The database still counts the primary categories; only the products with additional categories are read one by one.
+
+### 🖼️ Tile images from the product gallery <!-- addition -->
+
+- A product without an intro image gives its tile the **first published image of its gallery** — the image Gridbox itself shows for it: the first *Product slideshow* or *Product gallery* field of the app with a published image, in the order of the app's fields (also files uploaded to the product, `components/com_gridbox/assets/uploads/…`). Before, such a product was skipped and the tile showed a less viewed product (or no image).
+
 ## 1.9.0 — 2026-11-06
 
 ### 🔎 Structured data: the products of the list

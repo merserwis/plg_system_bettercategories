@@ -29,6 +29,18 @@ use Joomla\CMS\Router\Route;
             <?php echo HTMLHelper::_('form.token'); ?>
         </form>
     <?php endif; ?>
+    <?php if ($this->safeMode) : ?>
+        <div class="alert alert-warning d-flex flex-wrap align-items-center gap-3">
+            <span class="flex-grow-1"><span class="icon-shield-alt" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_DIAG_SAFE_IS_ON'); ?></span>
+            <a class="btn btn-warning" href="<?php echo Route::_('index.php?option=com_bettercategories&view=diagnostics'); ?>"><?php echo Text::_('COM_BETTERCATEGORIES_MENU_DIAGNOSTICS'); ?></a>
+        </div>
+    <?php endif; ?>
+    <?php if ($this->recentErrors) : ?>
+        <div class="alert alert-danger d-flex flex-wrap align-items-center gap-3">
+            <span class="flex-grow-1"><?php echo Text::sprintf('COM_BETTERCATEGORIES_DIAG_RECENT_ERRORS', $this->recentErrors); ?></span>
+            <a class="btn btn-danger" href="<?php echo Route::_('index.php?option=com_bettercategories&view=diagnostics'); ?>"><?php echo Text::_('COM_BETTERCATEGORIES_MENU_DIAGNOSTICS'); ?></a>
+        </div>
+    <?php endif; ?>
     <?php if (!$this->gridbox) : ?>
         <div class="alert alert-warning"><?php echo Text::_('COM_BETTERCATEGORIES_NO_GRIDBOX'); ?></div>
     <?php elseif (!$this->store || !$this->store['apps']) : ?>
@@ -110,6 +122,8 @@ use Joomla\CMS\Router\Route;
                         <span class="icon-cog" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_MENU_CONFIG'); ?></a>
                     <a class="btn btn-outline-primary text-start" href="<?php echo Route::_('index.php?option=com_bettercategories&view=page&page=tiles&tab=tile_images'); ?>">
                         <span class="icon-images" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_THUMBNAILS'); ?></a>
+                    <a class="btn btn-outline-primary text-start" href="<?php echo Route::_('index.php?option=com_bettercategories&view=diagnostics'); ?>">
+                        <span class="icon-heartbeat" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_MENU_DIAGNOSTICS'); ?></a>
                     <?php if ($this->canClear) : ?>
                         <button type="button" class="btn btn-outline-secondary text-start" data-bcc-clear-cache>
                             <span class="icon-trash" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_CLEAR_CACHE'); ?></button>

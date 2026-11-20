@@ -1,0 +1,573 @@
+<?xml version="1.0" encoding="utf-8"?>
+<changelogs>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.9.1</version>
+        <fix>
+            <item>Product counts as the visitor sees them</item>
+        </fix>
+        <addition>
+            <item>Diagnostics and safe mode</item>
+            <item>Tile images from the product gallery</item>
+            <item>1.9.0: Structured data: the products of the list</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.9.1" target="_blank" rel="noopener noreferrer">The full list of changes of 1.9.1 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.9.0</version>
+        <addition>
+            <item>Structured data: the products of the list</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.9.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.9.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.8.2</version>
+        <fix>
+            <item>Tile names on narrow tiles</item>
+            <item>1.8.1: The subcategory drawer in the columns layout</item>
+        </fix>
+        <addition>
+            <item>1.8.0: An administrator of its own, like Admin Tools</item>
+            <item>1.8.0: Check your site after every change</item>
+            <item>1.8.0: Code audit (Codex): security, bugs and speed</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.8.2" target="_blank" rel="noopener noreferrer">The full list of changes of 1.8.2 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.8.1</version>
+        <fix>
+            <item>The subcategory drawer in the columns layout</item>
+        </fix>
+        <addition>
+            <item>1.8.0: An administrator of its own, like Admin Tools</item>
+            <item>1.8.0: Check your site after every change</item>
+            <item>1.8.0: Code audit (Codex): security, bugs and speed</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.8.1" target="_blank" rel="noopener noreferrer">The full list of changes of 1.8.1 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.8.0</version>
+        <addition>
+            <item>An administrator of its own, like Admin Tools</item>
+            <item>Check your site after every change</item>
+            <item>Code audit (Codex): security, bugs and speed</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.8.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.8.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.7.0</version>
+        <addition>
+            <item>Category descriptions (moved from MerTools)</item>
+            <item>Gridbox Categories element</item>
+            <item>Moving over</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.7.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.7.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.13</version>
+        <fix>
+            <item>Price fields of the filters</item>
+            <item>1.6.12: Styles that always arrive</item>
+            <item>1.6.11: Buttons on the left, new look really shown</item>
+            <item>1.6.10: "Show all" and grid / list next to the sorting menu</item>
+            <item>1.6.9: One features filter for the whole store</item>
+            <item>1.6.9: Filters files that fit any site</item>
+            <item>1.6.8: Icons of categories and filter groups</item>
+            <item>1.6.8: Product list: grid / list and "Show all"</item>
+            <item>1.6.7: Filters</item>
+            <item>1.6.6: Filters</item>
+            <item>1.6.5: Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.13" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.13 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.12</version>
+        <fix>
+            <item>Styles that always arrive</item>
+            <item>1.6.11: Buttons on the left, new look really shown</item>
+            <item>1.6.10: "Show all" and grid / list next to the sorting menu</item>
+            <item>1.6.9: One features filter for the whole store</item>
+            <item>1.6.9: Filters files that fit any site</item>
+            <item>1.6.8: Icons of categories and filter groups</item>
+            <item>1.6.8: Product list: grid / list and "Show all"</item>
+            <item>1.6.7: Filters</item>
+            <item>1.6.6: Filters</item>
+            <item>1.6.5: Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.12" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.12 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.11</version>
+        <fix>
+            <item>Buttons on the left, new look really shown</item>
+            <item>1.6.10: "Show all" and grid / list next to the sorting menu</item>
+            <item>1.6.9: One features filter for the whole store</item>
+            <item>1.6.9: Filters files that fit any site</item>
+            <item>1.6.8: Icons of categories and filter groups</item>
+            <item>1.6.8: Product list: grid / list and "Show all"</item>
+            <item>1.6.7: Filters</item>
+            <item>1.6.6: Filters</item>
+            <item>1.6.5: Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.11" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.11 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.10</version>
+        <fix>
+            <item>"Show all" and grid / list next to the sorting menu</item>
+            <item>1.6.9: One features filter for the whole store</item>
+            <item>1.6.9: Filters files that fit any site</item>
+            <item>1.6.8: Icons of categories and filter groups</item>
+            <item>1.6.8: Product list: grid / list and "Show all"</item>
+            <item>1.6.7: Filters</item>
+            <item>1.6.6: Filters</item>
+            <item>1.6.5: Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.10" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.10 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.9</version>
+        <fix>
+            <item>One features filter for the whole store</item>
+            <item>Filters files that fit any site</item>
+            <item>1.6.8: Icons of categories and filter groups</item>
+            <item>1.6.8: Product list: grid / list and "Show all"</item>
+            <item>1.6.7: Filters</item>
+            <item>1.6.6: Filters</item>
+            <item>1.6.5: Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.9" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.9 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.8</version>
+        <fix>
+            <item>Icons of categories and filter groups</item>
+            <item>Product list: grid / list and "Show all"</item>
+            <item>1.6.7: Filters</item>
+            <item>1.6.6: Filters</item>
+            <item>1.6.5: Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.8" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.8 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.7</version>
+        <fix>
+            <item>Filters</item>
+            <item>1.6.6: Filters</item>
+            <item>1.6.5: Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.7" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.7 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.6</version>
+        <fix>
+            <item>Filters</item>
+            <item>1.6.5: Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.6" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.6 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.5</version>
+        <fix>
+            <item>Filters</item>
+            <item>1.6.4: Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.5" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.5 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.4</version>
+        <fix>
+            <item>Filters</item>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>1.6.3: Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.4" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.4 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.3</version>
+        <fix>
+            <item>1.6.2: Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <change>
+            <item>Close goes to the Gridbox panel</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.3" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.3 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.2</version>
+        <fix>
+            <item>Product cards in even rows (tab Layout, on by default)</item>
+            <item>1.6.1: Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.2" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.2 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.1</version>
+        <fix>
+            <item>Languages</item>
+        </fix>
+        <addition>
+            <item>1.6.0: Many technical parameters in one filter</item>
+            <item>1.6.0: HVACR parameters</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.1" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.1 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.6.0</version>
+        <addition>
+            <item>Many technical parameters in one filter</item>
+            <item>HVACR parameters</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.6.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.6.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.5.2</version>
+        <fix>
+            <item>Technical parameters no longer read numbers of standards and model names as values</item>
+            <item>On the 636-product test store this removes wrong values from 45 products (e.g</item>
+            <item>The parameters of all products are read again after the update (automatically, on the...</item>
+            <item>1.5.1: Filters did nothing on stores with the "Default" product order</item>
+            <item>1.5.1: The side panel opened under the header</item>
+            <item>1.5.1: The settings of the product list element are also found when the list is part of a...</item>
+        </fix>
+        <addition>
+            <item>1.5.0: Product filters (off by default)</item>
+            <item>1.5.0: Reset to defaults</item>
+        </addition>
+        <change>
+            <item>1.5.1: New panel position: in the side column next to the products</item>
+            <item>1.5.1: The plugin's own log file</item>
+            <item>1.5.1: The diagnostic HTML comment was removed</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.5.2" target="_blank" rel="noopener noreferrer">The full list of changes of 1.5.2 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.5.1</version>
+        <fix>
+            <item>Filters did nothing on stores with the "Default" product order</item>
+            <item>The side panel opened under the header</item>
+            <item>The settings of the product list element are also found when the list is part of a...</item>
+        </fix>
+        <addition>
+            <item>1.5.0: Product filters (off by default)</item>
+            <item>1.5.0: Reset to defaults</item>
+        </addition>
+        <change>
+            <item>New panel position: in the side column next to the products</item>
+            <item>The plugin's own log file</item>
+            <item>The diagnostic HTML comment was removed</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.5.1" target="_blank" rel="noopener noreferrer">The full list of changes of 1.5.1 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.5.0</version>
+        <addition>
+            <item>Product filters (off by default)</item>
+            <item>Reset to defaults</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.5.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.5.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.4.1</version>
+        <fix>
+            <item>Help tooltips</item>
+            <item>Languages</item>
+        </fix>
+        <addition>
+            <item>1.4.0: 12 administrator languages</item>
+            <item>1.4.0: Right-to-left sites</item>
+            <item>1.4.0: Prices exactly as Gridbox calculates them</item>
+            <item>1.4.0: Security and reliability</item>
+            <item>1.4.0: Technical notes</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.4.1" target="_blank" rel="noopener noreferrer">The full list of changes of 1.4.1 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.4.0</version>
+        <addition>
+            <item>12 administrator languages</item>
+            <item>Right-to-left sites</item>
+            <item>Prices exactly as Gridbox calculates them</item>
+            <item>Security and reliability</item>
+            <item>Technical notes</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.4.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.4.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.3.0</version>
+        <addition>
+            <item>Lowest price on every category</item>
+            <item>New module: mod_bettercategories</item>
+            <item>Faster first view</item>
+            <item>Settings file: export and import</item>
+            <item>Technical notes</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.3.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.3.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.2.0</version>
+        <addition>
+            <item>Fast WebP thumbnails</item>
+            <item>Per-level settings</item>
+            <item>Sibling bar on the last level</item>
+            <item>Structured data (JSON-LD)</item>
+            <item>Improvements</item>
+            <item>Technical notes</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.2.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.2.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
+        <version>1.1.0</version>
+        <addition>
+            <item>New features</item>
+            <item>Phones and small tiles</item>
+            <item>Accessibility</item>
+            <item>Technical notes</item>
+        </addition>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.1.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.1.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+</changelogs>

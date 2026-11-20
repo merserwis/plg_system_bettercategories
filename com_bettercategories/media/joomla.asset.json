@@ -1,8 +1,8 @@
 {
   "$schema": "https://developer.joomla.org/schemas/json-schema/web_assets.json",
   "name": "com_bettercategories",
-  "version": "1.9.0",
-  "description": "Better Categories for Gridbox: the control panel, the pages of settings and the quick setup",
+  "version": "1.9.1",
+  "description": "Better Categories for Gridbox: the control panel, the pages of settings, the quick setup and the diagnostics",
   "license": "GPL-3.0-or-later",
   "assets": [
     {
@@ -25,6 +25,17 @@
       "name": "com_bettercategories.cpanel",
       "type": "script",
       "uri": "com_bettercategories/bettercategories-cpanel.js",
+      "dependencies": [
+        "core"
+      ],
+      "attributes": {
+        "defer": true
+      }
+    },
+    {
+      "name": "com_bettercategories.diagnostics",
+      "type": "script",
+      "uri": "com_bettercategories/bettercategories-diagnostics.js",
       "dependencies": [
         "core"
       ],

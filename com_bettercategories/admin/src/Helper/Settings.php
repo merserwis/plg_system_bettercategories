@@ -320,10 +320,14 @@ final class Settings
         return [];
     }
 
-    /** the plugin is installed and on: its field classes (the pages are made of them) are then loaded */
+    /**
+     * The plugin is installed, on and not in safe mode: its field classes (the pages are made of them) are then
+     * loaded. In safe mode its code is not loaded at all (it may be what is broken) and it answers nothing.
+     */
     public static function pluginReady(): bool
     {
-        return (int) (self::plugin()->enabled ?? 0) === 1 && class_exists(\Merserwis\Plugin\System\BetterCategories\Field\BcpreviewField::class);
+        return (int) (self::plugin()->enabled ?? 0) === 1 && !Diagnostics::safeMode()
+            && class_exists(\Merserwis\Plugin\System\BetterCategories\Field\BcpreviewField::class);
     }
 
     /**

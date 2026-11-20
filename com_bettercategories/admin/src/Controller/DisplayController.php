@@ -31,7 +31,7 @@ class DisplayController extends BaseController
             return $this;
         }
         $view = $this->input->getCmd('view', $this->default_view);
-        if (!\in_array($view, ['cpanel', 'page', 'setup'], true)) {
+        if (!\in_array($view, ['cpanel', 'page', 'setup', 'diagnostics'], true)) {
             $view = $this->default_view;
             $this->input->set('view', $view);
         }

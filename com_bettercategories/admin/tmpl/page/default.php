@@ -48,6 +48,11 @@ if ($settings === '' || !\in_array($settings, $names, true)) {
             <?php echo Text::_('COM_BETTERCATEGORIES_PLUGIN_OFF'); ?>
             <a href="<?php echo Route::_('index.php?option=com_bettercategories'); ?>"><?php echo Text::_('COM_BETTERCATEGORIES_MENU_CPANEL'); ?></a>
         </div>
+    <?php elseif (\Merserwis\Component\BetterCategories\Administrator\Helper\Diagnostics::safeMode()) : ?>
+        <div class="alert alert-warning">
+            <?php echo Text::_('COM_BETTERCATEGORIES_DIAG_SAFE_IS_ON'); ?>
+            <a href="<?php echo Route::_('index.php?option=com_bettercategories&view=diagnostics'); ?>"><?php echo Text::_('COM_BETTERCATEGORIES_MENU_DIAGNOSTICS'); ?></a>
+        </div>
     <?php endif; ?>
 
     <p class="bcc-page-desc"><?php echo Text::_('COM_BETTERCATEGORIES_PAGE_' . strtoupper($page) . '_DESC'); ?></p>
@@ -62,7 +67,9 @@ if ($settings === '' || !\in_array($settings, $names, true)) {
     <?php endif; ?>
 
     <?php if (!$this->form) : ?>
-        <div class="alert alert-danger"><?php echo Text::_('COM_BETTERCATEGORIES_ERROR_PAGE'); ?></div>
+        <?php if (!\Merserwis\Component\BetterCategories\Administrator\Helper\Diagnostics::safeMode()) : ?>
+            <div class="alert alert-danger"><?php echo Text::_('COM_BETTERCATEGORIES_ERROR_PAGE'); ?></div>
+        <?php endif; ?>
     <?php elseif (\count($names) === 1) : ?>
         <?php echo $fieldset($names[0], $this->fieldsets[$names[0]]); ?>
     <?php else : ?>

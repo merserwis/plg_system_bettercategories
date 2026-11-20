@@ -14,6 +14,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\View\HtmlView as BaseHtmlView;
 use Joomla\CMS\Toolbar\ToolbarHelper;
 use Merserwis\Component\BetterCategories\Administrator\Helper\Catalog;
+use Merserwis\Component\BetterCategories\Administrator\Helper\Diagnostics;
 use Merserwis\Component\BetterCategories\Administrator\Helper\Settings;
 
 /**
@@ -45,6 +46,11 @@ class HtmlView extends BaseHtmlView
 
     protected bool $canClear = false;
 
+    protected bool $safeMode = false;
+
+    /** "500" errors of the site in the last 7 days (Diagnostics) */
+    protected int $recentErrors = 0;
+
     public function display($tpl = null): void
     {
         // also when reached by another task than display (page.display, setup.display): the settings are the plugin's
@@ -67,6 +73,11 @@ class HtmlView extends BaseHtmlView
             }
         }
         $this->version  = (string) (Settings::manifest()?->version ?? '');
+        $this->safeMode = Diagnostics::safeMode();
+        $since          = gmdate('Y-m-d', time() - 7 * 86400);
+        foreach (Diagnostics::entries(Diagnostics::ERRORS_LOG, 50) as $entry) {
+            $this->recentErrors += strcmp($entry['time'], $since) >= 0 ? 1 : 0;
+        }
         $user           = $this->getCurrentUser();
         $this->canEdit  = $user->authorise('core.edit.state', 'com_plugins');
         // the button "clear the cache" is answered by the plugin (not offered while it is off), for who may change its settings
@@ -94,5 +105,6 @@ class HtmlView extends BaseHtmlView
         $toolbar = $this->getDocument()->getToolbar();
         $toolbar->linkButton('wand', 'COM_BETTERCATEGORIES_MENU_SETUP')->url('index.php?option=com_bettercategories&view=setup');
         $toolbar->linkButton('cog', 'COM_BETTERCATEGORIES_MENU_CONFIG')->url('index.php?option=com_bettercategories&view=page&page=config');
+        $toolbar->linkButton('heartbeat', 'COM_BETTERCATEGORIES_MENU_DIAGNOSTICS')->url('index.php?option=com_bettercategories&view=diagnostics');
     }
 }

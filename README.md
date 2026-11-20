@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.9.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.9.1-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below — which shoppers can **filter by price, product fields, technical parameters and features** read from the descriptions.
@@ -15,7 +15,7 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 ## ⚡ Key Highlights & Capabilities
 
 * **Subcategories on every store category page:** On the store home page and on each category with children, the plugin lists the **direct subcategories of the current category**. Leaf categories (no children) are left exactly as Gridbox renders them.
-* **Product counts that match Gridbox:** Each subcategory shows the number of products in it **and all of its subcategories** — counted the same way as Gridbox's own *Categories* element: published and currently live products the visitor is allowed to see, primary category plus Gridbox's *additional categories* map, without the subscription add-ons Gridbox hides from listings.
+* **Product counts that match the product list:** Each subcategory shows the number of products in it **and all of its subcategories** — published and currently live products the visitor is allowed to see, primary category plus Gridbox's *additional categories* map, without the subscription add-ons Gridbox hides from listings, **each product once** (1.9.1), as the product list of the category page shows them. (Gridbox's own *Categories* element counts a product in two subcategories of one parent twice.)
 * **Canonical links:** Subcategory links use the same menu item (`Itemid`) Gridbox itself would pick — the category's menu item, the nearest parent's, the store app's, or the Gridbox home page — so they resolve to the same canonical URLs as Gridbox's sitemap, e.g. `/oferta/meters/installation-testers`.
 * **Text links or image tiles:** A simple list of links, one under another or in one wrapping row — or tiles with images in four styles: *text below the image*, *card*, *text on the image with a gradient* and *cover*.
 * **What is inside each category (new in 1.1.0):** Every category can show its own subcategories — as text under the name, a **drawer sliding down** that pushes the layout, a **panel sliding in from the side**, a **card flip** with the list on the back, or a **modern tooltip**. Custom title (e.g. *In this category:*), list / inline / chip styles, a limit with a *+N more* link, product counts, colours, hover or button opening, and a separate mode for phones.
@@ -34,11 +34,12 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **Reset to defaults (new in 1.5.0):** one button brings back the settings of a fresh installation, keeping this site's store IDs and filters if you wish.
 * **Help tooltips (new in 1.4.1):** a “?” beside every option shows its description on hover, keyboard focus or a click.
 * **Prices exactly as Gridbox calculates them (1.4.0):** the first store sale that applies, category sales on the product's own category and its parents, automatic exchange rates and the language currency.
-* **Smart category images:** Tile images come from, in order: an image chosen for the category in the plugin → the image set on the category in Gridbox → **the image of the most viewed product** in the category and its subcategories. Categories need no manual work to look good.
+* **Smart category images:** Tile images come from, in order: an image chosen for the category in the plugin → the image set on the category in Gridbox → **the image of the most viewed product** in the category and its subcategories (its intro image, else the first image of its gallery — 1.9.1). Categories need no manual work to look good.
 * **Modern hover effects:** Zoom in, zoom out, lift with shadow, light shine, grayscale-to-colour, tint fade-in / fade-out, tilt, outline ring — or none.
 * **Full visual control:** Position on the page, alignment, direction, responsive columns (desktop / tablet / phone), font sizes and colours (empty = Gridbox theme), image shape (rectangle, rounded corners, circle), aspect ratio, fit, background, colour tint, drop shadow (angle, distance, blur, size, opacity) and spacing.
 * **Zero impact on search and Gridbox's own filters:** Search results, Gridbox *Items filter* queries (`?query=`), tag and author listings are never modified; by default the list of subcategories appears only on the first page of a category.
 * **An administrator of its own (new in 1.8.0):** *Components → Better Categories for Gridbox* opens a control panel like Akeeba Admin Tools — the parts of the plugin as tiles with their state, a page for each (*Category List*, *Tiles*, *Subcategories*, *Category Descriptions*, *Navigation*, *Filters*) with the live preview beside the settings, a *Configuration* page for what is set once, and a **quick setup** of 15 switches marked recommended or optional. After every save it reminds you to check the site.
+* **Diagnostics and safe mode (new in 1.9.1):** a *Diagnostics* page checks what the plugin needs (versions, files, PHP limits, GD/WebP, writable folders, log size, debug settings), shows the latest “500” errors of the site — which Joomla keeps nowhere by default — and copies a report for support. Safe mode (a button, or an empty file `plugins/system/bettercategories/safe-mode`) stops the plugin without loading its code when it breaks a site. See [Problems and the log](#-problems-and-the-log).
 * **Joomla 6 & PHP 8.5 native:** Service-provider plugin with lazy loading, `createQuery()`, dependency-injected database, no deprecated Joomla APIs in the extension code, no warnings on PHP 8.5.
 
 ---
@@ -354,6 +355,10 @@ Quick check on your site: open a store category that has subcategories and look 
 ## 🩺 Problems and the log
 
 Errors are never shown to visitors. They are written to the plugin's own log file, `administrator/logs/plg_system_bettercategories.php`, and the **Filters** tab shows its latest lines (newest first) — send them to the developer when something does not work. The diagnostic HTML comment of earlier versions was removed in 1.5.1.
+**Diagnostics (1.9.1).** *Components → Better Categories for Gridbox → Diagnostics* checks the site in one place and shows the latest messages of the plugin and the latest **“500” errors of the whole site** (any extension, site and administrator). Joomla shows only “500 Whoops” for such an error and keeps it nowhere unless *Log Almost Everything* is on; the plugin writes them to `administrator/logs/plg_system_bettercategories_errors.php` with the stack trace but **without the values of the arguments**, masks the values quoted in the messages and the query of a database error (no passwords or personal data), leaves out 404/403 and keeps the file under 512 KB. *Copy the report* gives a plain-text summary to send with a question.
+
+**Safe mode (1.9.1).** If the plugin breaks the site or the administrator, create an empty file named `safe-mode` in `plugins/system/bettercategories` (file manager of the hosting or FTP). The plugin then does nothing and its code is not even loaded; the settings stay and the control panel and the Diagnostics page still open (the pages of settings wait until safe mode is off: they are made of the plugin's own fields). Delete the file — or use the button on the Diagnostics page, which first checks that the plugin's code loads again — to turn it back on. An update of the package leaves the file in place, so a fixed version can be installed first and the plugin turned on after. Renaming the plugin's folder, the old way, also stops it, but then the pages of Better Categories fail too.
+
 The plugin always uses its settings as saved in the database, even when the site hands it a different copy (some device-specific extensions or caches pass phones old plugin parameters).
 
 ---
@@ -386,6 +391,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.9.1** — Diagnostics page (checks, the “500” errors of the site that Joomla keeps nowhere, a report to copy) and safe mode (a button or an empty `safe-mode` file); product counts count each product once, as the product list shows them; tile images from the product gallery when a product has no intro image.
 * **1.9.0** — The products of a category page as a schema.org `ItemList` (names and addresses, numbered on across the pages of the list; not on filtered lists, *Show all* or `noindex` pages); the list of subcategories is named after its category.
 * **1.8.2** — Long words of tile names no longer break in the middle on narrow tiles (phones): the names of the list get one smaller font when needed, and cards leave more room for them.
 * **1.8.1** — The subcategory drawer in the *columns* layout lies over the tiles below: on phones it no longer widens the list past the screen (nor sends a tap on “+” to the neighbouring category), and the tiles no longer jump between columns when a drawer opens.
