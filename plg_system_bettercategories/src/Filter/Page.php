@@ -33,13 +33,10 @@ final class Page
 
     private Filters $filters;
 
-    private string $device;
-
-    public function __construct(BetterCategories $plugin, Registry $params, string $device)
+    public function __construct(BetterCategories $plugin, Registry $params)
     {
         $this->plugin  = $plugin;
         $this->params  = $params;
-        $this->device  = $device;
         $this->filters = new Filters($plugin, $params);
     }
 
@@ -134,8 +131,9 @@ final class Page
 
         $position = (string) $this->params->get('filters_position', 'sidebar_left');
         $position = in_array($position, Filters::POSITIONS, true) ? $position : 'sidebar_left';
-        $drawer   = $defs && ($position === 'drawer' || ($this->device === 'mobile' && $this->params->get('filters_mobile', 'drawer') === 'drawer'));
-        $classes  = 'bcf-pos-' . str_replace('_', '-', $position) . ' bcf-dev-' . $this->device
+        // the drawer of phones comes from the styles at their widths (bcf-m-drawer): the same HTML for every device (1.10.0)
+        $drawer   = $defs && $position === 'drawer';
+        $classes  = 'bcf-pos-' . str_replace('_', '-', $position)
             . ($drawer ? ' bcf-is-drawer' : '') . ($this->params->get('filters_mobile', 'drawer') === 'drawer' ? ' bcf-m-drawer' : '')
             . ((string) $this->params->get('filters_apply', 'auto') === 'auto' ? ' bcf-auto' : '')
             . ($viewToggle ? ' bcf-view-' . ($this->params->get('list_view_default', 'grid') === 'list' ? 'list' : 'grid') : '')
@@ -514,7 +512,9 @@ final class Page
                 }
             }
             $open    = !$menus && (!$def['collapsed'] || $badge > 0);
-            $groups .= '<details class="bcf-group bcf-group--' . $e($def['type']) . '" data-bcf-key="' . $e($def['key']) . '"' . ($open ? ' open' : '') . '>'
+            // menus above the products start closed; in the drawer of phones the script opens these as the side panel has them
+            $openM   = $menus && (!$def['collapsed'] || $badge > 0);
+            $groups .= '<details class="bcf-group bcf-group--' . $e($def['type']) . '" data-bcf-key="' . $e($def['key']) . '"' . ($open ? ' open' : '') . ($openM ? ' data-bcf-m-open' : '') . '>'
                 . '<summary class="bcf-group-title">' . ($def['icon'] !== '' || $def['iconFile'] !== '' ? $this->plugin->iconHtml($def['icon'], $def['iconFile']) : '')
                 . '<span class="bcf-group-name">' . $e($def['label']) . '</span>'
                 . ($badge > 0 ? '<span class="bcf-badge">' . $badge . '</span>' : '') . '</summary>'

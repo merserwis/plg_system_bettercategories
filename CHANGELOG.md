@@ -2,6 +2,29 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.10.0 — 2026-11-20
+
+### 📱 The same page for every device <!-- fix -->
+
+- **The HTML no longer depends on the device that asked for it.** Until now the plugin read the device from the browser's name (User-Agent) and built the page for it: the mode of the subcategory panels on phones (e.g. a drawer instead of the card flip), the side margin and font of the sibling bar, which tile images load at once, the filters drawer of phones. A page cache (MerTools, Joomla's, a hosting's) keeps one copy of a page for everyone, so whoever came first decided: on merserwis.pl a phone and a computer got the very same page (checked on 20.11). Now one HTML holds both and the width of the screen chooses — in the styles (`@media`) and in the script — so a kept page fits every visitor.
+- **Subcategory panels**: the mode of wider screens and the mode of phones (*Mode on phones*) both work from the same page; turning a tablet or narrowing a window switches between them. The live preview of the settings shows the phone mode at the Phone width too.
+- **Filters**: the drawer of phones comes from the styles alone; with filters *above the products* the menus are for wider screens, and in the drawer of a phone the groups open as in the side panel.
+- **Tile images**: the first row of the narrowest layout loads with high priority, the first row of the widest is not lazy.
+- The lists kept in the plugin's cache no longer have a copy per device (fewer copies, made less often).
+
+### ⚡ Made ahead: Scheduler task and console command <!-- addition -->
+
+- **A task of Joomla's Scheduler** (*System → Scheduled Tasks → New → Better Categories for Gridbox: warm-up*) and **a console command** (`php cli/joomla.php bettercategories:warmup [--time=300]`, run as the user of the web server) make the **lighter copies of the tile images** and the **index the filters read from the product descriptions** ahead. Before, a visitor waited for them: the index is emptied by every save of the settings, and the first filtered page then read the descriptions of the whole store. Each run works for a limited time (the task 50 seconds, less when PHP allows less) and the next one goes on where it stopped — also in the middle of the index; the lists kept in the cache are renewed only when new copies of images were made. The content is read in the site's default language (the console has its own).
+
+### 🚀 Faster filters <!-- change -->
+
+- **The product data of a filtered list is kept** (for the *Cache time* of the settings, at most 5 minutes): a filter or a page of the list no longer reads every product of the category again. It is read again at once when a product of the store changes — saved, added, removed, published or unpublished, moved to the trash, its price, stock or variations — when a sale starts or ends, or when the filters change (one figure of the whole store, checked on every request).
+- **One index of the descriptions for the whole store**: also when a filter of features is shown only in some categories, every category uses the same index — the one the warm-up makes. It is kept apart from the lists of the plugin, so making the lists again does not empty it.
+
+### 🧹 One script file instead of scripts in the page <!-- change -->
+
+- The scripts of the subcategory panels, the tile names, the sibling bar and the rows of Gridbox's *Categories* element are one file, `media/plg_system_bettercategories/js/site.js`, added once to the page (deferred) and kept by the browser — before, each block carried its own copy in the HTML. Sites with a Content Security Policy need fewer exceptions. The script of a folded description stays in the page: it runs right after the text, so a short one never shows the *Read more* button.
+
 ## 1.9.1 — 2026-11-20
 
 ### 🩺 Diagnostics and safe mode <!-- addition -->

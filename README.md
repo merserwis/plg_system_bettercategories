@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.9.1-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.10.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below — which shoppers can **filter by price, product fields, technical parameters and features** read from the descriptions.
@@ -39,6 +39,8 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **Full visual control:** Position on the page, alignment, direction, responsive columns (desktop / tablet / phone), font sizes and colours (empty = Gridbox theme), image shape (rectangle, rounded corners, circle), aspect ratio, fit, background, colour tint, drop shadow (angle, distance, blur, size, opacity) and spacing.
 * **Zero impact on search and Gridbox's own filters:** Search results, Gridbox *Items filter* queries (`?query=`), tag and author listings are never modified; by default the list of subcategories appears only on the first page of a category.
 * **An administrator of its own (new in 1.8.0):** *Components → Better Categories for Gridbox* opens a control panel like Akeeba Admin Tools — the parts of the plugin as tiles with their state, a page for each (*Category List*, *Tiles*, *Subcategories*, *Category Descriptions*, *Navigation*, *Filters*) with the live preview beside the settings, a *Configuration* page for what is set once, and a **quick setup** of 15 switches marked recommended or optional. After every save it reminds you to check the site.
+* **One page for every device (1.10.0):** the same HTML for phones, tablets and computers — the width of the screen chooses the layout, the mode of the subcategory panels and the filters drawer — so page caches (MerTools, Joomla, hosting) serve every visitor the right page.
+* **Made ahead (new in 1.10.0):** a task of Joomla's Scheduler and the console command `php cli/joomla.php bettercategories:warmup` make the lighter copies of the tile images and the index of the filters before visitors need them.
 * **Diagnostics and safe mode (new in 1.9.1):** a *Diagnostics* page checks what the plugin needs (versions, files, PHP limits, GD/WebP, writable folders, log size, debug settings), shows the latest “500” errors of the site — which Joomla keeps nowhere by default — and copies a report for support. Safe mode (a button, or an empty file `plugins/system/bettercategories/safe-mode`) stops the plugin without loading its code when it breaks a site. See [Problems and the log](#-problems-and-the-log).
 * **Joomla 6 & PHP 8.5 native:** Service-provider plugin with lazy loading, `createQuery()`, dependency-injected database, no deprecated Joomla APIs in the extension code, no warnings on PHP 8.5.
 
@@ -119,7 +121,7 @@ Empty typography and colour fields always mean **"use the Gridbox theme value"**
 | Hide subcategories without products | Yes | Skips subcategories whose count is 0 (e.g. *Uncategorised*). |
 | First page of the list only | Yes | No list on `?page=2` and further. |
 | Settings file | — | **Export all settings**, **Export styles only** (without store IDs, element IDs, category images and filters, so the file fits another site), **Import from file…** and **Reset to defaults**. Export takes the values currently in the form. Import checks the file, takes only known settings (plain values, nothing else), saves them at once and reloads the page; *Import styles only* keeps this site's store IDs, element IDs, category images and filters. Reset gives every setting the value of a fresh installation and saves it at once; with the tick box (on by default) this site's store IDs, element IDs, category images and filters stay. **(1.6.4)** *Only add the filters of the file* adds the filters of a settings file to the saved ones and keeps everything else — a filter with the same *Name in the address* is replaced, so a file of ready filters for one category can be imported (and imported again after changes) without touching the other filters. **(1.6.9)** In such a file a filter may name its categories by their address instead of IDs — `"categories_path": ["srhvacr/hvacr/analizatory-spalin"]`, `"exclude_path"` likewise (the whole path from the top category or its end) — since category IDs differ from site to site; a filter whose categories this site does not have is left out (with a message) instead of showing everywhere. `"after": "<name in the address>"` puts a new filter right after that one (`"first": "1"` at the start, `"remove": "1"` removes the filter of that name). |
-| Cache time (minutes) | `15` | The finished list is stored and reused (per category, device, language, access level and currency), so pages are not slowed down. `0` = no cache. Saving the settings clears it, together with Joomla's and Gridbox's page caches. A store sale starting or ending, or a product being published or ending on schedule, gives a fresh list at once. Expired entries are removed once an hour. |
+| Cache time (minutes) | `15` | The finished list is stored and reused (per category, language, access level and currency; since 1.10.0 one copy for every device), so pages are not slowed down. `0` = no cache. Saving the settings clears it, together with Joomla's and Gridbox's page caches. A store sale starting or ending, or a product being published or ending on schedule, gives a fresh list at once. Expired entries are removed once an hour. |
 
 ### Layout
 
@@ -139,7 +141,7 @@ Empty typography and colour fields always mean **"use the Gridbox theme value"**
 | When there are fewer items than columns | Align left | *Align left*, *Centre* (items keep the width they have in a full row) or *Stretch to full width* (items share the whole width of the module). Applies to every direction and device. |
 | Heading space above / below (px) | `0` / `16` | Margins of the heading. |
 
-Column counts work even on sites that strip `@media` rules from the HTML served to phones: the plugin also detects phones and tablets from the browser's User-Agent and uses the matching count directly, while explicit `@media` ranges keep a cached page correct on every device.
+Column counts follow the width of the screen (`@media`: phones up to 768 px, tablets up to 1024 px). Since 1.10.0 the HTML is the same for every device — the plugin no longer reads the device from the browser's User-Agent — so a page kept by a page cache is right for every visitor.
 
 ### Text and colours
 
@@ -212,7 +214,7 @@ Create it in *Content → Site Modules → New → Better Categories for Gridbox
 | Store app ID | For the store home only: which store; `0` = the store set in the plugin, or the first store. |
 | Heading, display, tile style, direction, columns (desktop / tablet / phone), *what is inside*, lowest price | Left at *— plugin setting —* they follow the plugin. |
 
-The module never hides products, adds no structured data and loads images lazily. It has its own cache entries (per module, device, language and currency).
+The module never hides products, adds no structured data and loads images lazily. It has its own cache entries (per module, language and currency).
 
 ### Per level
 
@@ -391,6 +393,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.10.0** — The same HTML for every device (the screen width chooses; page caches serve everyone the right page), a Scheduler task and a console command that make the image copies and the filters index ahead, the product data of the filters kept for up to 5 minutes, one script file instead of scripts in the page.
 * **1.9.1** — Diagnostics page (checks, the “500” errors of the site that Joomla keeps nowhere, a report to copy) and safe mode (a button or an empty `safe-mode` file); product counts count each product once, as the product list shows them; tile images from the product gallery when a product has no intro image.
 * **1.9.0** — The products of a category page as a schema.org `ItemList` (names and addresses, numbered on across the pages of the list; not on filtered lists, *Show all* or `noindex` pages); the list of subcategories is named after its category.
 * **1.8.2** — Long words of tile names no longer break in the middle on narrow tiles (phones): the names of the list get one smaller font when needed, and cards leave more room for them.

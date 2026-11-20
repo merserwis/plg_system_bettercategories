@@ -138,13 +138,23 @@ html.bcf-lock, html.bcf-lock body { overflow: hidden; }
 }
 
 /* ---- "top" position: the groups side by side, each opening as a menu */
-.bcf-pos-top:not(.bcf-is-drawer) .bcf-form { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; }
-.bcf-pos-top:not(.bcf-is-drawer) .bcf-head { margin: 0; align-self: center; }
-.bcf-pos-top:not(.bcf-is-drawer) .bcf-groups { display: flex; flex-wrap: wrap; gap: 8px; }
-.bcf-pos-top:not(.bcf-is-drawer) .bcf-group { position: relative; border: 1px solid var(--bcf-line); border-radius: 8px; padding: 7px 12px; }
-.bcf-pos-top:not(.bcf-is-drawer) .bcf-group-body { position: absolute; z-index: 50; top: calc(100% + 6px); inset-inline-start: 0; width: max(240px, 100%); max-height: 60vh; overflow: auto; background: var(--bcf-bg-c); border: 1px solid var(--bcf-line); border-radius: 8px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
-.bcf-pos-top:not(.bcf-is-drawer) .bcf-foot { padding: 0; align-self: center; }
-.bcf-pos-top:not(.bcf-is-drawer) .bcf-reset { display: none; }
+.bcf-pos-top:not(.bcf-is-drawer):not(.bcf-m-drawer) .bcf-form { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; }
+.bcf-pos-top:not(.bcf-is-drawer):not(.bcf-m-drawer) .bcf-head { margin: 0; align-self: center; }
+.bcf-pos-top:not(.bcf-is-drawer):not(.bcf-m-drawer) .bcf-groups { display: flex; flex-wrap: wrap; gap: 8px; }
+.bcf-pos-top:not(.bcf-is-drawer):not(.bcf-m-drawer) .bcf-group { position: relative; border: 1px solid var(--bcf-line); border-radius: 8px; padding: 7px 12px; }
+.bcf-pos-top:not(.bcf-is-drawer):not(.bcf-m-drawer) .bcf-group-body { position: absolute; z-index: 50; top: calc(100% + 6px); inset-inline-start: 0; width: max(240px, 100%); max-height: 60vh; overflow: auto; background: var(--bcf-bg-c); border: 1px solid var(--bcf-line); border-radius: 8px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+.bcf-pos-top:not(.bcf-is-drawer):not(.bcf-m-drawer) .bcf-foot { padding: 0; align-self: center; }
+.bcf-pos-top:not(.bcf-is-drawer):not(.bcf-m-drawer) .bcf-reset { display: none; }
+/* with the drawer of phones: menus only on wider screens (the same HTML for every device, 1.10.0) */
+@media (min-width: 769px) {
+  .bcf-pos-top.bcf-m-drawer:not(.bcf-is-drawer) .bcf-form { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 12px; }
+  .bcf-pos-top.bcf-m-drawer:not(.bcf-is-drawer) .bcf-head { margin: 0; align-self: center; }
+  .bcf-pos-top.bcf-m-drawer:not(.bcf-is-drawer) .bcf-groups { display: flex; flex-wrap: wrap; gap: 8px; }
+  .bcf-pos-top.bcf-m-drawer:not(.bcf-is-drawer) .bcf-group { position: relative; border: 1px solid var(--bcf-line); border-radius: 8px; padding: 7px 12px; }
+  .bcf-pos-top.bcf-m-drawer:not(.bcf-is-drawer) .bcf-group-body { position: absolute; z-index: 50; top: calc(100% + 6px); inset-inline-start: 0; width: max(240px, 100%); max-height: 60vh; overflow: auto; background: var(--bcf-bg-c); border: 1px solid var(--bcf-line); border-radius: 8px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, .12); }
+  .bcf-pos-top.bcf-m-drawer:not(.bcf-is-drawer) .bcf-foot { padding: 0; align-self: center; }
+  .bcf-pos-top.bcf-m-drawer:not(.bcf-is-drawer) .bcf-reset { display: none; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .bcf-is-drawer .bcf-form, .bcf-is-drawer .bcf-backdrop, .bcf-m-drawer .bcf-form, .bcf-group-title::after { transition: none; }

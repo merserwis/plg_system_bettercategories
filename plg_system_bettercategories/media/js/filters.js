@@ -65,6 +65,7 @@
     const wasOpen = panel().classList.contains('is-open');
     const openMenu = (document.querySelector('.bcf-pos-top:not(.bcf-is-drawer) .bcf-group[open]') || {}).dataset?.bcfKey;
     for (const [sel] of pairs) document.querySelector(sel).replaceWith(document.importNode(doc.querySelector(sel), true));
+    phoneGroups();
     ['.ba-blog-posts-header', '.ba-blog-posts-wrapper', '.ba-blog-posts-pagination-wrapper'].forEach((sel) => {
       const a = list.querySelector(sel);
       const b = nextList.querySelector(sel);
@@ -277,8 +278,25 @@
     if (window.app && app.lazyLoad && typeof app.lazyLoad.check === 'function') app.lazyLoad.check();
   }
 
+  // "above the products" with the drawer of phones: the groups start closed (menus); in the drawer, at the width of
+  // a phone, they open as the side panel has them (1.10.0: the same HTML for every device)
+  const phone = window.matchMedia ? window.matchMedia('(max-width: 768px)') : null;
+  const phoneGroups = () => {
+    if (!phone || !phone.matches) return;
+    document.querySelectorAll('.bcf-m-drawer .bcf-group[data-bcf-m-open]:not([open])').forEach((g) => { g.open = true; });
+  };
+  // a turned tablet or a widened window: the groups opened for the drawer would all stay open as menus — closed then
+  if (phone) {
+    const change = () => {
+      if (phone.matches) { phoneGroups(); return; }
+      document.querySelectorAll('.bcf-pos-top.bcf-m-drawer:not(.bcf-is-drawer) .bcf-group[open]').forEach((g) => { g.open = false; });
+    };
+    if (phone.addEventListener) phone.addEventListener('change', change); else if (phone.addListener) phone.addListener(change);
+  }
+
   const start = () => {
     bind();
+    phoneGroups();
     // the remembered view, also when the early script of the page did not run
     try {
       const v = localStorage.getItem('bcf-view');

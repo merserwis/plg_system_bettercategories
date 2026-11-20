@@ -63,6 +63,23 @@ final class Filters
     /** @var array<int, array>|null normalised filter definitions */
     private ?array $defs = null;
 
+    /** @var array<int, array>|null every filter of the store, also those another category does not show (the index covers them all) */
+    private ?array $allDefs = null;
+
+    /**
+     * The cache of the filters (1.10.0): the index of the descriptions and the product data, apart from the lists of
+     * the plugin, so making the lists again (new copies of images) keeps them.
+     */
+    public const CACHE_GROUP = 'plg_system_bettercategories_filters';
+
+    /** The warm-up: no product data kept (it is read for another visitor), the index stops at this time (microtime). */
+    public bool $warming = false;
+
+    public float $deadline = 0.0;
+
+    /** The index was not finished (the deadline): the warm-up goes on next time. */
+    public bool $indexIncomplete = false;
+
     public function __construct(BetterCategories $plugin, Registry $params)
     {
         $this->plugin = $plugin;
@@ -213,6 +230,8 @@ final class Filters
             $def['key'] = self::PREFIX . $key;
             $defs[]     = $def;
         }
+
+        $this->allDefs = $defs;
 
         return $this->defs = $defs;
     }
@@ -443,8 +462,70 @@ final class Filters
      */
     public function products(int $appId, int $categoryId, array $categories, array $defs): array
     {
+        // kept (1.10.0) for the "cache time" of the settings, at most 5 minutes; the key changes at once with a change of
+        // a product of the store (saved, added, removed, published or not, its price, stock, variations, access, language),
+        // a sale starting or ending, the categories the visitor sees and the filters
+        $minutes = $this->warming ? 0 : min(5, max(0, (int) $this->params->get('cache_time', 15)));
+        if ($minutes <= 0) {
+            return $this->loadProducts($appId, $categoryId, $categories, $defs);
+        }
+        $stamp = $this->dataStamp($appId);
+        if ($stamp === '') {
+            return $this->loadProducts($appId, $categoryId, $categories, $defs);
+        }
+        $key   = md5(implode('|', ['filter-products', BetterCategories::ASSET_VERSION, (int) @filemtime(__DIR__ . '/Params.php'), $appId, $categoryId,
+            $this->plugin->contentLanguage(), implode(',', $this->plugin->viewLevels()), $this->plugin->scheduleStamp($appId),
+            $stamp, md5(json_encode($defs)), md5(implode(',', array_keys($categories)))]));
+        $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
+            ->createCacheController('output', $this->plugin->siteCache(['defaultgroup' => self::CACHE_GROUP, 'lifetime' => $minutes, 'caching' => true]));
+        try {
+            $kept = $cache->get($key);
+            if (\is_array($kept) && isset($kept['p']) && \is_array($kept['p'])) {
+                // the options the product data gave the filters of text fields (addFieldValues()) come back with it
+                if (\is_array($kept['d'] ?? null)) {
+                    $this->defs = $kept['d'];
+                }
+
+                return $kept['p'];
+            }
+        } catch (\Throwable $e) {
+        }
+        $before   = $this->defs;
+        $products = $this->loadProducts($appId, $categoryId, $categories, $defs);
+        try {
+            $cache->store(['p' => $products, 'd' => $this->defs !== $before ? $this->defs : null], $key);
+        } catch (\Throwable $e) {
+        }
+
+        return $products;
+    }
+
+    /**
+     * What the product data of the filters is made of, for the whole store in one figure: the products (saved, published,
+     * trashed, access, language), their prices, stock and variations. '' when it cannot be read (no product data kept).
+     */
+    private function dataStamp(int $appId): string
+    {
+        try {
+            $db  = $this->plugin->db();
+            $row = $db->setQuery($db->createQuery()
+                ->select(['MAX(p.saved_time)', 'COUNT(*)', 'SUM(CRC32(CONCAT_WS(' . $db->quote('|') . ', p.id, p.published, p.page_category, p.page_access, p.language,'
+                    . ' p.saved_time, p.created, p.end_publishing, d.price, d.sale_price, d.stock, MD5(d.variations))))'])
+                ->from($db->quoteName('#__gridbox_pages', 'p'))
+                ->leftJoin($db->quoteName('#__gridbox_store_product_data', 'd') . ' ON d.product_id = p.id')
+                ->where('p.app_id = ' . $appId))->loadRow();
+
+            return \is_array($row) ? implode('/', $row) : '';
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /** products() without the cache. */
+    private function loadProducts(int $appId, int $categoryId, array $categories, array $defs): array
+    {
         $db    = $this->plugin->db();
-        $lang  = Factory::getApplication()->getLanguage()->getTag();
+        $lang  = $this->plugin->contentLanguage();
         $query = $this->plugin->visibleProductsQuery()
             ->select(['p.id', 'p.saved_time', 'p.page_category', 'd.price', 'd.sale_price', 'd.variations', 'd.stock'])
             ->innerJoin($db->quoteName('#__gridbox_categories', 'c') . ' ON c.id = p.page_category')
@@ -622,16 +703,18 @@ final class Filters
      */
     private function addTextIndex(array &$products, array $times, int $appId, array $defs): void
     {
+        // the features of every filter of the store, also of those this category does not show: one index (and one key)
+        // for all categories, the one the warm-up makes
         $patterns = [];
-        foreach ($defs as $def) {
-            foreach ($def['features'] as $slug => $feature) {
+        foreach ($this->allDefs ?? $defs as $def) {
+            foreach ($def['features'] ?? [] as $slug => $feature) {
                 $patterns[$def['id'] . ':' . $slug] = $feature['pattern'];
             }
         }
         ksort($patterns);
 
         $cache = Factory::getContainer()->get(CacheControllerFactoryInterface::class)
-            ->createCacheController('output', ['defaultgroup' => 'plg_system_bettercategories', 'lifetime' => self::INDEX_MINUTES, 'caching' => true]);
+            ->createCacheController('output', $this->plugin->siteCache(['defaultgroup' => self::CACHE_GROUP, 'lifetime' => self::INDEX_MINUTES, 'caching' => true]));
         // the version of the reading rules is part of the key: a changed Params.php reads everything again
         $key   = md5('filter-index|' . BetterCategories::ASSET_VERSION . '|' . (int) @filemtime(__DIR__ . '/Params.php') . '|' . $appId . '|' . md5(json_encode($patterns)));
         $index = $cache->get($key);
@@ -647,6 +730,11 @@ final class Filters
         if ($stale) {
             $db = $this->plugin->db();
             foreach (array_chunk($stale, 100) as $chunk) {
+                // the warm-up stops at its time; what is read is kept, the rest is read next time
+                if ($this->deadline > 0 && microtime(true) >= $this->deadline) {
+                    $this->indexIncomplete = true;
+                    break;
+                }
                 // the description is often kept in fields of the product (Gridbox apps: "Features",
                 // "Technical data" as text areas), not in the page itself
                 $more = [];

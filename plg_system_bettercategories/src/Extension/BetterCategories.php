@@ -43,7 +43,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.9.1';
+    private const VERSION    = '1.10.0';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -65,9 +65,6 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     /** @var int[]|null view levels of the current user (memoised per request) */
     private ?array $levels = null;
 
-    /** Device class of the current visitor (memoised per request). */
-    private ?string $deviceClass = null;
-
     /** Stored in the cache in place of an empty result, so leaf categories skip rendering too. */
     private const CACHE_EMPTY = "\0empty";
 
@@ -88,6 +85,15 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
     /** A thumbnail was left for later (time budget): the block is not cached, the next visit finishes it. */
     private bool $incomplete = false;
+
+    /** Thumbnails written in this request (the warm-up empties the cache of the lists only when it made some). */
+    private int $thumbsMade = 0;
+
+    /** The language of the content read by the warm-up (the site's default; the console and the administrator have their own). */
+    private ?string $warmLanguage = null;
+
+    /** The routine of Joomla's Scheduler (1.10.0). */
+    public const TASK_WARMUP = 'bettercategories.warmup';
 
     /** The page already carries breadcrumb structured data (the "automatic" breadcrumb setting adds none). */
     private bool $pageCrumbs = false;
@@ -126,6 +132,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             // Gridbox's own event at the start of its page processing: the filtered product list is
             // in place before Gridbox adds lazy loading and adaptive images to it
             'onBeforeRenderGridbox'    => 'onBeforeRenderGridbox',
+            // 1.10.0: the warm-up as a task of Joomla's Scheduler and as a command of the console (cli/joomla.php)
+            'onTaskOptionsList'        => 'onTaskOptionsList',
+            'onExecuteTask'            => 'onExecuteTask',
+            \Joomla\Application\ApplicationEvents::BEFORE_EXECUTE => 'onBeforeExecute',
         ];
     }
 
@@ -168,6 +178,40 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         if ($input->getCmd('tmpl') === 'component') {
             return;
         }
+        $this->renderPage($app, $input);
+        // the scripts of what was put in the page (and of the module, rendered earlier): one file
+        $this->addSiteScript($app);
+    }
+
+    /**
+     * media/plg_system_bettercategories/js/site.js (1.10.0, before: a script in the page after each block): the
+     * subcategory panels, the tile names, the sibling bar, the folded description and the rows of Gridbox's
+     * Categories element. Added once, deferred, where the page holds one of them.
+     */
+    private function addSiteScript($app): void
+    {
+        $body = $app->getBody();
+        if (str_contains($body, 'plg_system_bettercategories/js/site.js') || !preg_match('/class="bettercategories[\s"]|class="bettercategories-desc[\s"]|id="bettercategories-rows"/', $body)) {
+            return;
+        }
+        $end = strripos($body, '</body>');
+        if ($end !== false) {
+            $app->setBody(substr($body, 0, $end) . $this->siteScriptTag(false) . substr($body, $end));
+        }
+    }
+
+    /** The tag of site.js; in the preview (an iframe written by the administrator page) with the whole address and run at once. */
+    public function siteScriptTag(bool $preview): string
+    {
+        $file = 'media/plg_system_bettercategories/js/site.js';
+        $src  = ($preview ? rtrim(Uri::root(), '/') : Uri::root(true)) . '/' . $file . '?' . self::ASSET_VERSION . '.' . (int) @filemtime(JPATH_ROOT . '/' . $file);
+
+        return '<script src="' . htmlspecialchars($src, ENT_QUOTES, 'UTF-8') . '"' . ($preview ? '' : ' defer') . '></script>';
+    }
+
+    /** What the plugin puts into a store page (see onAfterRender()). */
+    private function renderPage($app, $input): void
+    {
         // Use the settings saved in the database, not the ones handed to the plugin at start-up: some
         // sites (device-specific extensions/caches) pass phones an older copy of plugin parameters.
         $this->params = $this->savedParams() ?? $this->params;
@@ -285,13 +329,13 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $this->pageCrumbs = stripos($body, 'BreadcrumbList') !== false;
 
-        $device = $this->device();
         $config = substr(md5(json_encode($this->params->toArray())), 0, 8);
 
         try {
             $minutes = max(0, min(1440, (int) $this->params->get('cache_time', 15)));
             if ($minutes > 0) {
-                $key = $this->cacheKey([$config, $appId, $categoryId, $device, (int) $this->pageCrumbs, $this->scheduleStamp($appId)]);
+                // no device in the key: the same HTML serves every device (1.10.0)
+                $key = $this->cacheKey([$config, $appId, $categoryId, (int) $this->pageCrumbs, $this->scheduleStamp($appId)]);
                 [$html] = $this->cached($key, $minutes, fn () => $this->render($appId, $categoryId));
             } else {
                 $html = $this->render($appId, $categoryId);
@@ -321,11 +365,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         if ($end === false || !str_contains($body, 'ba-app-sub-category') || str_contains($body, 'id="bettercategories-rows"')) {
             return;
         }
-        $html = '<style id="bettercategories-rows">.ba-app-sub-category.collapse-categories-list:hover i,.ba-app-sub-category.collapse-categories-list:hover a{color:var(--accent,var(--primary))!important}.ba-app-sub-category.collapse-categories-list{cursor:pointer}</style>'
-            // only in a Categories element set to fold (Gridbox keeps the arrow in the others, hidden): elsewhere the rows keep their links
-            . '<script>(function(){function go(){var l=document.querySelectorAll(".ba-collapsible-categories .ba-app-sub-category a");for(var i=0;i<l.length;i++){var a=l[i],c=a.nextElementSibling;'
-            . 'if(c&&c.tagName==="I"){a.removeAttribute("href");c.classList.remove("collapse-categories-list");a.parentNode.classList.add("collapse-categories-list");}}}'
-            . 'document.readyState==="loading"?document.addEventListener("DOMContentLoaded",go):go();})();</script>';
+        // the rows themselves are changed by site.js (only in a Categories element set to fold)
+        $html = '<style id="bettercategories-rows">.ba-app-sub-category.collapse-categories-list:hover i,.ba-app-sub-category.collapse-categories-list:hover a{color:var(--accent,var(--primary))!important}.ba-app-sub-category.collapse-categories-list{cursor:pointer}</style>';
         $app->setBody(substr($body, 0, $end) . $html . substr($body, $end));
     }
 
@@ -404,7 +445,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $listHidden  = $hasChildren && (bool) $params->get('hide_products', 0)
                 && !($params->get('first_page_only', 1) && $input->getInt('page', 1) > 1);
 
-            $body = (new Page($this, $params, $this->device()))->process($app->getBody(), $appId, $categoryId, $categories, $listHidden);
+            $body = (new Page($this, $params))->process($app->getBody(), $appId, $categoryId, $categories, $listHidden);
             if ($body !== null) {
                 $app->setBody($body);
             }
@@ -513,6 +554,164 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $this->cleanCaches();
     }
 
+    // ---------------------------------------------------------------- warm-up (1.10.0)
+
+    /**
+     * What the first visitors waited for, made ahead: the lighter copies of the tile images and the index of the
+     * technical parameters and features the filters read from the product descriptions (after a save of the
+     * settings, which empties it, the first filtered page read every description of the store). Within the
+     * time given; what is left is done by the next run (or by the visits, as before).
+     *
+     * @param callable|null $say a line of progress (the console)
+     *
+     * @return array{done: bool, thumbs: array, index: array<int, int>}
+     */
+    public function warmUp(float $seconds = 50.0, ?callable $say = null): array
+    {
+        $say   = $say ?? static function (string $line): void {
+        };
+        // within the time limit of PHP (the Scheduler may run in a web request): longer when PHP allows it, else shorter
+        $limit = (int) ini_get('max_execution_time');
+        if ($limit > 0 && $limit < $seconds + 10 && !(function_exists('set_time_limit') && @set_time_limit((int) ceil($seconds) + 10))) {
+            $seconds = max(5.0, $limit - 8.0);
+        }
+        $until = microtime(true) + max(5.0, $seconds);
+        $this->loadLanguage();
+        $this->params       = $this->savedParams() ?? $this->params;
+        $this->warmLanguage = (string) ComponentHelper::getParams('com_languages')->get('site', 'en-GB');
+        $done               = true;
+
+        // the lighter copies of the images
+        $thumbs = ['off' => true];
+        $p      = $this->settings();
+        if ($p['thumbs'] && function_exists('imagewebp')) {
+            $this->thumbsMade = 0;
+            do {
+                $thumbs = $this->generateThumbnails(min(8.0, max(0.5, $until - microtime(true) - 2)), false);
+                if (isset($thumbs['error'])) {
+                    break;
+                }
+                $say(sprintf('thumbnails: %d of %d ready', $thumbs['ready'], $thumbs['total']));
+            } while (empty($thumbs['done']) && microtime(true) < $until - 2);
+            $thumbs['made'] = $this->thumbsMade;
+            $done           = $done && !empty($thumbs['done']);
+            if ($this->thumbsMade > 0) {
+                // lists kept with the full-size images take the new copies
+                $this->cleanPluginCache();
+            }
+        }
+
+        // the index of the filters, store by store, within the time (between chunks of products)
+        $index   = [];
+        $filtersOn = (bool) $this->params->get('filters_enabled', 0);
+        if ($filtersOn) {
+            foreach ($this->storeIds() as $appId) {
+                if (microtime(true) >= $until - 2) {
+                    $done = false;
+                    break;
+                }
+                $filters           = new \Merserwis\Plugin\System\BetterCategories\Filter\Filters($this, $this->params);
+                $filters->warming  = true;
+                $filters->deadline = $until - 2;
+                $defs              = $filters->definitions($appId);
+                $index[$appId]     = \count($defs ? $filters->products($appId, 0, $this->loadCategories($appId), $defs) : []);
+                $say(sprintf('filters: store %d, %d products%s', $appId, $index[$appId], $filters->indexIncomplete ? ' (index not finished: time)' : ''));
+                if ($filters->indexIncomplete) {
+                    $done = false;
+                    break;
+                }
+            }
+        }
+        $this->warmLanguage = null;
+
+        return ['done' => $done, 'thumbs' => $thumbs, 'index' => $index, 'filters' => $filtersOn];
+    }
+
+    /** The stores the plugin works on: those chosen, else every store of Gridbox. */
+    private function storeIds(): array
+    {
+        $ids = array_values(array_filter(array_map('intval', explode(',', (string) $this->params->get('app_ids', '')))));
+        if ($ids) {
+            return $ids;
+        }
+        $db = $this->db();
+
+        return array_map('intval', $db->setQuery($db->createQuery()->select($db->quoteName('id'))->from($db->quoteName('#__gridbox_app'))
+            ->where($db->quoteName('type') . ' = ' . $db->quote('products')))->loadColumn() ?: []);
+    }
+
+    /** The language of the content shown: the page's, or in the warm-up the site's default. */
+    public function contentLanguage(): string
+    {
+        return $this->warmLanguage ?? $this->getApplication()->getLanguage()->getTag();
+    }
+
+    /**
+     * Options of a cache of the plugin read by the site: from the console or the administrator (the warm-up) the
+     * site's language, as the name of a cache file holds it (the folder is the same for every application:
+     * JPATH_CACHE is administrator/cache in Joomla 6, or the folder of the configuration).
+     */
+    public function siteCache(array $options): array
+    {
+        if (!$this->getApplication()->isClient('site')) {
+            $options['language'] = $this->contentLanguage();
+        }
+
+        return $options;
+    }
+
+    /** Only this plugin's cache (the lists), in every cache folder. */
+    private function cleanPluginCache(): void
+    {
+        $factory = Factory::getContainer()->get(CacheControllerFactoryInterface::class);
+        foreach (array_unique(array_filter([JPATH_SITE . '/cache', JPATH_ADMINISTRATOR . '/cache', JPATH_CACHE, (string) $this->getApplication()->get('cache_path', '')])) as $base) {
+            try {
+                $factory->createCacheController('callback', ['defaultgroup' => self::CACHE_GROUP, 'cachebase' => $base])->clean(self::CACHE_GROUP);
+            } catch (\Throwable $e) {
+            }
+        }
+    }
+
+    /** Joomla's Scheduler: the routine in the list of task types. */
+    public function onTaskOptionsList($event): void
+    {
+        $this->loadLanguage();
+        $subject = $event->getArgument('subject');
+        if (\is_object($subject) && method_exists($subject, 'addOptions')) {
+            $subject->addOptions([self::TASK_WARMUP => 'PLG_SYSTEM_BETTERCATEGORIES_TASK_WARMUP']);
+        }
+    }
+
+    /** Joomla's Scheduler: runs the warm-up (within 50 seconds; the rest on the next run). */
+    public function onExecuteTask($event): void
+    {
+        if (!method_exists($event, 'getRoutineId') || $event->getRoutineId() !== self::TASK_WARMUP) {
+            return;
+        }
+        $start  = microtime(true);
+        $status = 0;
+        try {
+            // the Scheduler keeps the run (time, exit code); the plugin's log only errors (the Filters tab shows its lines as problems)
+            $this->warmUp(50.0);
+        } catch (\Throwable $e) {
+            $this->logError($e);
+            $status = 5;
+        }
+        $subject = $event->getArgument('subject');
+        $end     = microtime(true);
+        $event->setResult(['logCategory' => \is_object($subject) ? ($subject->logCategory ?? 'scheduler') : 'scheduler', 'plugin' => $this->_name,
+            'startTime' => $start, 'endTime' => $end, 'duration' => $end - $start, 'status' => $status]);
+    }
+
+    /** The console (cli/joomla.php): the command bettercategories:warmup. */
+    public function onBeforeExecute($event): void
+    {
+        $app = method_exists($event, 'getApplication') ? $event->getApplication() : null;
+        if ($app instanceof \Joomla\CMS\Application\ConsoleApplication) {
+            $app->addCommand(new \Merserwis\Plugin\System\BetterCategories\Console\WarmupCommand($this));
+        }
+    }
+
     /** Clears this plugin's cache and the page caches that may hold pages rendered with old settings. */
     /**
      * Gridbox's joined style sheets (templates/gridbox/css/min/<md5 of the file names>.min.css) are named
@@ -558,7 +757,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         } catch (\Throwable $e) {
         }
         foreach (array_unique($bases) as $base) {
-            foreach ([self::CACHE_GROUP, 'com_plugins', 'page', 'gridbox'] as $group) {
+            foreach ([self::CACHE_GROUP, \Merserwis\Plugin\System\BetterCategories\Filter\Filters::CACHE_GROUP, 'com_plugins', 'page', 'gridbox'] as $group) {
                 try {
                     $factory->createCacheController('callback', ['defaultgroup' => $group, 'cachebase' => $base])->clean($group);
                 } catch (\Throwable $e) {
@@ -850,7 +1049,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $db     = $this->db();
         $now    = $db->quote($this->siteNow());
         $null   = $db->quote($db->getNullDate());
-        $lang   = $this->getApplication()->getLanguage()->getTag();
+        $lang   = $this->contentLanguage();
         $hidden = $this->hiddenProducts();
 
         $query = $db->createQuery()
@@ -1052,23 +1251,6 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
 
         return $this->gridboxMenu;
-    }
-
-    /**
-     * Device class from the User-Agent: "mobile" (phones), "tablet" or "desktop" (iPadOS reports a desktop Mac).
-     */
-    public function device(): string
-    {
-        if ($this->deviceClass === null) {
-            $ua = (string) ($this->getApplication()->getInput()->server->getString('HTTP_USER_AGENT', ''));
-            if (preg_match('/iPad|Tablet|PlayBook|Silk|Kindle|Android(?!.*Mobile)/i', $ua)) {
-                $this->deviceClass = 'tablet';
-            } else {
-                $this->deviceClass = preg_match('/Mobi|iPhone|iPod|Android.*Mobile|Windows Phone|BlackBerry|Opera Mini/i', $ua) ? 'mobile' : 'desktop';
-            }
-        }
-
-        return $this->deviceClass;
     }
 
     /**
@@ -1370,7 +1552,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
 
         // the counts of the subcategory panels too (sub_counts), else they would all read 0
-        if ($p['counter'] || $p['hideEmpty'] || ($p['subCounts'] && $p['subMode'] !== 'none')) {
+        if ($p['counter'] || $p['hideEmpty'] || ($p['subCounts'] && $this->subMarkup($p) !== 'none')) {
             $this->addCounts($categories);
         }
         $children = array_filter($children, fn ($cat) => !$p['hideEmpty'] || $cat->count > 0);
@@ -1398,9 +1580,11 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $id      = 'bettercategories-' . substr(md5($appId . '-' . $categoryId . '-' . microtime()), 0, 8);
         $sizes   = $this->imageSizes($p);
-        // Images of the first row load at once with high priority (they are usually the largest element
-        // in view, the LCP); the others lazily. Not in the module, which may sit lower on the page.
-        $firstRow = $p['eager'] && !$this->moduleMode && !$this->preview ? $this->deviceColumns($p) : 0;
+        // Images of the first row load at once (they are usually the largest element in view, the LCP); the
+        // others lazily. Not in the module, which may sit lower on the page. The same HTML serves every
+        // device (1.10.0): the first row of the narrowest layout gets high priority, the first row of the
+        // widest is not lazy.
+        [$firstRow, $eagerRow] = $p['eager'] && !$this->moduleMode && !$this->preview ? $this->firstRows($p) : [0, 0];
         $items   = '';
         $count   = 0;
         $withSub = false;
@@ -1420,7 +1604,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
             // Panel listing the subcategories of this category ("what is inside").
             $sub = $toggle = '';
-            if ($p['subMode'] !== 'none' && !empty($kids[$cat->id])) {
+            if ($this->subMarkup($p) !== 'none' && !empty($kids[$cat->id])) {
                 $withSub = true;
                 [$toggle, $sub] = $this->subPanel($id . '-' . $cat->id, $cat, $kids[$cat->id], $url, $link, $p);
             }
@@ -1453,13 +1637,13 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $front = '<a class="bettercategories-link" href="' . $url . '">'
                 . '<span class="bettercategories-media' . ($iconTile ? ' bettercategories-media--icon' : ($src === '' ? ' bettercategories-media--empty' : '')) . '">'
                 . ($iconTile ? $icon : '')
-                . ($src !== '' ? '<img src="' . $src . '"' . $set . ' alt="' . $title . '"' . ($count <= $firstRow ? ' fetchpriority="high"' : ' loading="lazy"') . ' decoding="async">' : '')
+                . ($src !== '' ? '<img src="' . $src . '"' . $set . ' alt="' . $title . '"' . ($count <= $firstRow ? ' fetchpriority="high"' : ($count <= $eagerRow ? '' : ' loading="lazy"')) . ' decoding="async">' : '')
                 . ($p['hover'] === 'shine' ? '<span class="bettercategories-shine" aria-hidden="true"></span>' : '')
                 . '</span>'
                 . '<span class="bettercategories-caption"><span class="bettercategories-name">' . ($p['iconTiles'] === 'name' ? $icon : '') . $title . '</span>' . $countHtml . '</span>'
                 . '</a>';
             // Card flip: the front (tile) and the back (subcategories) turn together; the button stays outside.
-            $body = $sub !== '' && $p['subMode'] === 'flip' ? $toggle . '<div class="bettercategories-card">' . $front . $sub . '</div>' : $front . $toggle . $sub;
+            $body = $sub !== '' && $this->subMarkup($p) === 'flip' ? $toggle . '<div class="bettercategories-card">' . $front . $sub . '</div>' : $front . $toggle . $sub;
 
             $items .= '<li class="bettercategories-item bettercategories-tile' . $liClass . '">' . $body . '</li>';
         }
@@ -1474,8 +1658,12 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $classes[] = 'bettercategories--style-' . $p['style'];
             $classes[] = 'bettercategories--shape-' . $p['shape'];
         }
+        $subAttr = '';
         if ($withSub) {
+            // the class of the wider screens; the script (site.js) sets the one of the width shown
             $classes[] = 'bettercategories--sub-' . $p['subMode'];
+            $subAttr   = $this->subMarkup($p) === 'below' ? '' : ' data-bc-sub="' . $p['subMode'] . '" data-bc-sub-m="' . $p['subModeMobile'] . '"'
+                . ($p['subTrigger'] === 'hover' ? ' data-bc-hover="1"' : '');
         }
         $p['items']   = $count;
         $p['withSub'] = $withSub;
@@ -1484,11 +1672,12 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $headAttr = htmlspecialchars($heading !== '' ? $heading : 'Categories', ENT_QUOTES, 'UTF-8');
 
         return $this->css($id, $p)
-            . '<nav id="' . $id . '" class="' . implode(' ', $classes) . '" aria-label="' . $headAttr . '">'
+            . '<nav id="' . $id . '" class="' . implode(' ', $classes) . '" aria-label="' . $headAttr . '"' . $subAttr . '>'
             . ($heading !== '' ? '<' . $p['headingTag'] . ' class="bettercategories-title">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</' . $p['headingTag'] . '>' : '')
             . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
-            . ($withSub && $p['subMode'] !== 'below' ? $this->subScript($id, $p['subTrigger'] === 'hover') : '')
-            . ($p['display'] === 'tiles' ? $this->captionScript($id) : '')
+            // the panels and the tile names are run by media/plg_system_bettercategories/js/site.js (one file for the page,
+            // added in onAfterRender; in the preview here)
+            . ($this->preview ? $this->siteScriptTag(true) : '')
             . ($p['schemaList'] && !$this->moduleMode ? $this->itemListSchema($this->listName('SUBCATS', $appId, $categoryId, $categories[$categoryId]->title ?? ''), $schema) : '')
             . $crumbs;
     }
@@ -1570,18 +1759,16 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             . '<nav id="' . $id . '" class="bettercategories bettercategories--siblings" aria-label="' . $label . '">'
             . ($heading !== '' ? '<' . $p['headingTag'] . ' class="bettercategories-title">' . htmlspecialchars($heading, ENT_QUOTES, 'UTF-8') . '</' . $p['headingTag'] . '>' : '')
             . '<ul class="bettercategories-list">' . $items . '</ul></nav>'
-            // phones scroll the bar sideways: bring the current category into view
-            . '<script>(function(n){var c=n&&n.querySelector(".is-current"),l=n&&n.querySelector(".bettercategories-list");if(!c||!l)return;'
-            . 'function f(){if(l.scrollWidth<=l.clientWidth)return;var a=l.getBoundingClientRect(),b=c.getBoundingClientRect();l.scrollLeft+=b.left-a.left-(a.width-b.width)/2;}'
-            . 'f();window.addEventListener("load",f);})(document.getElementById("' . $id . '"));</script>';
+            // phones scroll the bar sideways: site.js brings the current category into view
+            . ($this->preview ? $this->siteScriptTag(true) : '');
     }
 
     /** Styles of the sibling bar: chips in a wrapping row, one scrolling row on phones. */
     private function siblingsCss(string $s, array $p): string
     {
         $accent = $p['linkColor'] ?: '#1f2937';
-        $pad    = $p['device'] === 'mobile' ? $p['padSideMob'] : $p['padSide'];
-        $font   = $p['device'] === 'mobile' ? ($p['fontSizeMob'] ?: $p['fontSize']) : $p['fontSize'];
+        $pad    = $p['padSide'];
+        $font   = $p['fontSize'];
         $phone  = "$s .bettercategories-list{flex-wrap:nowrap;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:thin;padding-bottom:6px;}"
             . "$s .bettercategories-item{flex:0 0 auto;scroll-snap-align:start;}";
 
@@ -1602,8 +1789,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         // the back arrow points to the start of the line (right in right-to-left languages)
         $r[] = "[dir=rtl] $s .bettercategories-back svg{transform:scaleX(-1);}";
         $r[] = "$s .bettercategories-back svg{display:block;flex:0 0 auto;}";
-        // some sites strip @media from the page served to phones: the phone layout then applies directly
-        $r[] = $p['device'] === 'mobile' ? $phone : "@media (max-width:768px){ $phone $s{padding:0 {$p['padSideMob']}px;} }";
+        // phones (by the width of the screen, 1.10.0: the same HTML for every device)
+        $r[] = "@media (max-width:768px){ $phone $s{padding:0 {$p['padSideMob']}px;" . ($p['fontSizeMob'] ? "font-size:{$p['fontSizeMob']};" : '') . '} }';
 
         return '<style>' . implode('', $r) . '</style>';
     }
@@ -1750,6 +1937,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $ok  = @imagewebp($dst, $tmp, $quality) && @rename($tmp, $dir . '/' . $name);
             if (!$ok) {
                 @unlink($tmp);
+            } else {
+                $this->thumbsMade++;
             }
 
             return $ok;
@@ -1820,16 +2009,36 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         };
     }
 
-    /** Columns of the visitor's device (the first row of tiles). */
-    private function deviceColumns(array $p): int
+    /**
+     * The first row of tiles of the narrowest and of the widest layout (columns of the phone, tablet and
+     * desktop): [high priority, not lazy].
+     *
+     * @return array{0: int, 1: int}
+     */
+    private function firstRows(array $p): array
     {
         $tablet = $p['colsTablet'] ?: $p['colsDesktop'];
+        $cols   = [(int) $p['colsDesktop'], (int) $tablet, (int) ($p['colsMobile'] ?: $tablet)];
 
-        return (int) match ($p['device']) {
-            'mobile' => $p['colsMobile'] ?: $tablet,
-            'tablet' => $tablet,
-            default  => $p['colsDesktop'],
-        };
+        return [max(1, min($cols)), max(1, max($cols))];
+    }
+
+    /**
+     * The markup of the subcategory panels, for both modes (wider screens, phones): "none" (no panels),
+     * "below" (lists under the categories, no button), "flip" (a card that turns, when either mode flips),
+     * else "toggle" (a button and a panel). CSS shows each mode at its widths (subCss()).
+     */
+    private function subMarkup(array $p): string
+    {
+        $modes = array_unique([$p['subMode'], $p['subModeMobile'] ?? $p['subMode']]);
+        if ($modes === ['none']) {
+            return 'none';
+        }
+        if (!array_diff($modes, ['none', 'below'])) {
+            return 'below';
+        }
+
+        return \in_array('flip', $modes, true) ? 'flip' : 'toggle';
     }
 
     // ---------------------------------------------------------------- module
@@ -1876,7 +2085,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $this->moduleOverrides = $overrides;
             $minutes               = max(0, min(1440, (int) $this->params->get('cache_time', 15)));
             if ($minutes > 0) {
-                $key    = $this->cacheKey(['module', md5(json_encode($this->params->toArray())), json_encode($overrides), $appId, $categoryId, $this->device(), $this->scheduleStamp($appId)]);
+                $key    = $this->cacheKey(['module', md5(json_encode($this->params->toArray())), json_encode($overrides), $appId, $categoryId, $this->scheduleStamp($appId)]);
                 [$html] = $this->cached($key, $minutes, fn () => $this->render($appId, $categoryId));
             } else {
                 $html = $this->render($appId, $categoryId);
@@ -2035,7 +2244,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
      * product appearing (created date) or ending. Part of the cache key, so a cached list does not
      * outlive such a change (prices "from", counts).
      */
-    private function scheduleStamp(int $appId): string
+    public function scheduleStamp(int $appId): string
     {
         if (isset($this->stamps[$appId])) {
             return $this->stamps[$appId];
@@ -2585,7 +2794,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
      * Makes the thumbnails of every category tile now (form values: width, quality, image sources), so
      * no visitor waits for them. Runs in steps of about 8 s; the page repeats the call until "done".
      */
-    private function generateThumbnails(): array
+    private function generateThumbnails(float $budget = 8.0, bool $clean = true): array
     {
         $p = $this->settings();
         if (!$p['thumbs']) {
@@ -2608,7 +2817,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $ids = array_map('intval', $db->setQuery($query)->loadColumn() ?: []);
         }
 
-        $this->thumbBudget = 8.0;
+        $this->thumbBudget = $budget;
+        $this->thumbTime   = 0.0;
+        $this->incomplete  = false;
         $manual = $this->manualImages();
         $images = [];
         foreach ($ids as $appId) {
@@ -2638,7 +2849,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
             $src !== '' ? $ready++ : $skipped++;
         }
-        $this->cleanCaches();
+        if ($clean) {
+            $this->cleanCaches();
+        }
 
         return ['done' => true, 'total' => count($images), 'ready' => $ready, 'skipped' => $skipped];
     }
@@ -2879,9 +3092,9 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $inner = ($p['subTitle'] !== '' ? '<div class="bettercategories-sub-title">' . htmlspecialchars($p['subTitle'], ENT_QUOTES, 'UTF-8') . '</div>' : '')
             . '<ul class="bettercategories-sublist bettercategories-sublist--' . $p['subStyle'] . '">' . $list . '</ul>'
-            . ($p['subMode'] === 'flip' ? '<a class="bettercategories-sub-all" href="' . $url . '">' . htmlspecialchars($p['subAllLabel'], ENT_QUOTES, 'UTF-8') . '</a>' : '');
+            . ($this->subMarkup($p) === 'flip' ? '<a class="bettercategories-sub-all" href="' . $url . '">' . htmlspecialchars($p['subAllLabel'], ENT_QUOTES, 'UTF-8') . '</a>' : '');
 
-        if ($p['subMode'] === 'below') {
+        if ($this->subMarkup($p) === 'below') {
             return ['', '<div class="bettercategories-sub">' . $inner . '</div>'];
         }
 
@@ -2894,67 +3107,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         ];
     }
 
-    /**
-     * Toggle buttons of one block: open/close a panel, close the others, close on Escape or a click
-     * outside. Scoped to the block; no dependencies.
-     */
     /** CSS text-align of the alignment setting: left / right follow the writing direction (start / end), like the flex alignment does. */
     private function textAlign(array $p): string
     {
         return ['left' => 'start', 'center' => 'center', 'right' => 'end'][$p['align']] ?? 'start';
-    }
-
-    private function subScript(string $id, bool $hover): string
-    {
-        return '<script>(function(n){if(!n)return;'
-            // fit(): a tooltip stays inside the window; a drawer under a narrow tile (< 200 px) opens
-            // across the whole row of the list, so its text is not squeezed into the tile width.
-            // In the "columns" layout a drawer that grew the tile made the columns rebalance (tiles jumped
-            // under the finger or the pointer), and one positioned in the tile is cut to the next column
-            // by the browser: there it floats (bettercategories--float, fixed) and fit() places it under
-            // the tile, measured, so a transformed ancestor does not move it; again on scroll. room():
-            // the block grows below the list (::after) by what a shown drawer reaches past it, so the
-            // next section of the page does not cover it.
-            . 'var tip=n.classList.contains("bettercategories--sub-tooltip"),dr=n.classList.contains("bettercategories--sub-drawer"),ul=n.querySelector(".bettercategories-list");'
-            . 'var fl=dr&&ul&&n.classList.contains("bettercategories--columns"),hv=' . ($hover ? 'matchMedia("(hover:hover)").matches' : 'false') . ';if(fl)n.classList.add("bettercategories--float");'
-            . 'function shown(li){return li.classList.contains("is-open")||(hv&&li.matches(":hover"))||!!li.querySelector(".bettercategories-link:focus-visible,.bettercategories-sub:focus-within");}'
-            . 'function room(){var m=0,a=ul.getBoundingClientRect().bottom;n.querySelectorAll(".bettercategories-has-sub").forEach(function(li){var i=li.querySelector(".bettercategories-sub-inner");if(i&&shown(li))m=Math.max(m,li.getBoundingClientRect().bottom+i.scrollHeight+16-a);});n.style.setProperty("--bc-room",Math.ceil(m)+"px");}'
-            . 'function fit(li){var s=li.querySelector(".bettercategories-sub");if(!s)return;'
-            . 'if(tip){s.classList.remove("bettercategories-sub--down");s.style.setProperty("--bc-dx","0px");var r=s.getBoundingClientRect();if(r.top<8){s.classList.add("bettercategories-sub--down");r=s.getBoundingClientRect();}var w=document.documentElement.clientWidth,d=0;if(r.left<8)d=8-r.left;else if(r.right>w-8)d=w-8-r.right;s.style.setProperty("--bc-dx",Math.round(d)+"px");}'
-            . 'else if(fl){var a=ul.getBoundingClientRect(),b=li.getBoundingClientRect(),wd=b.width<200&&a.width>b.width+1;s.style.left="0px";s.style.top="0px";var o=s.getBoundingClientRect();s.style.width=(wd?a.width:b.width)+"px";s.style.left=Math.round((wd?a.left:b.left)-o.left)+"px";s.style.top=Math.round(b.bottom-o.top)+"px";room();}'
-            . 'else if(dr&&ul){var a=ul.getBoundingClientRect(),b=li.getBoundingClientRect();var rtl=getComputedStyle(li).direction==="rtl";s.style.marginLeft="";s.style.marginRight="";if(b.width<200&&a.width>b.width+1){s.style.width=a.width+"px";if(rtl)s.style.marginRight=Math.round(b.right-a.right)+"px";else s.style.marginLeft=Math.round(a.left-b.left)+"px";}else{s.style.width="";}}}'
-            . 'if(tip||dr){var last=null;n.addEventListener("pointerover",function(e){var li=e.target.closest(".bettercategories-has-sub");if(li&&li!==last){last=li;fit(li);}});'
-            . 'n.addEventListener("focusin",function(e){var li=e.target.closest(".bettercategories-has-sub");if(li)fit(li);});'
-            . 'window.addEventListener("resize",function(){last=null;n.querySelectorAll(".bettercategories-has-sub.is-open").forEach(fit);});}'
-            . 'if(fl){window.addEventListener("scroll",function(){n.querySelectorAll(".bettercategories-has-sub.is-open,.bettercategories-has-sub:hover,.bettercategories-has-sub:focus-within").forEach(fit);},{passive:true});'
-            . 'n.addEventListener("pointerleave",function(){last=null;room();});n.addEventListener("focusout",function(){setTimeout(room,0);});}'
-            . 'function set(li,o){if(o)fit(li);li.classList.toggle("is-open",o);var b=li.querySelector(".bettercategories-toggle");if(b)b.setAttribute("aria-expanded",o?"true":"false");if(fl)room();}'
-            . 'function closeAll(k){n.querySelectorAll(".bettercategories-item.is-open").forEach(function(li){if(li!==k)set(li,false);});}'
-            . 'n.addEventListener("click",function(e){var b=e.target.closest(".bettercategories-toggle");if(!b||!n.contains(b))return;e.preventDefault();var li=b.closest(".bettercategories-item");var o=!li.classList.contains("is-open");closeAll(li);set(li,o);});'
-            . 'document.addEventListener("click",function(e){if(!n.contains(e.target))closeAll(null);});'
-            . 'n.addEventListener("keydown",function(e){if(e.key==="Escape"){var li=e.target.closest(".bettercategories-item.is-open");closeAll(null);if(li){var b=li.querySelector(".bettercategories-toggle");if(b)b.focus();}}});'
-            . '})(document.getElementById("' . $id . '"));</script>';
-    }
-
-    /**
-     * Tile names: a word wider than the caption (narrow tiles, e.g. 3 columns on a phone) was cut in the
-     * middle without a hyphen. Then all names of the list get one smaller font, down to 75 % of their
-     * own, so the longest word fits (one smaller name among the others looked like a mistake); again when
-     * the list width changes and when the web fonts have loaded. Without JS (or when 75 % is not enough)
-     * the CSS still breaks the word.
-     */
-    private function captionScript(string $id): string
-    {
-        return '<script>(function(n){if(!n||!window.ResizeObserver)return;var w=-1;'
-            . 'function go(){var cw=n.clientWidth;if(!cw||cw===w)return;w=cw;var k=1,cs=[];'
-            . 'n.querySelectorAll(".bettercategories-tile>.bettercategories-link .bettercategories-caption,.bettercategories-card>.bettercategories-link .bettercategories-caption").forEach(function(c){'
-            . 'var m=c.querySelector(".bettercategories-name");if(!m)return;c.style.fontSize="";cs.push(c);'
-            . 'var s=getComputedStyle(c),a=c.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight),ws=m.textContent.match(/\S+/g);if(a<=0||!ws)return;'
-            . 'var t=document.createElement("span"),x=0;t.style.cssText="position:absolute;left:0;top:0;visibility:hidden;white-space:nowrap;";m.appendChild(t);'
-            . 'ws.forEach(function(v){t.textContent=v;x=Math.max(x,t.offsetWidth);});t.remove();if(x>a)k=Math.min(k,(a-1)/x);});'
-            . 'if(k<1){k=Math.max(k,.75);cs.forEach(function(c){c.style.fontSize=Math.floor(parseFloat(getComputedStyle(c).fontSize)*k*2)/2+"px";});}}'
-            . 'new ResizeObserver(go).observe(n);if(document.fonts)document.fonts.ready.then(function(){w=-1;go();});'
-            . '})(document.getElementById("' . $id . '"));</script>';
     }
 
     /** Validated settings (every value is safe to print into CSS/HTML). */
@@ -2985,7 +3141,6 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'colsDesktop'  => $columns ?: ($display === 'tiles' ? 4 : 1),
             'colsTablet'   => $int('columns_tablet', 0, 0, 8),
             'colsMobile'   => $int('columns_mobile', 0, 0, 8),
-            'device'       => $this->preview ? 'desktop' : $this->device(),
             'gap'          => $int('gap', 16, 0, 80),
             'fontSize'     => $this->cssSize((string) $this->params->get('font_size', '')),
             'headingSize'  => $this->cssSize((string) $this->params->get('heading_size', '')),
@@ -3022,7 +3177,10 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'capTop'       => $int('caption_margin_top', 10, -100, 200),
             'capBottom'    => $int('caption_margin_bottom', 0, -100, 200),
             'fill'         => $pick('fill_mode', ['left', 'center', 'stretch'], 'left'),
-            'subMode'      => $this->subMode($display, $this->preview ? 'desktop' : $this->device()),
+            // the panels of the subcategories: a mode for wider screens and one for phones (1.10.0: chosen by the
+            // width of the screen in CSS and in the script, so the same HTML suits every device and page cache)
+            'subMode'      => $this->subMode($display, 'desktop'),
+            'subModeMobile' => $this->subMode($display, 'mobile'),
             'subTrigger'   => $pick('sub_trigger', ['hover', 'click'], 'hover'),
             'subStyle'     => $pick('sub_style', ['list', 'inline', 'chips'], 'list'),
             'subTitle'     => trim((string) $this->params->get('sub_title', 'In this category:')),
@@ -3143,7 +3301,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         $rows[] = "$s{--bcat-gap:{$p['gap']}px;margin:{$p['marginTop']}px 0 {$p['marginBottom']}px;text-align:{$this->textAlign($p)};"
             . ($p['textColor'] ? "color:{$p['textColor']};" : '') . '}';
-        $rows[] = $block($devices[$p['device']]);
+        $rows[] = $block($devices['desktop']);
         $rows[] = "$s .bettercategories-title{margin:{$p['headTop']}px 0 {$p['headBottom']}px;text-align:inherit;" . ($p['textColor'] ? 'color:inherit;' : '') . '}';
         $rows[] = "$s .bettercategories-list{list-style:none;margin:0;padding:0;gap:var(--bcat-gap);}";
         $rows[] = "$s,$s *,$s *::before,$s *::after{box-sizing:border-box;}";
@@ -3286,15 +3444,17 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             }
         }
 
-        // Every width range explicitly: some sites strip @media from the HTML served to phones, so the
-        // base value above already matches the visitor's device; these rules fix a cached page shown
-        // on another device.
+        // Every width range explicitly (the base value above is the desktop's): the same HTML serves every
+        // device, so a page kept by a page cache fits whoever sees it (1.10.0).
         $rows[] = '@media (min-width:1025px){ ' . $block($devices['desktop']) . ' }';
         $rows[] = '@media (min-width:769px) and (max-width:1024px){ ' . $block($devices['tablet']) . ' }';
         $rows[] = '@media (max-width:768px){ ' . $block($devices['mobile']) . ' }';
 
         if ($p['withSub']) {
-            $rows[] = $this->subCss($s, $p);
+            // one mode, or the mode of the wider screens and the one of phones, each at its widths
+            $rows[] = $p['subMode'] === $p['subModeMobile']
+                ? $this->subCss($s, $p, $p['subMode'])
+                : '@media (min-width:769px){ ' . $this->subCss($s, $p, $p['subMode']) . ' }@media (max-width:768px){ ' . $this->subCss($s, $p, $p['subModeMobile']) . ' }';
         }
 
         if ($p['hideProducts'] && !$this->preview) {
@@ -3340,10 +3500,17 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
     }
 
-    /** Styles of the subcategory panels ("what is inside") for the chosen mode. */
-    private function subCss(string $s, array $p): string
+    /**
+     * Styles of the subcategory panels ("what is inside") in one mode. The markup is the one of both modes
+     * (subMarkup()): a mode without a button hides it, one that is not the card flip leaves the card as a
+     * plain box and hides its "whole category" link.
+     */
+    private function subCss(string $s, array $p, string $mode): string
     {
-        $mode   = $p['subMode'];
+        $markup = $this->subMarkup($p);
+        if ($mode === 'none') {
+            return "$s .bettercategories-toggle,$s .bettercategories-sub{display:none!important;}";
+        }
         $bg     = $p['subBg'];
         $color  = $p['subColor'] ? "color:{$p['subColor']};" : '';
         $ease   = 'cubic-bezier(.2,.7,.2,1)';
@@ -3376,11 +3543,19 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $r[] = "$s .bettercategories-sub-all{display:inline-block;margin-top:.6em;font-weight:600;text-decoration:none;" . ($p['linkColor'] ? "color:{$p['linkColor']};" : '') . '}';
         $r[] = "$s .bettercategories-has-sub{position:relative;}";
 
+        if ($markup === 'flip' && $mode !== 'flip') {
+            // the card of the other mode: a plain box; its link to the whole category belongs to the flip
+            $r[] = "$s .bettercategories-card{display:contents;}$s .bettercategories-sub-all{display:none;}";
+        }
         if ($mode === 'below' || $mode === 'drawer') {
             // the list sits under the tile: the tile must not stretch over the list's space
-            $r[] = "$s .bettercategories-has-sub > .bettercategories-link{height:auto;}";
+            $r[] = "$s .bettercategories-has-sub > .bettercategories-link,$s .bettercategories-has-sub > .bettercategories-card > .bettercategories-link{height:auto;}";
         }
         if ($mode === 'below') {
+            if ($markup !== 'below') {
+                // the panels of the other mode: always shown, without their button
+                $r[] = "$s .bettercategories-toggle{display:none;}";
+            }
             $r[] = "$s .bettercategories-sub{margin-top:.4em;text-align:inherit;$color}";
             if ($p['display'] === 'tiles') {
                 $r[] = "$s .bettercategories-tile .bettercategories-sub{text-align:{$this->textAlign($p)};}";
@@ -3410,7 +3585,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 // a drawer widened across the row (narrow tiles) lies over the neighbouring tiles' free space
                 $r[] = "$open,$focus" . "{z-index:7;}" . ($hover ? "@media (hover:hover){ $s .bettercategories-has-sub:hover{z-index:7;} }" : '');
                 $r[] = $both('.bettercategories-sub-inner', 'padding-bottom:.6em;box-shadow:0 4px 14px rgba(0,0,0,.08);');
-                // "columns" layout: the drawer lies over the tiles below (placed by subScript), the tile keeps its height
+                // "columns" layout: the drawer lies over the tiles below (placed by site.js), the tile keeps its height
                 $r[] = "$s.bettercategories--float .bettercategories-sub{position:fixed;top:0;left:0;}";
                 $r[] = "$s.bettercategories--float::after{content:'';display:block;height:var(--bc-room,0px);}";
                 break;
