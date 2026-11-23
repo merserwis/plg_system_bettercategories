@@ -3,6 +3,26 @@
     <changelog>
         <element>pkg_bettercategories</element>
         <type>package</type>
+        <version>1.10.1</version>
+        <fix>
+            <item>The Column by column layout fills the columns evenly</item>
+            <item>1.10.0: The same page for every device</item>
+        </fix>
+        <addition>
+            <item>1.10.0: Made ahead: Scheduler task and console command</item>
+        </addition>
+        <change>
+            <item>1.10.0: Faster filters</item>
+            <item>1.10.0: One script file instead of scripts in the page</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.10.1" target="_blank" rel="noopener noreferrer">The full list of changes of 1.10.1 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
         <version>1.10.0</version>
         <fix>
             <item>The same page for every device</item>

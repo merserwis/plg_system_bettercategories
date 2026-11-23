@@ -2,6 +2,14 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.10.1 — 2026-11-23
+
+### 🧱 The *Column by column* layout fills the columns evenly <!-- fix -->
+
+- **The tiles no longer bunch up in the last columns.** The *Column by column* direction was made of the browser's CSS columns, which balance the heights of the columns. Tiles of different heights — a category name in two lines — did not fit two under each other, so 7 tiles in 6 columns stood 1-1-1-2-2 with the sixth column empty (seen on merserwis.pl, 20.11); equal tiles would have stood 2-2-2-1 with two empty columns.
+- Now the list is a grid and the plugin places every tile itself, for each device: top to bottom, then the next column, the first columns with one tile more than the others (7 tiles in 6 columns: 2-1-1-1-1-1). The height of the names no longer matters, no column stays empty, and a drawer opened on hover still moves no tile.
+- *When there are fewer items than columns* (centre / stretch) works in this layout as in *Row by row*.
+
 ## 1.10.0 — 2026-11-20
 
 ### 📱 The same page for every device <!-- fix -->

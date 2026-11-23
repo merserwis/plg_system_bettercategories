@@ -43,7 +43,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.10.0';
+    private const VERSION    = '1.10.1';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -3296,7 +3296,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $block = function (array $d) use ($s, $p): string {
             return "$s{--bcat-cols:{$d['cols']};padding-left:{$d['pad']}px;padding-right:{$d['pad']}px;" . ($d['font'] ? "font-size:{$d['font']};" : '') . '}'
                 . ($d['head'] ? "$s .bettercategories-title{font-size:{$d['head']};}" : '')
-                . $this->fillCss($s, $p, (int) $d['cols']);
+                . $this->fillCss($s, $p, (int) $d['cols'])
+                . $this->columnsCss($s, $p, (int) $d['cols']);
         };
 
         $rows[] = "$s{--bcat-gap:{$p['gap']}px;margin:{$p['marginTop']}px 0 {$p['marginBottom']}px;text-align:{$this->textAlign($p)};"
@@ -3341,9 +3342,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 $rows[] = "$s .bettercategories-list{display:flex;flex-wrap:wrap;justify-content:$justify;column-gap:calc(var(--bcat-gap)*1.5);row-gap:$rowGap;}";
                 break;
             case 'columns':
-                // column by column: fill the first column top to bottom, then the next
-                $rows[] = "$s .bettercategories-list{display:block;column-count:var(--bcat-cols);column-gap:var(--bcat-gap);}";
-                $rows[] = "$s .bettercategories-item{break-inside:avoid;margin-bottom:$rowGap;}";
+                // column by column: a grid, each item placed per device by columnsCss()
+                $rows[] = "$s .bettercategories-list{display:grid;grid-template-columns:repeat(var(--bcat-cols),minmax(0,1fr));justify-content:$justify;row-gap:$rowGap;}";
                 break;
             case 'scroll':
                 // one row, scrolled sideways; --bcat-cols items fit the width
@@ -3482,6 +3482,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $width = "calc((100% - ($cols - 1)*var(--bcat-gap))/$cols)";
         switch ($p['orientation']) {
             case 'rows':
+            case 'columns':
                 return $p['fill'] === 'stretch'
                     ? "$s .bettercategories-list{grid-template-columns:repeat($n,minmax(0,1fr));}"
                     : "$s .bettercategories-list{grid-template-columns:repeat($n,$width);justify-content:center;}";
@@ -3489,15 +3490,42 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
                 return $p['fill'] === 'stretch'
                     ? "$s .bettercategories-list{grid-auto-columns:calc((100% - ($n - 1)*var(--bcat-gap))/$n);}"
                     : "$s .bettercategories-list{justify-content:center;}";
-            case 'columns':
-                return $p['fill'] === 'stretch'
-                    ? "$s .bettercategories-list{column-count:$n;}"
-                    : "$s .bettercategories-list{column-count:$n;max-width:calc($n*$width + ($n - 1)*var(--bcat-gap));margin-left:auto;margin-right:auto;}";
             default: // inline text links
                 return $p['fill'] === 'stretch'
                     ? "$s .bettercategories-item{flex:1 1 0;text-align:center;}"
                     : "$s .bettercategories-list{justify-content:center;}";
         }
+    }
+
+    /**
+     * The "columns" layout on one device: each item's cell in the grid, column by column. The first columns
+     * get one item more than the rest (7 items in 6 columns: 2-1-1-1-1-1), so no column stays empty.
+     * Before 1.10.1 these were CSS columns: the browser balanced their heights, so tiles of different heights
+     * (a name in two lines) ended 1-1-1-2-2 and equal ones 2-2-2-1 with the last columns empty.
+     */
+    private function columnsCss(string $s, array $p, int $cols): string
+    {
+        $n = (int) ($p['items'] ?? 0);
+        if ($p['orientation'] !== 'columns' || $n <= 0) {
+            return '';
+        }
+        if ($n < $cols && $p['fill'] !== 'left') {
+            $cols = $n; // fillCss(): as many columns as items
+        }
+        $rows = (int) ceil($n / max(1, $cols));
+        $long = $n - max(1, $cols) * ($rows - 1); // the columns with $rows items, the rest have one less
+        $css  = '';
+        for ($i = 0; $i < $n; $i++) {
+            if ($i < $long * $rows) {
+                [$col, $row] = [intdiv($i, $rows), $i % $rows];
+            } else {
+                $j = $i - $long * $rows;
+                [$col, $row] = [$long + intdiv($j, $rows - 1), $j % ($rows - 1)];
+            }
+            $css .= "$s .bettercategories-item:nth-child(" . ($i + 1) . '){grid-area:' . ($row + 1) . '/' . ($col + 1) . ';}';
+        }
+
+        return $css;
     }
 
     /**
