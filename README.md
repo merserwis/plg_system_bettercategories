@@ -42,6 +42,8 @@ Out of the box, a Gridbox store category page lists the products of the **whole 
 * **One page for every device (1.10.0):** the same HTML for phones, tablets and computers — the width of the screen chooses the layout, the mode of the subcategory panels and the filters drawer — so page caches (MerTools, Joomla, hosting) serve every visitor the right page.
 * **Made ahead (new in 1.10.0):** a task of Joomla's Scheduler and the console command `php cli/joomla.php bettercategories:warmup` make the lighter copies of the tile images and the index of the filters before visitors need them.
 * **Diagnostics and safe mode (new in 1.9.1):** a *Diagnostics* page checks what the plugin needs (versions, files, PHP limits, GD/WebP, writable folders, log size, debug settings), shows the latest “500” errors of the site — which Joomla keeps nowhere by default — and copies a report for support. Safe mode (a button, or an empty file `plugins/system/bettercategories/safe-mode`) stops the plugin without loading its code when it breaks a site. See [Problems and the log](#-problems-and-the-log).
+* **Store menu (new in 1.11.0):** the module as a mega menu for the header — a button with a panel, a bar of the top categories or an open panel for Gridbox's own *Mega Menu* — three levels with images, counts and prices “from”; a drawer from the side on phones. See [Module](#module-mod_bettercategories).
+* **Statistics of the filters (new in 1.11.0):** which filters and values the visitors choose and which choices find no product, counted without personal data also on cached pages; on a page of its own and as a section of the e-mail report of Better Search.
 * **Joomla 6 & PHP 8.5 native:** Service-provider plugin with lazy loading, `createQuery()`, dependency-injected database, no deprecated Joomla APIs in the extension code, no warnings on PHP 8.5.
 
 ---
@@ -215,6 +217,19 @@ Create it in *Content → Site Modules → New → Better Categories for Gridbox
 | Heading, display, tile style, direction, columns (desktop / tablet / phone), *what is inside*, lowest price | Left at *— plugin setting —* they follow the plugin. |
 
 The module never hides products, adds no structured data and loads images lazily. It has its own cache entries (per module, language and currency).
+
+**Store menu (1.11.0).** *Show as* → *Store menu (mega menu)* turns the module into the menu of the store:
+
+| Option | Description |
+|---|---|
+| Kind | *Button with a panel* (top categories on the left, the subcategories of the one pointed at on the right), *Bar of the top categories* (each opens its subcategories under the bar) or *Open panel* (always shown — for the drop-down of an item of Gridbox's menu, *Mega Menu*). Below 1024 px every kind is a drawer from the side. |
+| Button text | Empty = *Categories* in the language of the page. |
+| Opens | On hover or only on click (computers); touch screens always on a tap. |
+| Levels | 2: the top categories and their subcategories; 3: also the categories under those, as links. |
+| Links under a subcategory | At most this many, then *More…*; 0 = all. |
+| Columns of the subcategories, images, number of products, price “from”, accent colour | As named; the images are those of the list, as 96 px WebP copies. |
+
+The *Category* is the root: *Store home* shows the top categories of the store.
 
 ### Per level
 
@@ -393,6 +408,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
+* **1.11.0** (not released yet) — Store menu (mega menu) as a kind of the module; statistics of the filters with a page of their own and a section in the e-mail report of Better Search; technical values read by the reader shared with Better Search.
 * **1.10.1** — The *Column by column* layout fills the columns evenly (7 tiles in 6 columns: 2-1-1-1-1-1); before, tiles of different heights bunched up in the last columns and left others empty.
 * **1.10.0** — The same HTML for every device (the screen width chooses; page caches serve everyone the right page), a Scheduler task and a console command that make the image copies and the filters index ahead, the product data of the filters kept for up to 5 minutes, one script file instead of scripts in the page.
 * **1.9.1** — Diagnostics page (checks, the “500” errors of the site that Joomla keeps nowhere, a report to copy) and safe mode (a button or an empty `safe-mode` file); product counts count each product once, as the product list shows them; tile images from the product gallery when a product has no intro image.

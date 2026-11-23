@@ -155,6 +155,13 @@ final class Page
         // in one row above the products every filter opens as a menu: all closed at first
         $form  = $this->form($defs, $result['facets'], $state, $total, $classes, $style, $position === 'top' && !$drawer);
         $bar   = $this->bar($defs, $result['facets'], $state, $total, $drawer, $tools) . $early;
+        // 1.11.0: what the page shows, signed, for the statistics of the filters (sent by filters.js: also from a page cache)
+        if ($state && $this->params->get('filter_stats', 1)) {
+            $stat = Stats::attributes($appId, $categoryId, (string) ($categories[$categoryId]->title ?? ''), $defs, $state, $result['facets'], $total,
+                $this->plugin->siteDay(), $query);
+            $at   = strpos($bar, '<div class="bcf-bar" data-bcf-bar');
+            $bar  = $at === false ? $bar : substr_replace($bar, $stat, $at + strlen('<div class="bcf-bar" data-bcf-bar'), 0);
+        }
         // the subcategories (inserted later, "above the products") go above the bar: see MARK
         $block = self::MARK . $bar . $element;
 

@@ -122,6 +122,8 @@ use Joomla\CMS\Router\Route;
                         <span class="icon-cog" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_MENU_CONFIG'); ?></a>
                     <a class="btn btn-outline-primary text-start" href="<?php echo Route::_('index.php?option=com_bettercategories&view=page&page=tiles&tab=tile_images'); ?>">
                         <span class="icon-images" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_THUMBNAILS'); ?></a>
+                    <a class="btn btn-outline-primary text-start" href="<?php echo Route::_('index.php?option=com_bettercategories&view=stats'); ?>">
+                        <span class="icon-chart" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_MENU_STATS'); ?></a>
                     <a class="btn btn-outline-primary text-start" href="<?php echo Route::_('index.php?option=com_bettercategories&view=diagnostics'); ?>">
                         <span class="icon-heartbeat" aria-hidden="true"></span> <?php echo Text::_('COM_BETTERCATEGORIES_MENU_DIAGNOSTICS'); ?></a>
                     <?php if ($this->canClear) : ?>

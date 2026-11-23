@@ -105,6 +105,7 @@ class HtmlView extends BaseHtmlView
         $toolbar = $this->getDocument()->getToolbar();
         $toolbar->linkButton('wand', 'COM_BETTERCATEGORIES_MENU_SETUP')->url('index.php?option=com_bettercategories&view=setup');
         $toolbar->linkButton('cog', 'COM_BETTERCATEGORIES_MENU_CONFIG')->url('index.php?option=com_bettercategories&view=page&page=config');
+        $toolbar->linkButton('chart', 'COM_BETTERCATEGORIES_MENU_STATS')->url('index.php?option=com_bettercategories&view=stats');
         $toolbar->linkButton('heartbeat', 'COM_BETTERCATEGORIES_MENU_DIAGNOSTICS')->url('index.php?option=com_bettercategories&view=diagnostics');
     }
 }

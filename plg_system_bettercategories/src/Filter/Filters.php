@@ -795,8 +795,11 @@ final class Filters
         $html = preg_replace('#<(script|style)\b[^>]*>.*?</\1>#is', ' ', $html) ?? $html;
         $html = preg_replace('#</?(?:sub|sup)\b[^>]*>#i', '', $html) ?? $html;
         $text = html_entity_decode(strip_tags(str_replace('<', ' <', $html)), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        // a no-break space between digits is kept: "123&nbsp;456 V" is one number to the reader of technical values (1.11.0)
+        $text = preg_replace('/(?<=\d)[\x{00A0}\x{202F}](?=\d{3}(?!\d))/u', "\x01", $text) ?? $text;
+        $text = trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
 
-        return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+        return str_replace("\x01", "\u{00A0}", $text);
     }
 
     // ---------------------------------------------------------------- matching and counts

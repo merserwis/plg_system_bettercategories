@@ -96,6 +96,25 @@
     return true;
   }
 
+  /**
+   * The statistics of the filters (1.11.0): the bar of a filtered page carries what it shows, signed by the
+   * server; sent once per page and browser session, also for a page served from a page cache.
+   */
+  function count() {
+    const bar = document.querySelector('[data-bcf-bar][data-bcf-stat]');
+    if (!bar || !navigator.sendBeacon) return;
+    const sig = bar.getAttribute('data-bcf-sig') || '';
+    try {
+      if (sessionStorage.getItem('bcf-stat-' + sig)) return;
+      sessionStorage.setItem('bcf-stat-' + sig, '1');
+    } catch (e) { /* private mode: counted every time */ }
+    const body = new FormData();
+    body.append('bc_action', 'stat');
+    body.append('stat', bar.getAttribute('data-bcf-stat') || '');
+    body.append('sig', sig);
+    try { navigator.sendBeacon(bar.getAttribute('data-bcf-stat-url'), body); } catch (e) { /* not counted */ }
+  }
+
   async function load(url, push) {
     if (controller) controller.abort();
     controller = new AbortController();
@@ -106,6 +125,7 @@
       if (!response.ok) throw new Error('HTTP ' + response.status);
       const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
       if (!swap(doc)) throw new Error('swap');
+      count();
       if (push) history.pushState({ bcf: 1 }, '', url);
       document.title = doc.title || document.title;
     } catch (e) {
@@ -307,6 +327,7 @@
       }
     } catch (e) { /* private mode */ }
     syncView();
+    count();
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();

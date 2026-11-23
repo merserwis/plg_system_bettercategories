@@ -2,6 +2,26 @@
 
 All changes of **Better Categories for Gridbox**, newest first. Each version is also published as a [GitHub release](https://github.com/merserwis/plg_system_bettercategories/releases) with its installation package.
 
+## 1.11.0 — not released yet
+
+### 🧭 Store menu (mega menu) <!-- addition -->
+
+- **The module as the menu of the store:** *Show as* → **Store menu (mega menu)** shows the category tree for the header of the site, three levels deep — the top categories, their subcategories as headings with the category image, the number of products and the price “from”, and the categories under those as links (*Links under a subcategory*, then *More…*). The links, counts, prices and images are the ones of the list (the menu item Gridbox picks, each product once, sale prices, own image → Gridbox's image → the most viewed product, as small WebP copies).
+- **Three kinds:** a **button** (“Categories”) that opens a panel — the top categories on the left, the subcategories of the one pointed at on the right; a **bar** of the top categories, each opening its subcategories under the whole bar; an **open panel** for the drop-down of an item of Gridbox's own menu (*Mega Menu*). On hover or only on click; *Escape*, a click outside and leaving with the pointer close it. A button near the right edge keeps its panel on the screen.
+- **Phones and tablets** (below 1024 px): a drawer from the side with the top categories; the arrow of one shows its subcategories, with *Back* and the name of the category at the top. The keyboard stays in the open drawer, and closing it returns to the button. The same HTML for every device, so a page cache serves it to all; without JavaScript the panel opens on hover and keyboard focus and every link works.
+- Added with Gridbox's *Joomla Module* element (in the header, or inside a *Mega Menu* of Gridbox's menu); kept in the plugin's cache like the list (per settings, language and the scheduled changes of the store).
+
+### 📊 Statistics of the filters <!-- addition -->
+
+- **Which filters the visitors use:** a new page *Filter Statistics* (control panel, menu of Better Categories) shows for 7, 30, 90 or 180 days the filtered pages and how many found no product, the filters chosen most, their values, the categories filtered most, and the values that most often found no product — worth a look: products missing from the store, or descriptions without the parameter. Each with the change against the period before.
+- **Counted by the visitor's browser,** once per page and browser session, so pages served from a page cache (MerTools) count too. What the page shows is signed by the site and valid for a week: a changed, invented or old choice is not counted, and neither are known robots and headless browsers. The same page sent again from one address and browser within 30 minutes counts once, and one of them counts at most 300 pages an hour (the address only as a salted hash in the cache, never in the statistics). No personal data: numbers per day, category, filter and value, a history of up to 400 days. *Filters → Statistics* turns it off.
+- **In the e-mail report of Better Search:** with Better Search for Gridbox 1.11.0 or later and its e-mail report on, the report gets a section *Filters in the categories* for the same period, in its own style (*Add to the e-mail report of Better Search*, on by default).
+
+### 🔢 Technical values read as Better Search reads them <!-- change -->
+
+- **One reader of technical values for the filters and for Better Search:** the filters now use the same code as the search of Better Search (a shared file kept in one place and copied into both), so a value is read the same way in a filter and in a search. A no-break space between digits (“123&nbsp;456 V”) is kept for the reader, so such a number stays one number. The filters gain what the search had learned: a sign written apart (“od - 40 do 125 °C”, “0 do + 50 °C” are ranges, not 40 °C and 50 °C), a range whose first number has only the degree sign (“-20° ÷ 60°C”), the “¸” of a “÷” broken by a copy from a PDF, and the size of a pipe thread (“G 1/2 A”) is no current. **“100 000” stays one number only where it is one:** the groups of three digits after a space are joined when the first group has one or two digits, when the others are “000” (“150 000 lux”) or after a no-break space — “100 250 Ω” in two cells of a table is no longer 100 250 Ω. On a copy of a store of 4 143 products 171 products read differently, all checked: mostly temperature ranges read as two separate values before, and pipe threads read as currents.
+- The filter index is read again once after the update (by itself, or ahead by the warm-up).
+
 ## 1.10.1 — 2026-11-23
 
 ### 🧱 The *Column by column* layout fills the columns evenly <!-- fix -->

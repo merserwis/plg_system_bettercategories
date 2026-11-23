@@ -33,7 +33,9 @@ use Joomla\Event\SubscriberInterface;
 use Merserwis\Plugin\System\BetterCategories\Description\Description;
 use Merserwis\Plugin\System\BetterCategories\Filter\GridboxList;
 use Merserwis\Plugin\System\BetterCategories\Filter\Page;
+use Merserwis\Plugin\System\BetterCategories\Filter\Stats;
 use Merserwis\Plugin\System\BetterCategories\Icon\Icons;
+use Merserwis\Plugin\System\BetterCategories\Menu\MegaMenu;
 
 final class BetterCategories extends CMSPlugin implements SubscriberInterface
 {
@@ -43,7 +45,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     private const RATIOS     = ['1-1' => '1 / 1', '4-3' => '4 / 3', '3-2' => '3 / 2', '16-9' => '16 / 9', '3-4' => '3 / 4'];
     private const HOVERS     = ['none', 'zoom', 'zoom_out', 'lift', 'shine', 'grayscale', 'tint_reveal', 'tint_show', 'tilt', 'ring'];
     private const DIRECTIONS = ['rows', 'columns', 'scroll', 'inline'];
-    private const VERSION    = '1.10.1';
+    private const VERSION    = '1.11.0';
 
     /** Version of the administrator scripts and styles (cache busting together with the file time). */
     public const ASSET_VERSION = self::VERSION;
@@ -129,6 +131,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             'onAjaxBettercategories'   => 'onAjax',
             'onExtensionAfterSave'     => 'onExtensionAfterSave',
             'onBetterCategoriesModule' => 'onModule',
+            // 1.11.0: the statistics of the filters in Better Search's e-mail report
+            'onBetterSearchReport'     => 'onBetterSearchReport',
             // Gridbox's own event at the start of its page processing: the filtered product list is
             // in place before Gridbox adds lazy loading and adaptive images to it
             'onBeforeRenderGridbox'    => 'onBeforeRenderGridbox',
@@ -190,6 +194,7 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
      */
     private function addSiteScript($app): void
     {
+        $this->addMenuScript($app);
         $body = $app->getBody();
         if (str_contains($body, 'plg_system_bettercategories/js/site.js') || !preg_match('/class="bettercategories[\s"]|class="bettercategories-desc[\s"]|id="bettercategories-rows"/', $body)) {
             return;
@@ -197,6 +202,21 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $end = strripos($body, '</body>');
         if ($end !== false) {
             $app->setBody(substr($body, 0, $end) . $this->siteScriptTag(false) . substr($body, $end));
+        }
+    }
+
+    /** 1.11.0: media/plg_system_bettercategories/js/menu.js where the page holds a store menu (deferred, once). */
+    private function addMenuScript($app): void
+    {
+        $body = $app->getBody();
+        if (!str_contains($body, '<nav id="bettercategories-menu-') || str_contains($body, 'plg_system_bettercategories/js/menu.js')) {
+            return;
+        }
+        $file = 'media/plg_system_bettercategories/js/menu.js';
+        $tag  = '<script src="' . htmlspecialchars(Uri::root(true) . '/' . $file . '?' . self::ASSET_VERSION . '.' . (int) @filemtime(JPATH_ROOT . '/' . $file), ENT_QUOTES, 'UTF-8') . '" defer></script>';
+        $end  = strripos($body, '</body>');
+        if ($end !== false) {
+            $app->setBody(substr($body, 0, $end) . $tag . substr($body, $end));
         }
     }
 
@@ -1260,6 +1280,26 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
     public function onAjax($event): void
     {
         $app = $this->getApplication();
+        // 1.11.0: a filtered page seen by a visitor (filters.js), for the statistics of the filters: no token (a page
+        // from a page cache has none), the page's own signature instead
+        if ($app->isClient('site') && $app->getInput()->getMethod() === 'POST' && $app->getInput()->post->getCmd('bc_action', '') === 'stat') {
+            $counted = false;
+            try {
+                $this->params = $this->savedParams() ?? $this->params;
+                if ($this->params->get('filters_enabled', 0) && $this->params->get('filter_stats', 1)) {
+                    $counted = Stats::receive($this->db(), $app->getInput()->post->getString('stat', ''), $app->getInput()->post->getAlnum('sig', ''),
+                        (string) $app->getInput()->server->getString('HTTP_USER_AGENT', ''), $this->siteDay(),
+                        // the visitor's address as Joomla sees it (behind a proxy with "Behind Load Balancer" on), with the browser:
+                        // visitors behind one proxy are not one visitor
+                        \Joomla\Utilities\IpHelper::getIp() . '|' . $app->getInput()->server->getString('HTTP_USER_AGENT', ''));
+                }
+            } catch (\Throwable $e) {
+                $this->logError($e);
+            }
+            $this->ajaxResult($event, ['counted' => $counted]);
+
+            return;
+        }
         $this->loadLanguage();
         if (!$app->isClient('administrator') || !Session::checkToken() || !$app->getIdentity()?->authorise('core.manage', 'com_plugins')) {
             $app->setHeader('status', '403', true);
@@ -2062,6 +2102,8 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $categoryId   = max(0, (int) $event->getArgument('category', 0));
         $appId        = max(0, (int) $event->getArgument('app', 0));
         $overrides    = array_filter(array_map('strval', (array) $event->getArgument('overrides', [])), fn ($v) => trim($v) !== '');
+        // 1.11.0: the module as the store menu (mega menu) instead of a list
+        $menu         = (array) $event->getArgument('menu', []);
         $html         = '';
 
         try {
@@ -2084,7 +2126,14 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
             $this->moduleMode      = true;
             $this->moduleOverrides = $overrides;
             $minutes               = max(0, min(1440, (int) $this->params->get('cache_time', 15)));
-            if ($minutes > 0) {
+            if ($menu) {
+                $this->loadLanguage();
+                $menu = $this->menuOptions($menu);
+                $make = fn () => $this->renderMenu($appId, $categoryId, $menu);
+                $key  = $this->cacheKey(['menu', md5(json_encode($this->params->toArray())), json_encode($menu), $appId, $categoryId, $this->scheduleStamp($appId),
+                    $this->getApplication()->getLanguage()->getTag()]);
+                $html = $minutes > 0 ? $this->cached($key, $minutes, $make)[0] : $make();
+            } elseif ($minutes > 0) {
                 $key    = $this->cacheKey(['module', md5(json_encode($this->params->toArray())), json_encode($overrides), $appId, $categoryId, $this->scheduleStamp($appId)]);
                 [$html] = $this->cached($key, $minutes, fn () => $this->render($appId, $categoryId));
             } else {
@@ -2100,10 +2149,11 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
 
         // a kept block carries the ids it was made with: two modules on one page (or the same one twice) would share them, and
         // the script of the second would work the first; every insertion gets ids of its own (its styles, panels and script follow)
-        if ($html !== '' && preg_match_all('/\bbettercategories-[0-9a-f]{8}(?![0-9a-z_])/', $html, $found)) {
+        // (the store menu too: bettercategories-menu-<8>, its panel and subcategory ids follow; 1.11.0)
+        if ($html !== '' && preg_match_all('/\bbettercategories-(?:menu-)?[0-9a-f]{8}(?![0-9a-z_])/', $html, $found)) {
             $fresh = [];
             foreach (array_unique($found[0]) as $old) {
-                $fresh[$old] = 'bettercategories-' . bin2hex(random_bytes(4));
+                $fresh[$old] = (str_starts_with($old, 'bettercategories-menu-') ? 'bettercategories-menu-' : 'bettercategories-') . bin2hex(random_bytes(4));
             }
             $html = strtr($html, $fresh);
         }
@@ -2124,6 +2174,99 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         $params->set('leaf_siblings', 0);
 
         return $params;
+    }
+
+    // ---------------------------------------------------------------- store menu (1.11.0)
+
+    /** The options of the store menu from the module, each checked (see Menu\MegaMenu). */
+    private function menuOptions(array $in): array
+    {
+        $pick = fn (string $key, array $allowed, string $default): string => in_array((string) ($in[$key] ?? ''), $allowed, true) ? (string) $in[$key] : $default;
+
+        return [
+            'style'   => $pick('style', MegaMenu::STYLES, 'button'),
+            'label'   => mb_substr(trim((string) ($in['label'] ?? '')), 0, 60),
+            'depth'   => (int) $pick('depth', ['2', '3'], '3'),
+            'images'  => $pick('images', ['none', 'groups', 'all'], 'groups'),
+            'counts'  => (int) (bool) ($in['counts'] ?? 1),
+            'price'   => (int) (bool) ($in['price'] ?? 0),
+            'columns' => max(2, min(6, (int) ($in['columns'] ?? 4))),
+            'leaves'  => max(0, min(50, (int) ($in['leaves'] ?? 6))),
+            'trigger' => $pick('trigger', ['hover', 'click'], 'hover'),
+            'accent'  => $this->cssColor((string) ($in['accent'] ?? '')),
+        ];
+    }
+
+    /**
+     * The store menu of a store (or of one category, its subcategories as the top level): the nodes for
+     * Menu\MegaMenu with what the list shows elsewhere — the links Gridbox makes, the counts of each product once,
+     * the prices "from", the category images (own, Gridbox's, of the most viewed product) as small WebP copies.
+     * Empty categories are left out when the list leaves them out.
+     */
+    private function renderMenu(int $appId, int $rootId, array $o): string
+    {
+        $categories = $this->loadCategories($appId);
+        if (!$categories || ($rootId > 0 && !isset($categories[$rootId]))) {
+            return '';
+        }
+        $p = $this->settings();
+        $this->addCounts($categories);
+        if ($o['price']) {
+            $this->addPricesFrom($appId, $categories);
+        }
+        if ($o['images'] !== 'none' && $p['popularImage']) {
+            $this->addTopProductImages($appId, $categories);
+        }
+        $manual = $o['images'] !== 'none' ? $this->manualImages() : [];
+        $icons  = $o['images'] !== 'none' ? $this->categoryIcons() : [];
+        $kids   = [];
+        foreach ($categories as $cat) {
+            if (!$p['hideEmpty'] || $cat->count > 0) {
+                $kids[$cat->parent][] = $cat;
+            }
+        }
+        // small copies: 96 px (and 192 px for sharp screens) for an image shown at 48 px
+        $thumbP = ['thumbWidth' => 96] + $p;
+        $node   = function ($cat, int $level) use (&$node, $appId, $categories, $kids, $manual, $icons, $p, $thumbP, $o): array {
+            $image = '';
+            $img   = null;
+            if ($o['images'] !== 'none' && ($level === 2 || $o['images'] === 'all')) {
+                $image = $manual[$cat->id] ?? '';
+                if ($image === '' && $p['gridboxImage']) {
+                    $image = (string) $cat->image;
+                }
+                if ($image === '' && $p['popularImage']) {
+                    $image = (string) $cat->topImage;
+                }
+                if ($image !== '') {
+                    [$thumb, $srcset] = $this->thumbnail($image, $thumbP);
+                    $img = ['src' => $thumb !== '' ? $thumb : $this->imageUrl($image), 'srcset' => $srcset];
+                }
+            }
+
+            return [
+                'title'    => (string) $cat->title,
+                'url'      => Route::_($this->categoryLink($appId, $cat->id, $categories), false),
+                'count'    => (int) $cat->count,
+                'price'    => $o['price'] && $cat->priceFrom !== null ? sprintf($p['priceLabel'], $this->formatPrice($cat->priceFrom)) : '',
+                'img'      => $img,
+                'icon'     => $icons[$cat->id] ?? '',
+                'children' => $level < $o['depth'] ? array_map(fn ($child) => $node($child, $level + 1), $kids[$cat->id] ?? []) : [],
+            ];
+        };
+        $nodes = array_map(fn ($cat) => $node($cat, 1), $kids[$rootId] ?? []);
+
+        $text  = fn (string $key, string $default): string => ($t = Text::_('PLG_SYSTEM_BETTERCATEGORIES_MENU_' . $key)) !== 'PLG_SYSTEM_BETTERCATEGORIES_MENU_' . $key ? $t : $default;
+        $menu  = new MegaMenu($o, [
+            'label' => $o['label'] !== '' ? $o['label'] : $text('LABEL', 'Categories'),
+            'all'   => $this->printfLabel($text('ALL', 'All in %s'), 'All in %s', 's'),
+            'more'  => $text('MORE', 'More…'),
+            'back'  => $text('BACK', 'Back'),
+            'close' => $text('CLOSE', 'Close'),
+            'open'  => $this->printfLabel($text('OPEN', 'Subcategories of %s'), 'Subcategories of %s', 's'),
+        ]);
+
+        return $menu->render('bettercategories-menu-' . substr(md5($appId . '-' . $rootId . '-' . json_encode($o)), 0, 8), $nodes);
     }
 
     // ---------------------------------------------------------------- price "from"
@@ -2237,6 +2380,45 @@ final class BetterCategories extends CMSPlugin implements SubscriberInterface
         }
 
         return (new \DateTime('now', $zone))->format('Y-m-d H:i:s');
+    }
+
+    /** Today in the site's time zone (the day of the statistics, as Better Search counts its searches). */
+    public function siteDay(): string
+    {
+        return substr($this->siteNow(), 0, 10);
+    }
+
+    /**
+     * 1.11.0: the statistics of the filters as a section of Better Search's e-mail report. Better Search
+     * (1.11.0 and later) asks with onBetterSearchReport: arguments from, to (the period, days Y-m-d, to
+     * excluded), ui (its escaping, number and style helpers); the section is added to the "sections" list.
+     */
+    public function onBetterSearchReport($event): void
+    {
+        if (!method_exists($event, 'getArgument')) {
+            return;
+        }
+        try {
+            $this->params = $this->savedParams() ?? $this->params;
+            if (!$this->params->get('filters_enabled', 0) || !$this->params->get('filter_stats', 1) || !$this->params->get('filter_stats_report', 1)) {
+                return;
+            }
+            $from = (string) $event->getArgument('from', '');
+            $to   = (string) $event->getArgument('to', '');
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
+                return;
+            }
+            $this->loadLanguage();
+            $limit   = max(5, min(25, (int) $event->getArgument('limit', 10)));
+            $summary = Stats::summary($this->db(), $from, $to, $limit);
+            $html    = Stats::reportHtml($summary, (array) $event->getArgument('ui', []),
+                fn (string $key) => html_entity_decode(Text::_('PLG_SYSTEM_BETTERCATEGORIES_STATS_' . $key), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            $sections   = (array) $event->getArgument('sections', []);
+            $sections[] = $html;
+            $event->setArgument('sections', $sections);
+        } catch (\Throwable $e) {
+            $this->logError($e);
+        }
     }
 
     /**

@@ -88,10 +88,34 @@ class PlgSystemBettercategoriesInstallerScript extends InstallerScript
         }
     }
 
+    /** 1.11.0: the statistics of the filters go with the plugin. */
+    public function uninstall(InstallerAdapter $parent): void
+    {
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $db->setQuery('DROP TABLE IF EXISTS ' . $db->quoteName('#__bettercategories_filter_stats'))->execute();
+        } catch (\Throwable $e) {
+        }
+    }
+
     public function postflight(string $type, InstallerAdapter $parent): void
     {
         if ($type === 'uninstall') {
             return;
+        }
+
+        // 1.11.0: the table of the statistics of the filters (made here, not through the plugin class: the old
+        // class may be loaded in this request; the plugin makes it too when it is missing)
+        try {
+            $db = Factory::getContainer()->get(DatabaseInterface::class);
+            $db->setQuery('CREATE TABLE IF NOT EXISTS ' . $db->quoteName('#__bettercategories_filter_stats') . ' ('
+                . ' day DATE NOT NULL, app_id INT NOT NULL DEFAULT 0, category_id INT NOT NULL DEFAULT 0,'
+                . " filter VARCHAR(64) NOT NULL DEFAULT '', value VARCHAR(64) NOT NULL DEFAULT '',"
+                . " label VARCHAR(190) NOT NULL DEFAULT '', value_label VARCHAR(190) NOT NULL DEFAULT '',"
+                . ' uses INT UNSIGNED NOT NULL DEFAULT 0, no_results INT UNSIGNED NOT NULL DEFAULT 0,'
+                . ' PRIMARY KEY (day, app_id, category_id, filter, value), KEY idx_filter (filter, value, day)'
+                . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci')->execute();
+        } catch (\Throwable $e) {
         }
 
         $this->removeDroppedLanguages();

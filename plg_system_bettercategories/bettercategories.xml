@@ -3,10 +3,10 @@
     <name>plg_system_bettercategories</name>
     <author>Merserwis</author>
     <authorUrl>https://github.com/merserwis/</authorUrl>
-    <creationDate>2026-11-20</creationDate>
+    <creationDate>2026-11-23</creationDate>
     <copyright>Copyright (C) 2026 Merserwis. All rights reserved.</copyright>
     <license>GNU General Public License version 3</license>
-    <version>1.10.1</version>
+    <version>1.11.0</version>
     <description>PLG_SYSTEM_BETTERCATEGORIES_XML_DESCRIPTION</description>
     <namespace path="src">Merserwis\Plugin\System\BetterCategories</namespace>
     <files>
@@ -487,6 +487,16 @@
                 <field name="filters_accent" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_ACCENT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
                 <field name="filters_bg" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_BG_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
                 <field name="filters_color" type="color" default="" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_COLOR_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_COLOR_DESC" showon="filters_enabled:1" />
+            </fieldset>
+            <fieldset name="filters_stats" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_STATS" description="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_STATS_DESC" page="filters">
+                <field name="filter_stats" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_STATS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_STATS_DESC" showon="filters_enabled:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
+                <field name="filter_stats_report" type="radio" layout="joomla.form.field.radio.switcher" default="1" label="PLG_SYSTEM_BETTERCATEGORIES_FILTER_STATS_REPORT_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTER_STATS_REPORT_DESC" showon="filters_enabled:1[AND]filter_stats:1">
+                    <option value="0">JNO</option>
+                    <option value="1">JYES</option>
+                </field>
             </fieldset>
             <fieldset name="filters_texts" label="PLG_SYSTEM_BETTERCATEGORIES_FIELDSET_FILTERS_TEXTS" page="filters">
                 <field name="filters_texts_note" type="note" class="alert alert-light" label="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXTS_LABEL" description="PLG_SYSTEM_BETTERCATEGORIES_FILTERS_TEXTS_DESC" showon="filters_enabled:1" />

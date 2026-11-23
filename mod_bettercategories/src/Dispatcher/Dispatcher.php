@@ -20,6 +20,9 @@ class Dispatcher extends AbstractModuleDispatcher
 {
     private const OVERRIDES = ['heading', 'display', 'tile_style', 'orientation', 'columns', 'columns_tablet', 'columns_mobile', 'sub_mode', 'price_from'];
 
+    /** The settings of the store menu (menu_<key>), handed to the plugin. */
+    private const MENU = ['style', 'label', 'depth', 'images', 'counts', 'price', 'columns', 'leaves', 'trigger', 'accent'];
+
     protected function getLayoutData(): array
     {
         $data   = parent::getLayoutData();
@@ -30,11 +33,20 @@ class Dispatcher extends AbstractModuleDispatcher
             $overrides[$key] = trim((string) $params->get($key, ''));
         }
 
+        // 1.11.0: the store menu (mega menu) instead of the list
+        $menu = [];
+        if ($params->get('kind', 'list') === 'menu') {
+            foreach (self::MENU as $key) {
+                $menu[$key] = trim((string) $params->get('menu_' . $key, ''));
+            }
+        }
+
         $event = new Event('onBetterCategoriesModule', [
             'app'       => (int) $params->get('app_id', 0),
             'category'  => (int) $params->get('category', 0),
             'module'    => (int) ($data['module']->id ?? 0),
             'overrides' => $overrides,
+            'menu'      => $menu,
             'html'      => '',
         ]);
         $this->getApplication()->getDispatcher()->dispatch('onBetterCategoriesModule', $event);

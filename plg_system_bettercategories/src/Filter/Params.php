@@ -1,8 +1,8 @@
 <?php
 
 /**
- * @package     Merserwis.Plugin
- * @subpackage  System.bettercategories
+ * @package     Merserwis.Gridbox
+ * @subpackage  Shared
  *
  * Technical parameters: values with a unit ("1000 V", "1 kV", "50 Hz", "200 GΩ"), ranges
  * ("-20…+50 °C", "0–600 V", "od -10 do 40 °C"), measurement categories ("CAT IV", "kat. III")
@@ -13,6 +13,10 @@
  * In the product texts the units are read as written (case matters: "mA" is milliampere, "MΩ"
  * megaohm, a lone "a" is a Polish word); queries are typed in lower case, so there "10 ma" is
  * 10 mA and "10 mohm" may mean either milli- or megaohm (both are tried).
+ *
+ * One reader for Better Search (search, index) and Better Categories (filters): the source is the
+ * repository gb-shared (src/Params.php); each plugin carries a copy in its own namespace, written by
+ * gb-shared/tools/sync.py — edit the source, never a copy.
  */
 
 namespace Merserwis\Plugin\System\BetterCategories\Filter;
@@ -21,6 +25,12 @@ namespace Merserwis\Plugin\System\BetterCategories\Filter;
 
 final class Params
 {
+    /**
+     * Version of the reading rules: a plugin keeps what it has read under it (Better Search: its index
+     * format, Better Categories: the key of its filter index), so a change here reads the texts again.
+     */
+    public const VERSION = '1.0.0';
+
     /**
      * Unit as written => dimension of the token, or [dimension, factor to the base unit]. Pressure is
      * kept in pascals (1 bar = 100 000 Pa, 1 psi = 6894.757 Pa), flow in m³/h (1 l/min = 0.06 m³/h).
@@ -42,13 +52,15 @@ final class Params
     private const ROMAN = ['i' => 1, 'ii' => 2, 'iii' => 3, 'iv' => 4];
 
     /**
-     * A number: "1000", "1,5", "-20", "1 000", "100 000" (a space between groups of three digits). A group of three
-     * after a space is never read alone: "100 000 Pa" is 100000 Pa, not 0 Pa.
+     * A number: "1000", "1,5", "-20", "1 000", "10 500", "100 000". Groups of three digits after a space are
+     * one number when the first group has one or two digits, when every later group is "000" ("150 000 lx")
+     * or when the space is a no-break one; "100 250 Ω" is two cells of a table, not 100250 Ω. A group of
+     * three after a space is never read alone: "100 000 Pa" is 100000 Pa, not 0 Pa.
      */
-    private const NUM = '[-−–]?(?:\d{1,3}(?:[  ]\d{3})+|\d+)(?:[.,]\d+)?';
+    private const NUM = '[-−–]?(?:\d{1,3}(?:[\x{00A0}\x{202F}]\d{3})+|\d{1,3}(?: 000)+(?!\d)|\d{1,2}(?: \d{3})+|\d+)(?:[.,]\d+)?';
 
-    /** Words and signs between the two ends of a range. */
-    private const SEP = '(?:\.{2,3}|…|–|—|-|−|÷|~|\bto\b|\bdo\b|\bbis\b)';
+    /** Words and signs between the two ends of a range ("¸" is a "÷" broken by a copy from a PDF). */
+    private const SEP = '(?:\.{2,3}|…|–|—|-|−|÷|¸|~|\bto\b|\bdo\b|\bbis\b)';
 
     /**
      * Designations of standards: "PN-EN 62446", "PN-HD 60364-6", "IEC 61010-1", "EN 61557-1:2007", "BS 7671".
@@ -154,6 +166,9 @@ final class Params
         if ($text === '' || !preg_match('/\d|IP|ip|CAT|cat|kat|KAT/u', $text)) {
             return ['params' => [], 'rest' => $text];
         }
+        // a sign written apart from its number: "do + 50 °C", "od - 40 do 125 °C" (the space moves before the
+        // sign, so the text keeps its length and the offsets below stay right; a "- " starting a list item stays)
+        $text  = preg_replace(['/\+(\s+)(?=\d)/u', '/(?<![\p{L}\d])(od|from|von)(\s+)([-−–])(\s+)(?=\d)/iu'], ['$1+', '$1$2$4$3'], $text) ?? $text;
         $rest  = $text;
         $blank = function (array $m) use (&$rest): void {
             // the found text is taken out of the query (same length: offsets of later matches stay right)
@@ -183,8 +198,10 @@ final class Params
         $unit = self::unitPattern($isQuery);
 
         // numbers of standards are no values: "PN-EN 62446 do 1000 V" is a test up to 1000 V, not 62446…1000 V
+        $standards = [];
         if (preg_match_all(self::STANDARD, $rest, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
             foreach ($all as $m) {
+                $standards[] = $m[0];
                 $blank($m);
             }
         }
@@ -192,7 +209,7 @@ final class Params
         // a number glued to a code with a hyphen is part of a model name ("C-4A", "APS-1102A",
         // "M10-522-10 260V"), not a value; "DC-150 kHz" is a band from DC
         // ranges: "-20…+50 °C", "0-600 V", "od -10 do 40°C", "1 mA ... 10 A"
-        $range = '/(?<![\p{L}\d.,])(?:(?<![\p{L}\d]-)|(?<=DC-)|(?<=AC-))(?:od\s+|from\s+|von\s+)?(?<n1>' . self::NUM . ')\s*(?:' . $unit . ')?\s*' . self::SEP
+        $range = '/(?<![\p{L}\d.,])(?:(?<![\p{L}\d]-)|(?<=DC-)|(?<=AC-))(?:od\s+|from\s+|von\s+)?(?<n1>\+?' . self::NUM . ')(?:°(?!\s?[CcFf]))?\s*(?:' . $unit . ')?\s*' . self::SEP
             . '\s*\+?(?<n2>' . self::NUM . ')\s*' . str_replace(['(?<prefix>', '(?<unit>'], ['(?<bprefix>', '(?<bunit>'], $unit) . '/u';
         if (preg_match_all($range, $rest, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
             foreach ($all as $m) {
@@ -234,7 +251,8 @@ final class Params
         if (preg_match_all($single, $rest, $all, PREG_SET_ORDER | PREG_OFFSET_CAPTURE)) {
             foreach ($all as $m) {
                 $u = self::unitOf($m, '', $isQuery);
-                if ($u === null) {
+                // the size of a pipe thread ("G 1/2 A", "G 3/8"), not a current
+                if ($u === null || preg_match('/(?:^|[^A-Za-z0-9])G ?$/', substr($rest, max(0, $m[0][1] - 3), min(3, $m[0][1])))) {
                     continue;
                 }
                 foreach (preg_split('/\s*\/\s*/', $m[1][0]) ?: [] as $raw) {
@@ -246,6 +264,15 @@ final class Params
                     $params[] = self::param($u['dim'], $alts[0][0], $alts[0][1], $m[0][0], $alts);
                 }
                 $blank($m);
+            }
+        }
+
+        // a standard in a query is still a word to search for ("EN 61557 1000 V"): only the values were read around it
+        if ($isQuery) {
+            foreach ($standards as [$designation, $offset]) {
+                if (trim(substr($rest, $offset, strlen($designation))) === '') {
+                    $rest = substr_replace($rest, $designation, $offset, strlen($designation));
+                }
             }
         }
 
@@ -333,7 +360,7 @@ final class Params
 
     private static function number(string $raw): ?float
     {
-        $raw = str_replace(['−', '–', ' ', ' ', ','], ['-', '-', '', '', '.'], trim($raw));
+        $raw = str_replace(['−', '–', ' ', "\u{00A0}", "\u{202F}", ','], ['-', '-', '', '', '', '.'], trim($raw));
 
         return is_numeric($raw) ? (float) $raw : null;
     }
