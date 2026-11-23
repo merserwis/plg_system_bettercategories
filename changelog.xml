@@ -3,6 +3,22 @@
     <changelog>
         <element>pkg_bettercategories</element>
         <type>package</type>
+        <version>1.11.0</version>
+        <addition>
+            <item>Store menu (mega menu)</item>
+            <item>Statistics of the filters</item>
+        </addition>
+        <change>
+            <item>Technical values read as Better Search reads them</item>
+        </change>
+        <note>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases/tag/v1.11.0" target="_blank" rel="noopener noreferrer">The full list of changes of 1.11.0 (GitHub)</a>]]></item>
+            <item><![CDATA[<a href="https://github.com/merserwis/plg_system_bettercategories/releases" target="_blank" rel="noopener noreferrer">All versions and their changes (GitHub releases)</a>]]></item>
+        </note>
+    </changelog>
+    <changelog>
+        <element>pkg_bettercategories</element>
+        <type>package</type>
         <version>1.10.1</version>
         <fix>
             <item>The Column by column layout fills the columns evenly</item>

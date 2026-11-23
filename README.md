@@ -3,7 +3,7 @@
 [![Joomla Version](https://img.shields.io/badge/Joomla-6.x-blue?style=for-the-badge&logo=joomla)](https://www.joomla.org)
 [![PHP Version](https://img.shields.io/badge/PHP-8.2%20--%208.5-777BB4?style=for-the-badge&logo=php)](https://www.php.net)
 [![Gridbox](https://img.shields.io/badge/Balbooa%20Gridbox-2.20.3.1%20(Store)-orange?style=for-the-badge)](https://www.balbooa.com/joomla-gridbox)
-[![Version](https://img.shields.io/badge/Release-v1.10.1-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
+[![Version](https://img.shields.io/badge/Release-v1.11.0-brightgreen?style=for-the-badge)](https://github.com/merserwis/)
 [![License](https://img.shields.io/badge/License-GPL--3.0-green?style=for-the-badge)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 A native Joomla 6 extension that makes **Balbooa Gridbox store categories** navigable the way shoppers expect: a parent category **shows its subcategories first** (as text links or image tiles, with product counts), and the products below — which shoppers can **filter by price, product fields, technical parameters and features** read from the descriptions.
@@ -408,7 +408,7 @@ Gridbox's store elements (product list, category header) are Gridbox **Pro** fea
 
 The full history of every version is in **[CHANGELOG.md](CHANGELOG.md)**. In short:
 
-* **1.11.0** (not released yet) — Store menu (mega menu) as a kind of the module; statistics of the filters with a page of their own and a section in the e-mail report of Better Search; technical values read by the reader shared with Better Search.
+* **1.11.0** — Store menu (mega menu) as a kind of the module; statistics of the filters with a page of their own and a section in the e-mail report of Better Search; technical values read by the reader shared with Better Search.
 * **1.10.1** — The *Column by column* layout fills the columns evenly (7 tiles in 6 columns: 2-1-1-1-1-1); before, tiles of different heights bunched up in the last columns and left others empty.
 * **1.10.0** — The same HTML for every device (the screen width chooses; page caches serve everyone the right page), a Scheduler task and a console command that make the image copies and the filters index ahead, the product data of the filters kept for up to 5 minutes, one script file instead of scripts in the page.
 * **1.9.1** — Diagnostics page (checks, the “500” errors of the site that Joomla keeps nowhere, a report to copy) and safe mode (a button or an empty `safe-mode` file); product counts count each product once, as the product list shows them; tile images from the product gallery when a product has no intro image.
